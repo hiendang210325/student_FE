@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-brand-page text-brand-text font-nunito antialiased;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Ruled school notebook lined background pattern */
+.notebook-paper {
+  background-color: #FBF6EA;
+  background-image: 
+    /* Vertical pink margin line at 56px from left edge */
+    linear-gradient(to right, transparent 54px, #F8A5C2 54px, #F8A5C2 56px, transparent 56px),
+    /* Faint horizontal ruled lines */
+    linear-gradient(to bottom, transparent 31px, #CFE8FF 31px, #CFE8FF 32px);
+  background-size: 100% 100%, 100% 32px;
+  background-repeat: no-repeat, repeat-y;
+  background-position: 0 0, 0 8px;
+}
+
+/* Squiggle hand-drawn SVG underline effect */
+.squiggle-underline {
+  position: relative;
+  display: inline-block;
+}
+.squiggle-underline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -10px;
+  width: 100%;
+  height: 9px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 12' preserveAspectRatio='none'%3E%3Cpath d='M0,6 Q12.5,0 25,6 T50,6 T75,6 T100,6' fill='none' stroke='%23D6336C' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-size: 40px 9px;
+}
+
+.font-serif-title {
+  font-family: 'Playfair Display', serif;
+}
+
+.squiggle-underline-note {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='6' viewBox='0 0 24 6'%3E%3Cpath d='M0 3 Q 3 0, 6 3 T 12 3 T 18 3 T 24 3' fill='none' stroke='%23A61E4D' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: bottom;
+  padding-bottom: 5px;
+}
+
+
