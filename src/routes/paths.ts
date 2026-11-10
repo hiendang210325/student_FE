@@ -8,6 +8,8 @@ export const ROUTES = {
   STUDENTS: '/students',
   STUDENT_DETAIL: '/students/:id',
   CLASSES: '/classes',
+  CLASS_DETAIL: '/classes/:id',
+  SCHEDULE: '/schedule',
   GRADES: '/grades',
   SETTINGS: '/settings',
   PROFILE: '/profile',

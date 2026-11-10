@@ -6,12 +6,9 @@ import logoImage from '@/assets/logo/logo.png';
 import {
   LayoutDashboard,
   Users,
-  GraduationCap,
   BookOpen,
   Calendar,
-  CheckCircle2,
   FileText,
-  AlertCircle,
   CreditCard,
   Bell,
   BarChart3,
@@ -38,7 +35,7 @@ export const Sidebar: React.FC = () => {
   const navContent = (
     <div className="h-full flex flex-col justify-between p-4 box-border">
       <div>
-        {/* Top: Logo block in cream #FBF6EA rounded container */}
+        {/* Logo trên nền kem #FBF6EA bo góc */}
         <div className="bg-brand-cream rounded-[12px] p-2.5 flex items-center justify-center border border-brand-border/60 shadow-sm mb-4">
           <img
             src={logoSrc}
@@ -48,9 +45,9 @@ export const Sidebar: React.FC = () => {
           />
         </div>
 
-        {/* Navigation Menu */}
+        {/* Menu điều hướng */}
         <nav className="space-y-3.5">
-          {/* Overview (Active by default on Dashboard) */}
+          {/* Tổng quan (mặc định kích hoạt ở Dashboard) */}
           <NavLink
             to={ROUTES.DASHBOARD}
             end
@@ -78,7 +75,7 @@ export const Sidebar: React.FC = () => {
             )}
           </NavLink>
 
-          {/* Group: QUẢN LÝ */}
+          {/* Nhóm: QUẢN LÝ */}
           <div className="pt-1">
             <div className="px-3.5 pb-1 text-[12px] font-bold tracking-wider text-brand-subtext uppercase">
               QUẢN LÝ
@@ -110,65 +107,65 @@ export const Sidebar: React.FC = () => {
                 )}
               </NavLink>
 
-              <a
-                href="#teachers"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setIsMobileOpen(false);
-                }}
-                className="h-[44px] px-3.5 rounded-[10px] flex items-center gap-3 text-brand-text hover:bg-white/40 text-[14px] font-semibold transition-colors cursor-pointer"
-              >
-                <GraduationCap className="w-5 h-5 text-brand-subtext flex-shrink-0" strokeWidth={1.75} />
-                <span>Giáo viên</span>
-              </a>
-
               <NavLink
                 to={ROUTES.CLASSES}
                 onClick={() => setIsMobileOpen(false)}
                 className={({ isActive }) =>
                   cn(
-                    'h-[44px] px-3.5 rounded-[10px] flex items-center gap-3 text-[14px] font-semibold transition-colors',
+                    'h-[44px] px-3.5 flex items-center gap-3 text-[14px] transition-all',
                     isActive
-                      ? 'bg-white/90 text-brand-pinkText shadow-xs font-bold'
-                      : 'text-brand-text hover:bg-white/40'
+                      ? 'rounded-[10px] bg-white shadow-sm text-brand-pinkText font-bold'
+                      : 'rounded-[10px] text-brand-text hover:bg-white/40 font-semibold'
                   )
                 }
               >
-                <BookOpen className="w-5 h-5 text-brand-subtext flex-shrink-0" strokeWidth={1.75} />
-                <span>Lớp học</span>
+                {({ isActive }) => (
+                  <>
+                    <BookOpen
+                      className={cn(
+                        'w-5 h-5 flex-shrink-0',
+                        isActive ? 'text-brand-pinkText' : 'text-brand-subtext'
+                      )}
+                      strokeWidth={1.75}
+                    />
+                    <span>Lớp học</span>
+                  </>
+                )}
               </NavLink>
             </div>
           </div>
 
-          {/* Group: HẰNG NGÀY */}
+          {/* Nhóm: HẰNG NGÀY */}
           <div className="pt-0.5">
             <div className="px-3.5 pb-1 text-[12px] font-bold tracking-wider text-brand-subtext uppercase">
               HẰNG NGÀY
             </div>
             <div className="space-y-0.5">
-              <a
-                href="#schedule"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setIsMobileOpen(false);
-                }}
-                className="h-[44px] px-3.5 rounded-[10px] flex items-center gap-3 text-brand-text hover:bg-white/40 text-[14px] font-semibold transition-colors cursor-pointer"
+              <NavLink
+                to={ROUTES.SCHEDULE}
+                onClick={() => setIsMobileOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    'h-[44px] px-3.5 flex items-center gap-3 text-[14px] transition-all',
+                    isActive
+                      ? 'rounded-[10px] bg-white shadow-sm text-brand-pinkText font-bold'
+                      : 'rounded-[10px] text-brand-text hover:bg-white/40 font-semibold'
+                  )
+                }
               >
-                <Calendar className="w-5 h-5 text-brand-subtext flex-shrink-0" strokeWidth={1.75} />
-                <span>Lịch học</span>
-              </a>
-
-              <a
-                href="#attendance"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setIsMobileOpen(false);
-                }}
-                className="h-[44px] px-3.5 rounded-[10px] flex items-center gap-3 text-brand-text hover:bg-white/40 text-[14px] font-semibold transition-colors cursor-pointer"
-              >
-                <CheckCircle2 className="w-5 h-5 text-brand-subtext flex-shrink-0" strokeWidth={1.75} />
-                <span>Điểm danh</span>
-              </a>
+                {({ isActive }) => (
+                  <>
+                    <Calendar
+                      className={cn(
+                        'w-5 h-5 flex-shrink-0',
+                        isActive ? 'text-brand-pinkText' : 'text-brand-subtext'
+                      )}
+                      strokeWidth={1.75}
+                    />
+                    <span>Lịch học</span>
+                  </>
+                )}
+              </NavLink>
 
               <a
                 href="#homework"
@@ -181,28 +178,10 @@ export const Sidebar: React.FC = () => {
                 <FileText className="w-5 h-5 text-brand-subtext flex-shrink-0" strokeWidth={1.75} />
                 <span>Bài tập</span>
               </a>
-
-              <a
-                href="#leaves"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setIsMobileOpen(false);
-                }}
-                className="h-[44px] px-3.5 rounded-[10px] flex items-center justify-between text-brand-text hover:bg-white/40 text-[14px] font-semibold transition-colors cursor-pointer"
-              >
-                <div className="flex items-center gap-3">
-                  <AlertCircle className="w-5 h-5 text-brand-subtext flex-shrink-0" strokeWidth={1.75} />
-                  <span>Đơn xin nghỉ</span>
-                </div>
-                {/* Raspberry count badge with 6px radius */}
-                <span className="w-5 h-5 rounded-[6px] bg-brand-raspberry text-white text-[12px] font-bold flex items-center justify-center">
-                  3
-                </span>
-              </a>
             </div>
           </div>
 
-          {/* Group: TÀI CHÍNH & BÁO CÁO */}
+          {/* Nhóm: TÀI CHÍNH & BÁO CÁO */}
           <div className="pt-0.5">
             <div className="px-3.5 pb-1 text-[12px] font-bold tracking-wider text-brand-subtext uppercase">
               TÀI CHÍNH &amp; BÁO CÁO
@@ -248,7 +227,7 @@ export const Sidebar: React.FC = () => {
         </nav>
       </div>
 
-      {/* Pinned Bottom User Chip */}
+      {/* Thẻ người dùng cố định ở chân trang */}
       <div className="pt-2 border-t border-brand-border/80">
         <div className="bg-white/90 border border-brand-border/80 shadow-sm rounded-[12px] p-2.5 flex items-center justify-between transition-all hover:border-brand-pinkAccent/60">
           <div className="flex items-center gap-2.5">
@@ -260,7 +239,7 @@ export const Sidebar: React.FC = () => {
                 <span className="text-[14px] font-bold text-brand-text leading-tight">
                   {user?.fullName || 'Chị Vân'}
                 </span>
-                <span className="px-1.5 py-0.5 rounded-[6px] text-[10px] font-bold bg-[#FFE0EB] text-brand-pinkText border border-brand-pinkAccent/40 leading-none">
+                <span className="px-1.5 py-0.5 rounded-[10px] text-[10px] font-bold bg-[#FFE0EB] text-brand-pinkText border border-brand-pinkAccent/40 leading-none">
                   Admin
                 </span>
               </div>
@@ -283,13 +262,13 @@ export const Sidebar: React.FC = () => {
 
   return (
     <>
-      {/* Mobile Top Bar with Hamburger */}
+      {/* Thanh đầu trang trên thiết bị di động */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-brand-sidebar border-b border-brand-border px-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsMobileOpen(!isMobileOpen)}
-            className="p-2 rounded-[8px] bg-white/70 text-brand-text hover:bg-white"
-            aria-label="Toggle menu"
+            className="p-2 rounded-[10px] bg-white/70 text-brand-text hover:bg-white"
+            aria-label="Mở bảng điều hướng"
           >
             {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -300,12 +279,12 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* Desktop Fixed Sidebar (240px wide) */}
+      {/* Thanh bên cố định trên máy tính (rộng 240px) */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-[240px] h-screen bg-brand-sidebar border-r border-brand-border flex-col justify-between flex-shrink-0 z-20 overflow-y-auto">
         {navContent}
       </aside>
 
-      {/* Mobile Drawer */}
+      {/* Thanh bên dạng ngăn kéo trên thiết bị di động */}
       {isMobileOpen && (
         <div className="lg:hidden fixed inset-0 z-40 flex">
           <div

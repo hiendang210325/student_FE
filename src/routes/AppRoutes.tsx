@@ -12,6 +12,8 @@ import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { StudentListPage } from '@/features/students/pages/StudentListPage';
 import { StudentDetailPage } from '@/features/students/pages/StudentDetailPage';
 import { ClassListPage } from '@/features/classes/pages/ClassListPage';
+import { ClassDetailPage } from '@/features/classes/pages/ClassDetailPage';
+import { SchedulePage } from '@/features/schedule/pages/SchedulePage';
 
 const PageLoader = () => (
   <div className="flex h-[50vh] items-center justify-center">
@@ -40,6 +42,8 @@ export const AppRoutes: React.FC = () => {
           <Route path={ROUTES.STUDENTS} element={<StudentListPage />} />
           <Route path={ROUTES.STUDENT_DETAIL} element={<StudentDetailPage />} />
           <Route path={ROUTES.CLASSES} element={<ClassListPage />} />
+          <Route path={ROUTES.CLASS_DETAIL} element={<ClassDetailPage />} />
+          <Route path={ROUTES.SCHEDULE} element={<SchedulePage />} />
           <Route
             path={ROUTES.GRADES}
             element={
