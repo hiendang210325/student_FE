@@ -6,7 +6,7 @@ import { AuthLayout } from '@/layouts/AuthLayout/AuthLayout';
 import { ProtectedRoute } from './ProtectedRoute';
 import { Spinner } from '@/components/common/Spinner/Spinner';
 
-// Direct imports for instant loading & type safety
+// Nhập trực tiếp các trang để tải tức thì và đảm bảo an toàn kiểu dữ liệu (Type Safety)
 import { LoginPage } from '@/features/auth/pages/LoginPage';
 import { DashboardPage } from '@/features/dashboard/pages/DashboardPage';
 import { StudentListPage } from '@/features/students/pages/StudentListPage';

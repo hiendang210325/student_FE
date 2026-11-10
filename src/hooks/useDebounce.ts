@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 
 /**
- * Debounce hook to delay updating value (e.g., search input)
+ * Hook debounce trì hoãn cập nhật giá trị (ví dụ: ô nhập tìm kiếm)
  */
 export function useDebounce<T>(value: T, delay = 400): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);

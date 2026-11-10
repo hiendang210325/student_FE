@@ -149,7 +149,7 @@ const initialStudents: StudentRecord[] = [
   },
 ];
 
-// Exact 14 students in trash
+// Danh sách đúng chuẩn 14 học sinh nằm trong thùng rác
 const initialTrashStudents: StudentRecord[] = [
   {
     id: 20,
@@ -332,26 +332,26 @@ export const StudentListPage: React.FC = () => {
   const [students, setStudents] = useState<StudentRecord[]>(initialStudents);
   const [trashList, setTrashList] = useState<StudentRecord[]>(initialTrashStudents);
 
-  // Search & Filter state for List
+  // Trạng thái tìm kiếm và lọc cho danh sách học sinh
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
 
-  // Search & Pagination state for Trash
+  // Trạng thái tìm kiếm và phân trang cho danh sách thùng rác
   const [trashSearchQuery, setTrashSearchQuery] = useState('');
   const [trashPage, setTrashPage] = useState<number>(1);
 
-  // Modals state using shadcn UI
+  // Trạng thái các hộp thoại (Modal/Dialog) sử dụng thư viện shadcn UI
   const [viewingStudent, setViewingStudent] = useState<StudentRecord | null>(null);
   const [permanentDeleteTarget, setPermanentDeleteTarget] = useState<StudentRecord | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // ==================== SHADCN UI CONFIRMATION DIALOG: CHUYỂN VÀO THÙNG RÁC ====================
-  // Open by default for HS0001 Nguyễn Minh Anh as requested
+  // ==================== HỘP THOẠI XÁC NHẬN SHADCN UI: CHUYỂN VÀO THÙNG RÁC ====================
+  // Mở mặc định cho HS0001 Nguyễn Minh Anh theo yêu cầu thiết kế
   const [softDeleteTarget, setSoftDeleteTarget] = useState<StudentRecord | null>(initialStudents[0]);
 
-  // ==================== SHADCN UI POP-UP: SỬA HỌC SINH ====================
+  // ==================== HỘP THOẠI POP-UP SHADCN UI: SỬA HỌC SINH ====================
   const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false);
   const [editStudentId, setEditStudentId] = useState<number>(1);
   const [editCode, setEditCode] = useState<string>('HS0001');
@@ -363,7 +363,7 @@ export const StudentListPage: React.FC = () => {
   const [editPhone, setEditPhone] = useState<string>('0900 111 201');
   const [editStatus, setEditStatus] = useState<'Đang học' | 'Bảo lưu' | 'Nghỉ học'>('Đang học');
 
-  // New Student Form state
+  // Trạng thái form thêm mới học sinh
   const [newCode, setNewCode] = useState('HS0011');
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
@@ -390,7 +390,7 @@ export const StudentListPage: React.FC = () => {
     return name.slice(0, 2).toUpperCase();
   };
 
-  // Open Edit Pop-up for a student
+  // Mở hộp thoại Pop-up sửa học sinh
   const handleOpenEditDialog = (student: StudentRecord) => {
     setEditStudentId(student.id);
     setEditCode(student.studentCode);
@@ -403,7 +403,7 @@ export const StudentListPage: React.FC = () => {
     setIsEditDialogOpen(true);
   };
 
-  // Submit Edit Form
+  // Xử lý gửi biểu mẫu lưu thay đổi thông tin học sinh
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setStudents((prev) =>
@@ -425,7 +425,7 @@ export const StudentListPage: React.FC = () => {
     showToast(`Đã lưu thay đổi cho học sinh ${editName}!`);
   };
 
-  // Remove class chip
+  // Xóa chip lớp học
   const handleRemoveClass = (clsToRemove: string) => {
     if (editClasses.length > 1) {
       setEditClasses((prev) => prev.filter((c) => c !== clsToRemove));
@@ -434,7 +434,7 @@ export const StudentListPage: React.FC = () => {
     }
   };
 
-  // Add class by typing and pressing Enter or clicking Add
+  // Thêm lớp học bằng cách nhập chữ rồi nhấn Enter hoặc nhấn nút Thêm
   const handleAddNewClass = () => {
     const val = newClassInput.trim();
     if (!val) return;
@@ -448,12 +448,12 @@ export const StudentListPage: React.FC = () => {
 
   const handleClassInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
-      e.preventDefault(); // Stop form submission
+      e.preventDefault(); // Ngăn chặn kích hoạt gửi toàn bộ biểu mẫu
       handleAddNewClass();
     }
   };
 
-  // Soft Delete confirmation action
+  // Hành động xác nhận xóa mềm: Chuyển học sinh vào thùng rác
   const handleConfirmSoftDelete = () => {
     if (!softDeleteTarget) return;
     const student = softDeleteTarget;
@@ -467,7 +467,7 @@ export const StudentListPage: React.FC = () => {
     showToast(`Đã chuyển học sinh ${student.fullName} vào thùng rác.`);
   };
 
-  // Restore
+  // Khôi phục học sinh từ thùng rác
   const handleRestore = (student: StudentRecord) => {
     setTrashList((prev) => prev.filter((s) => s.id !== student.id));
     setStudents((prev) => [
@@ -477,7 +477,7 @@ export const StudentListPage: React.FC = () => {
     showToast(`Đã khôi phục học sinh ${student.fullName} vào danh sách.`);
   };
 
-  // Permanent Delete
+  // Xóa vĩnh viễn học sinh khỏi hệ thống
   const handleConfirmPermanentDelete = () => {
     if (!permanentDeleteTarget) return;
     const name = permanentDeleteTarget.fullName;
@@ -486,7 +486,7 @@ export const StudentListPage: React.FC = () => {
     showToast(`Đã xóa vĩnh viễn học sinh ${name} khỏi cơ sở dữ liệu.`);
   };
 
-  // Add Student Submit
+  // Xử lý gửi biểu mẫu thêm học sinh mới
   const handleAddStudentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
@@ -510,7 +510,7 @@ export const StudentListPage: React.FC = () => {
     showToast(`Đã thêm học sinh ${created.fullName} thành công!`);
   };
 
-  // Filtered List
+  // Danh sách học sinh đã được áp dụng bộ lọc và tìm kiếm
   const displayStudents = useMemo(() => {
     return students.filter((s) => {
       const matchSearch =
@@ -529,7 +529,7 @@ export const StudentListPage: React.FC = () => {
     });
   }, [students, searchQuery, selectedClass, selectedStatus]);
 
-  // Trash Filtered
+  // Danh sách thùng rác đã được áp dụng bộ lọc và tìm kiếm
   const filteredTrashList = useMemo(() => {
     return trashList.filter((s) => {
       const q = trashSearchQuery.toLowerCase().trim();

@@ -31,7 +31,7 @@ export const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      // Simulate authentication request
+      // Mô phỏng yêu cầu gửi dữ liệu xác thực đăng nhập
       setTimeout(() => {
         login(
           {

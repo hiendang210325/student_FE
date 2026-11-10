@@ -12,7 +12,7 @@ export const apiClient: AxiosInstance = axios.create({
   },
 });
 
-// Request Interceptor: Attach JWT Token
+// Bộ chặn yêu cầu (Request Interceptor): Tự động gắn Token xác thực JWT vào tiêu đề Authorization
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = tokenService.getAccessToken();
@@ -24,7 +24,7 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: Transform & Error Handling
+// Bộ chặn phản hồi (Response Interceptor): Chuyển đổi dữ liệu và xử lý lỗi tập trung
 apiClient.interceptors.response.use(
   (response) => response.data,
   async (error: AxiosError<{ message?: string; errors?: Record<string, string[]> }>) => {
@@ -32,7 +32,7 @@ apiClient.interceptors.response.use(
     const message = error.response?.data?.message || error.message || 'Đã có lỗi xảy ra. Vui lòng thử lại sau.';
     const errors = error.response?.data?.errors;
 
-    // Handle Unauthorized (401)
+    // Xử lý khi chưa xác thực hoặc hết phiên đăng nhập (Mã lỗi 401)
     if (status === 401) {
       tokenService.clearAll();
       if (!window.location.pathname.includes('/login')) {

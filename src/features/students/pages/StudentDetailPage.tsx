@@ -9,7 +9,7 @@ export const StudentDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // Mock detail data
+  // Dữ liệu chi tiết học sinh giả lập (Mock data)
   const student = {
     id: id || '1',
     studentCode: 'HS1001',

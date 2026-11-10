@@ -1,5 +1,5 @@
 /**
- * Environment configuration with type safety and fallback defaults
+ * Cấu hình biến môi trường với kiểm tra kiểu dữ liệu và giá trị mặc định dự phòng
  */
 export const ENV = {
   API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',

@@ -2,19 +2,19 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 /**
- * Merges Tailwind classes cleanly with clsx and twMerge
+ * Kết hợp các class Tailwind gọn gàng bằng clsx và twMerge
  */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
 /**
- * Asynchronous sleep helper
+ * Hàm hỗ trợ trì hoãn bất đồng bộ (sleep)
  */
 export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Remove Vietnamese accents for search indexing/filtering
+ * Xóa dấu tiếng Việt phục vụ tìm kiếm/lọc chỉ mục
  */
 export function removeVietnameseTones(str: string): string {
   let result = str;

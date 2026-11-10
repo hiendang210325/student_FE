@@ -38,21 +38,21 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
   const [email, setEmail] = useState(initialEmail);
   const [emailError, setEmailError] = useState<string | null>(null);
 
-  // OTP state (6 digits)
+  // Trạng thái mã OTP (gồm 6 chữ số)
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
   const [otpError, setOtpError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(60);
   const [isCounting, setIsCounting] = useState(false);
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Password state
+  // Trạng thái mật khẩu mới
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Sync initial email when modal opens
+  // Tự động đồng bộ email ban đầu khi hộp thoại mở ra
   useEffect(() => {
     if (isOpen) {
       if (initialEmail) setEmail(initialEmail);
@@ -65,7 +65,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     }
   }, [isOpen, initialEmail]);
 
-  // Countdown timer for OTP
+  // Bộ đếm ngược thời gian hết hạn mã OTP
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isCounting && countdown > 0) {
@@ -76,7 +76,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     return () => clearTimeout(timer);
   }, [isCounting, countdown]);
 
-  // Auto focus first OTP input when reaching step OTP
+  // Tự động chuyển tiêu điểm vào ô nhập OTP đầu tiên khi chuyển sang bước xác thực OTP
   useEffect(() => {
     if (step === 'OTP') {
       setTimeout(() => {
@@ -85,9 +85,9 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     }
   }, [step]);
 
-  // Password strength logic
+  // Thuật toán tính độ mạnh của mật khẩu
   const calculatePasswordStrength = (pass: string): {
-    score: number; // 0 to 4
+    score: number; // Điểm số từ 0 đến 4
     label: string;
     colorClass: string;
     barColor: string;
@@ -109,7 +109,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     if (/[0-9]/.test(pass)) score += 1;
     if (/[^A-Za-z0-9]/.test(pass)) score += 1;
 
-    // Minimum baseline for short passwords
+    // Ngưỡng tối thiểu cho các mật khẩu quá ngắn
     if (pass.length > 0 && pass.length < 6) {
       score = 1;
     }
@@ -153,7 +153,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
 
   const strength = calculatePasswordStrength(newPassword);
 
-  // Check if confirmation password mismatches
+  // Kiểm tra xem mật khẩu nhập lại có khớp với mật khẩu mới hay không
   const isPasswordMismatch =
     confirmPassword.length > 0 && confirmPassword !== newPassword;
   const isPasswordMatch =
@@ -161,7 +161,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     newPassword.length > 0 &&
     confirmPassword === newPassword;
 
-  // Step 1: Submit Email
+  // Bước 1: Gửi yêu cầu xác nhận địa chỉ Email
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setEmailError(null);
@@ -173,7 +173,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     }
 
     setIsSubmitting(true);
-    // Simulate sending OTP via API
+    // Giả lập cuộc gọi API gửi mã OTP về hòm thư
     setTimeout(() => {
       setIsSubmitting(false);
       setStep('OTP');
@@ -182,17 +182,17 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     }, 600);
   };
 
-  // Step 2: Handle OTP input changes
+  // Bước 2: Xử lý sự kiện khi người dùng nhập từng ký tự mã OTP
   const handleOtpChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return;
 
     const newOtp = [...otp];
-    // Take the last typed character
+    // Lấy ký tự số cuối cùng vừa được nhập vào ô
     newOtp[index] = value.slice(-1);
     setOtp(newOtp);
     setOtpError(null);
 
-    // Auto focus next input
+    // Tự động chuyển con trỏ sang ô nhập tiếp theo
     if (value && index < 5) {
       otpInputRefs.current[index + 1]?.focus();
     }
@@ -236,14 +236,14 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     }
 
     setIsSubmitting(true);
-    // Simulate OTP verification
+    // Giả lập kiểm tra và xác thực mã OTP qua API
     setTimeout(() => {
       setIsSubmitting(false);
       setStep('NEW_PASSWORD');
     }, 600);
   };
 
-  // Step 3: Submit New Password
+  // Bước 3: Gửi và lưu mật khẩu mới
   const handleResetPasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -256,7 +256,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     }
 
     setIsSubmitting(true);
-    // Simulate updating password API
+    // Giả lập cuộc gọi API cập nhật mật khẩu mới vào cơ sở dữ liệu
     setTimeout(() => {
       setIsSubmitting(false);
       setStep('SUCCESS');

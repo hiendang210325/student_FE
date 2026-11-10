@@ -1,5 +1,5 @@
 /**
- * Format Date to standard Vietnamese display: DD/MM/YYYY
+ * Định dạng ngày theo chuẩn hiển thị tiếng Việt: DD/MM/YYYY
  */
 export function formatDate(dateString?: string | Date | null): string {
   if (!dateString) return '-';
@@ -12,7 +12,7 @@ export function formatDate(dateString?: string | Date | null): string {
 }
 
 /**
- * Format Currency (VND)
+ * Định dạng tiền tệ (VND)
  */
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('vi-VN', {
@@ -22,7 +22,7 @@ export function formatCurrency(amount: number): string {
 }
 
 /**
- * Format Vietnamese phone number (090 123 4567)
+ * Định dạng số điện thoại Việt Nam (090 123 4567)
  */
 export function formatPhoneNumber(phone?: string | null): string {
   if (!phone) return '-';

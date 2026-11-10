@@ -14,7 +14,7 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80 rounded-[10px]",
         outline: "text-foreground rounded-[10px]",
-        // Lớp Văn chị Vân brand pastel variants with 10-12px radius, strictly no rounded-full
+        // Các biến thể màu pastel thương hiệu Lớp Văn chị Vân với bo góc chuẩn 10-12px, nghiêm cấm dùng rounded-full
         studying:
           "border-transparent bg-[#DCEBFA] text-[#1F4E79] rounded-[10px]",
         reserved:

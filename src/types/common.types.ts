@@ -1,5 +1,5 @@
 /**
- * Common API Response wrapper
+ * Định dạng phản hồi API dùng chung
  */
 export interface ApiResponse<T = unknown> {
   success: boolean;
@@ -9,7 +9,7 @@ export interface ApiResponse<T = unknown> {
 }
 
 /**
- * Standard Paginated Response
+ * Dữ liệu phản hồi phân trang chuẩn
  */
 export interface PaginatedData<T> {
   items: T[];
@@ -22,7 +22,7 @@ export interface PaginatedData<T> {
 export type PaginatedResponse<T> = ApiResponse<PaginatedData<T>>;
 
 /**
- * Base query params for listings
+ * Các tham số truy vấn cơ bản cho danh sách
  */
 export interface PaginationParams {
   page?: number;
@@ -33,7 +33,7 @@ export interface PaginationParams {
 }
 
 /**
- * Standard Select/Dropdown Option
+ * Lựa chọn chuẩn cho Select/Dropdown
  */
 export interface Option<T = string | number> {
   label: string;
@@ -42,7 +42,7 @@ export interface Option<T = string | number> {
 }
 
 /**
- * Base database entity
+ * Thực thể cơ sở trong cơ sở dữ liệu
  */
 export interface BaseEntity {
   id: string | number;
