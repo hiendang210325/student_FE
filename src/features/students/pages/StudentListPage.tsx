@@ -348,8 +348,8 @@ export const StudentListPage: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // ==================== HỘP THOẠI XÁC NHẬN SHADCN UI: CHUYỂN VÀO THÙNG RÁC ====================
-  // Mở mặc định cho HS0001 Nguyễn Minh Anh theo yêu cầu thiết kế
-  const [softDeleteTarget, setSoftDeleteTarget] = useState<StudentRecord | null>(initialStudents[0]);
+  // Mặc định đóng khi tải trang, chỉ hiển thị khi người dùng bấm nút xóa học sinh
+  const [softDeleteTarget, setSoftDeleteTarget] = useState<StudentRecord | null>(null);
 
   // ==================== HỘP THOẠI POP-UP SHADCN UI: SỬA HỌC SINH ====================
   const [isEditDialogOpen, setIsEditDialogOpen] = useState<boolean>(false);
@@ -555,20 +555,20 @@ export const StudentListPage: React.FC = () => {
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="w-full max-w-[1136px] min-h-[976px] p-8 mx-auto flex flex-col justify-between gap-6 box-border select-none bg-brand-page text-brand-text font-nunito relative">
+      <div className="w-full lg:max-w-[1136px] lg:min-h-[976px] p-0 lg:p-8 mx-auto flex flex-col lg:justify-between gap-4 lg:gap-6 box-border select-none bg-brand-page text-brand-text font-nunito relative">
         {/* Toast Notification */}
         {toastMessage && (
-          <div className="fixed bottom-6 right-6 z-50 bg-[#3B2A35] text-white px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+          <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 bg-[#3B2A35] text-white px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             <span>{toastMessage}</span>
           </div>
         )}
 
-        {/* ==================== ROW 1: HEADER (88px) ==================== */}
-        <header className="h-[88px] flex items-center justify-between relative flex-shrink-0">
-          <div className="flex flex-col justify-center">
-            <div className="flex items-center gap-3">
-              <h1 className="font-serif-title text-[28px] font-bold text-brand-text leading-tight">
+        {/* ==================== ROW 1: HEADER ==================== */}
+        <header className="min-h-[72px] lg:h-[88px] flex flex-col md:flex-row md:items-center justify-between gap-3 relative flex-shrink-0">
+          <div className="flex flex-col justify-center min-w-0">
+            <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+              <h1 className="font-serif-title text-[24px] lg:text-[28px] font-bold text-brand-text leading-tight">
                 Học sinh
               </h1>
               {activeTab === 'TRASH' ? (
@@ -585,15 +585,15 @@ export const StudentListPage: React.FC = () => {
             {/* Signature margin note with hand-drawn squiggle underline */}
             <div className="flex items-center gap-4 mt-1.5">
               <div className="inline-block transform -rotate-1 origin-left">
-                <span className="font-serif-title italic text-[15px] font-semibold text-brand-pinkText squiggle-underline-note">
+                <span className="font-serif-title italic text-[14px] lg:text-[15px] font-semibold text-brand-pinkText squiggle-underline-note">
                   {activeTab === 'TRASH'
                     ? '“Thùng rác giữ học sinh đã xóa, khôi phục được bất cứ lúc nào.”'
                     : '“Nhập đủ số điện thoại phụ huynh để gửi nhắc học phí nhé!”'}
                 </span>
               </div>
 
-              {/* STICKERS */}
-              <div className="flex items-center gap-2 pl-6">
+              {/* STICKERS (ẩn trên mobile) */}
+              <div className="hidden md:flex items-center gap-2 pl-6">
                 <svg
                   className="w-6 h-6 text-brand-pinkAccent animate-pulse"
                   viewBox="0 0 24 24"
@@ -620,12 +620,12 @@ export const StudentListPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Right: Primary Button "Thêm học sinh" using shadcn Button */}
-          <div className="flex items-center gap-3">
+          {/* Right: Primary Button "Thêm học sinh" */}
+          <div className="flex items-center gap-3 w-full md:w-auto">
             <Button
               variant="raspberry"
               onClick={() => setIsAddModalOpen(true)}
-              className="h-[44px] px-5 rounded-[12px] gap-2 shadow-sm active:scale-95 text-[14px]"
+              className="w-full md:w-auto h-[44px] px-5 rounded-[12px] gap-2 shadow-sm active:scale-95 text-[14px] justify-center"
             >
               <Plus className="w-5 h-5 flex-shrink-0" strokeWidth={2} />
               <span>Thêm học sinh</span>
@@ -633,8 +633,8 @@ export const StudentListPage: React.FC = () => {
           </div>
         </header>
 
-        {/* ==================== ROW 2: TAB BAR (44px) ==================== */}
-        <div className="h-[44px] flex items-center gap-3 flex-shrink-0">
+        {/* ==================== ROW 2: TAB BAR ==================== */}
+        <div className="min-h-[44px] flex flex-wrap items-center gap-2 lg:gap-3 flex-shrink-0">
           <Button
             variant={activeTab === 'LIST' ? 'blueAction' : 'secondary'}
             onClick={() => handleTabChange('LIST')}
@@ -673,21 +673,21 @@ export const StudentListPage: React.FC = () => {
           </Button>
         </div>
 
-        {/* ==================== ROW 3: ONE TABLE CARD (732px) ==================== */}
-        <section className="h-[732px] bg-white border border-[#F3D9E3] rounded-[12px] shadow-card flex flex-col justify-between overflow-hidden flex-shrink-0">
+        {/* ==================== ROW 3: ONE TABLE CARD ==================== */}
+        <section className="lg:h-[732px] bg-white border border-[#F3D9E3] rounded-[12px] shadow-card flex flex-col justify-between overflow-hidden flex-shrink-0">
           {activeTab === 'TRASH' ? (
             /* ========================= TRASH STATE VIEW ========================= */
             <>
-              {/* TOP ROW (80px) */}
-              <div className="h-[80px] px-6 flex items-center justify-between gap-6 border-b border-[#F3D9E3] flex-shrink-0 bg-white">
-                <div className="flex-1 h-[52px] px-4 rounded-[12px] bg-[#E9F3FF] border border-[#CFE8FF] flex items-center gap-3">
+              {/* TOP ROW */}
+              <div className="lg:h-[80px] p-4 lg:px-6 flex flex-col md:flex-row md:items-center justify-between gap-3 lg:gap-6 border-b border-[#F3D9E3] flex-shrink-0 bg-white">
+                <div className="flex-1 lg:h-[52px] px-3.5 py-2.5 lg:py-0 lg:px-4 rounded-[12px] bg-[#E9F3FF] border border-[#CFE8FF] flex items-center gap-3">
                   <Info className="w-5 h-5 text-[#1F4E79] flex-shrink-0" strokeWidth={1.75} />
                   <p className="text-[13px] font-medium text-[#1F4E79] leading-snug">
                     Học sinh trong thùng rác chỉ bị ẩn khỏi hệ thống. Khôi phục để dùng lại, hoặc xóa vĩnh viễn để xóa hẳn khỏi dữ liệu (không thể hoàn tác).
                   </p>
                 </div>
 
-                <div className="relative w-[340px] flex-shrink-0">
+                <div className="relative w-full md:w-[280px] lg:w-[340px] flex-shrink-0">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9C6B84] pointer-events-none" />
                   <Input
                     placeholder="Tìm trong thùng rác…"
@@ -713,13 +713,13 @@ export const StudentListPage: React.FC = () => {
               </div>
 
               {/* TABLE CONTAINER */}
-              <div className="flex-1 flex flex-col justify-start overflow-hidden">
-                <div className="h-[48px] bg-[#DCEBFA] text-[#1F4E79] px-6 grid grid-cols-[110px_1.2fr_130px_90px_160px_110px_230px] items-center text-[13px] font-semibold select-none flex-shrink-0">
+              <div className="hidden md:flex flex-1 flex-col justify-start overflow-hidden">
+                <div className="h-[48px] bg-[#DCEBFA] text-[#1F4E79] px-4 lg:px-6 grid md:grid-cols-[95px_1.2fr_115px_100px_210px] lg:grid-cols-[110px_1.2fr_130px_90px_160px_110px_230px] items-center text-[13px] font-semibold select-none flex-shrink-0">
                   <div>Mã học sinh</div>
                   <div>Họ và tên</div>
                   <div>Lớp</div>
-                  <div className="text-center">Giới tính</div>
-                  <div>Số điện thoại phụ huynh</div>
+                  <div className="hidden lg:block text-center">Giới tính</div>
+                  <div className="hidden lg:block">Số điện thoại phụ huynh</div>
                   <div>Ngày xóa</div>
                   <div className="text-right pr-2">Thao tác</div>
                 </div>
@@ -728,7 +728,7 @@ export const StudentListPage: React.FC = () => {
                   {displayedTrashRows.map((student) => (
                     <div
                       key={student.id}
-                      className="flex-1 px-6 grid grid-cols-[110px_1.2fr_130px_90px_160px_110px_230px] items-center text-[14px] bg-white hover:bg-[#FFF6F9] transition-colors"
+                      className="flex-1 px-4 lg:px-6 grid md:grid-cols-[95px_1.2fr_115px_100px_210px] lg:grid-cols-[110px_1.2fr_130px_90px_160px_110px_230px] items-center text-[14px] bg-white hover:bg-[#FFF6F9] transition-colors"
                     >
                       <div className="font-mono text-[13px] font-bold text-brand-text">
                         {student.studentCode}
@@ -739,10 +739,10 @@ export const StudentListPage: React.FC = () => {
                           {getInitials(student.fullName)}
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="font-bold text-brand-text leading-tight truncate">
+                          <span className="font-bold text-brand-text leading-tight truncate" title={student.fullName}>
                             {student.fullName}
                           </span>
-                          <span className="text-[12px] text-brand-subtext leading-none mt-0.5 truncate">
+                          <span className="text-[12px] text-brand-subtext leading-none mt-0.5 truncate" title={student.email}>
                             {student.email}
                           </span>
                         </div>
@@ -756,11 +756,11 @@ export const StudentListPage: React.FC = () => {
                         ))}
                       </div>
 
-                      <div className="text-center font-semibold text-brand-text text-[13px]">
+                      <div className="hidden lg:block text-center font-semibold text-brand-text text-[13px]">
                         {student.gender}
                       </div>
 
-                      <div className="font-mono text-[13px] font-semibold text-brand-text">
+                      <div className="hidden lg:block font-mono text-[13px] font-semibold text-brand-text">
                         {student.parentPhone}
                       </div>
 
@@ -796,7 +796,7 @@ export const StudentListPage: React.FC = () => {
                     Array.from({ length: 10 - displayedTrashRows.length }).map((_, pIdx) => (
                       <div
                         key={`empty-${pIdx}`}
-                        className="flex-1 px-6 grid grid-cols-[110px_1.2fr_130px_90px_160px_110px_230px] items-center text-[14px] bg-white opacity-0 pointer-events-none select-none"
+                        className="hidden lg:grid flex-1 px-6 grid-cols-[110px_1.2fr_130px_90px_160px_110px_230px] items-center text-[14px] bg-white opacity-0 pointer-events-none select-none"
                       >
                         <div>-</div>
                       </div>
@@ -804,8 +804,67 @@ export const StudentListPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* MOBILE TRASH CARDS */}
+              <div className="md:hidden divide-y divide-[#F3D9E3]">
+                {displayedTrashRows.map((student) => (
+                  <div key={student.id} className="p-4 flex flex-col gap-3 bg-white">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-[10px] bg-[#EFE9ED] text-[#6B5560] font-bold text-[13px] flex items-center justify-center flex-shrink-0">
+                          {getInitials(student.fullName)}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-[15px] text-brand-text leading-tight truncate">
+                            {student.fullName}
+                          </div>
+                          <div className="text-[12px] text-brand-subtext truncate mt-0.5">
+                            {student.email}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="font-mono text-[12px] font-bold text-brand-text bg-[#FFF6F9] border border-[#F3D9E3] px-2 py-0.5 rounded-[8px] flex-shrink-0">
+                        {student.studentCode}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {student.classes.map((cls, cIdx) => (
+                          <Badge key={cIdx} variant="classChip">
+                            {cls}
+                          </Badge>
+                        ))}
+                      </div>
+                      <span className="text-[12px] font-medium text-brand-subtext font-mono">
+                        Xóa: {student.deletedDate || '03/11/2026'}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col gap-2 pt-1">
+                      <Button
+                        variant="outlineBlue"
+                        onClick={() => handleRestore(student)}
+                        className="w-full h-[44px] rounded-[10px] gap-2 text-[14px]"
+                      >
+                        <RotateCcw className="w-4 h-4 flex-shrink-0" strokeWidth={1.75} />
+                        <span>Khôi phục</span>
+                      </Button>
+
+                      <Button
+                        variant="deletePermanent"
+                        onClick={() => setPermanentDeleteTarget(student)}
+                        className="w-full h-[44px] rounded-[10px] gap-2 text-[14px]"
+                      >
+                        <Trash2 className="w-4 h-4 flex-shrink-0" strokeWidth={1.75} />
+                        <span>Xóa vĩnh viễn</span>
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               {/* FOOTER */}
-              <div className="h-[52px] px-6 border-t border-[#F3D9E3] flex items-center justify-between flex-shrink-0 bg-white">
+              <div className="min-h-[52px] px-4 lg:px-6 py-3 lg:py-0 border-t border-[#F3D9E3] flex flex-col sm:flex-row items-center justify-between gap-2 flex-shrink-0 bg-white">
                 <span className="text-[13px] font-semibold text-brand-subtext">
                   {trashTotal > 0
                     ? `Hiển thị ${(trashPage - 1) * trashPageSize + 1}–${Math.min(
@@ -862,8 +921,8 @@ export const StudentListPage: React.FC = () => {
             /* ========================= LIST STATE VIEW ========================= */
             <>
               {/* TOOLBAR */}
-              <div className="h-[72px] px-6 flex items-center gap-4 border-b border-[#F3D9E3] flex-shrink-0">
-                <div className="relative flex-1">
+              <div className="lg:h-[72px] p-4 lg:px-6 flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4 border-b border-[#F3D9E3] flex-shrink-0">
+                <div className="relative w-full lg:flex-1">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9C6B84] pointer-events-none" />
                   <Input
                     placeholder="Tìm theo tên, mã học sinh, email, số điện thoại phụ huynh…"
@@ -881,39 +940,41 @@ export const StudentListPage: React.FC = () => {
                   )}
                 </div>
 
-                <select
-                  value={selectedClass}
-                  onChange={(e) => setSelectedClass(e.target.value)}
-                  className="w-[180px] h-[48px] px-3.5 rounded-[12px] border border-[#9C6B84] bg-white text-[14px] font-semibold text-brand-text focus:outline-none focus:ring-2 focus:ring-[#2F6FA8]/20 cursor-pointer"
-                >
-                  <option value="ALL">Tất cả các lớp</option>
-                  <option value="Văn 7C">Văn 7C</option>
-                  <option value="Văn 8B">Văn 8B</option>
-                  <option value="Văn 9A">Văn 9A</option>
-                  <option value="Luyện thi vào 10">Luyện thi vào 10</option>
-                  <option value="Văn 10 nâng cao">Văn 10 nâng cao</option>
-                </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex items-center gap-3">
+                  <select
+                    value={selectedClass}
+                    onChange={(e) => setSelectedClass(e.target.value)}
+                    className="w-full lg:w-[180px] h-[48px] px-3.5 rounded-[12px] border border-[#9C6B84] bg-white text-[14px] font-semibold text-brand-text focus:outline-none focus:ring-2 focus:ring-[#2F6FA8]/20 cursor-pointer"
+                  >
+                    <option value="ALL">Tất cả các lớp</option>
+                    <option value="Văn 7C">Văn 7C</option>
+                    <option value="Văn 8B">Văn 8B</option>
+                    <option value="Văn 9A">Văn 9A</option>
+                    <option value="Luyện thi vào 10">Luyện thi vào 10</option>
+                    <option value="Văn 10 nâng cao">Văn 10 nâng cao</option>
+                  </select>
 
-                <select
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="w-[180px] h-[48px] px-3.5 rounded-[12px] border border-[#9C6B84] bg-white text-[14px] font-semibold text-brand-text focus:outline-none focus:ring-2 focus:ring-[#2F6FA8]/20 cursor-pointer"
-                >
-                  <option value="ALL">Tất cả trạng thái</option>
-                  <option value="Đang học">Đang học</option>
-                  <option value="Bảo lưu">Bảo lưu</option>
-                  <option value="Nghỉ học">Nghỉ học</option>
-                </select>
+                  <select
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    className="w-full lg:w-[180px] h-[48px] px-3.5 rounded-[12px] border border-[#9C6B84] bg-white text-[14px] font-semibold text-brand-text focus:outline-none focus:ring-2 focus:ring-[#2F6FA8]/20 cursor-pointer"
+                  >
+                    <option value="ALL">Tất cả trạng thái</option>
+                    <option value="Đang học">Đang học</option>
+                    <option value="Bảo lưu">Bảo lưu</option>
+                    <option value="Nghỉ học">Nghỉ học</option>
+                  </select>
+                </div>
               </div>
 
-              {/* TABLE CONTAINER */}
-              <div className="flex-1 flex flex-col justify-start overflow-hidden">
-                <div className="h-[48px] bg-[#DCEBFA] text-[#1F4E79] px-6 grid grid-cols-[105px_1.2fr_135px_80px_155px_130px_120px] items-center text-[13px] font-semibold select-none flex-shrink-0">
+              {/* TABLE CONTAINER (Tablet & Desktop) */}
+              <div className="hidden md:flex flex-1 flex-col justify-start overflow-hidden">
+                <div className="h-[48px] bg-[#DCEBFA] text-[#1F4E79] px-4 lg:px-6 grid md:grid-cols-[95px_1.3fr_120px_125px_115px] lg:grid-cols-[105px_1.2fr_135px_80px_155px_130px_120px] items-center text-[13px] font-semibold select-none flex-shrink-0">
                   <div>Mã học sinh</div>
                   <div>Họ và tên</div>
                   <div>Lớp</div>
-                  <div className="text-center">Giới tính</div>
-                  <div>Số điện thoại phụ huynh</div>
+                  <div className="hidden lg:block text-center">Giới tính</div>
+                  <div className="hidden lg:block">Số điện thoại phụ huynh</div>
                   <div>Trạng thái</div>
                   <div className="text-right pr-2">Thao tác</div>
                 </div>
@@ -928,7 +989,7 @@ export const StudentListPage: React.FC = () => {
                     return (
                       <div
                         key={student.id}
-                        className="h-[56px] px-6 grid grid-cols-[105px_1.2fr_135px_80px_155px_130px_120px] items-center text-[14px] bg-white hover:bg-[#FFF6F9] transition-colors"
+                        className="h-[56px] px-4 lg:px-6 grid md:grid-cols-[95px_1.3fr_120px_125px_115px] lg:grid-cols-[105px_1.2fr_135px_80px_155px_130px_120px] items-center text-[14px] bg-white hover:bg-[#FFF6F9] transition-colors"
                       >
                         <div className="font-mono text-[13px] font-bold text-brand-text">
                           {student.studentCode}
@@ -941,10 +1002,10 @@ export const StudentListPage: React.FC = () => {
                             {getInitials(student.fullName)}
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <span className="font-bold text-brand-text leading-tight truncate">
+                            <span className="font-bold text-brand-text leading-tight truncate" title={student.fullName}>
                               {student.fullName}
                             </span>
-                            <span className="text-[12px] text-brand-subtext leading-none mt-0.5 truncate">
+                            <span className="text-[12px] text-brand-subtext leading-none mt-0.5 truncate" title={student.email}>
                               {student.email}
                             </span>
                           </div>
@@ -958,11 +1019,11 @@ export const StudentListPage: React.FC = () => {
                           ))}
                         </div>
 
-                        <div className="text-center font-semibold text-brand-text text-[13px]">
+                        <div className="hidden lg:block text-center font-semibold text-brand-text text-[13px]">
                           {student.gender}
                         </div>
 
-                        <div className="font-mono text-[13px] font-semibold text-brand-text">
+                        <div className="hidden lg:block font-mono text-[13px] font-semibold text-brand-text">
                           {student.parentPhone}
                         </div>
 
@@ -988,56 +1049,55 @@ export const StudentListPage: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Actions with shadcn Buttons and Tooltip */}
+                        {/* Các nút thao tác kèm chú thích (Tooltip) chỉ hiện khi di chuột vào */}
                         <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setViewingStudent(student)}
-                            title="Xem thông tin"
-                            className="w-9 h-9 text-[#1F4E79] hover:bg-[#E9F3FF]"
-                          >
-                            <Eye className="w-4 h-4" strokeWidth={1.75} />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setViewingStudent(student)}
+                                className="w-9 h-9 text-[#1F4E79] hover:bg-[#E9F3FF]"
+                              >
+                                <Eye className="w-4 h-4" strokeWidth={1.75} />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <span>Xem thông tin</span>
+                            </TooltipContent>
+                          </Tooltip>
 
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenEditDialog(student)}
-                            title="Sửa học sinh"
-                            className="w-9 h-9 text-[#1F4E79] hover:bg-[#E9F3FF]"
-                          >
-                            <Pencil className="w-4 h-4" strokeWidth={1.75} />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleOpenEditDialog(student)}
+                                className="w-9 h-9 text-[#1F4E79] hover:bg-[#E9F3FF]"
+                              >
+                                <Pencil className="w-4 h-4" strokeWidth={1.75} />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <span>Sửa học sinh</span>
+                            </TooltipContent>
+                          </Tooltip>
 
-                          {/* Tooltip on row 4 using shadcn Tooltip */}
-                          {student.studentCode === 'HS0004' ? (
-                            <Tooltip defaultOpen>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => setSoftDeleteTarget(student)}
-                                  className="w-9 h-9 text-brand-pinkText hover:bg-[#FFE0EB]"
-                                >
-                                  <Trash2 className="w-4 h-4" strokeWidth={1.75} />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="top">
-                                <span>Chuyển vào thùng rác</span>
-                              </TooltipContent>
-                            </Tooltip>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setSoftDeleteTarget(student)}
-                              title="Xóa vào thùng rác"
-                              className="w-9 h-9 text-brand-pinkText hover:bg-[#FFE0EB]"
-                            >
-                              <Trash2 className="w-4 h-4" strokeWidth={1.75} />
-                            </Button>
-                          )}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setSoftDeleteTarget(student)}
+                                className="w-9 h-9 text-brand-pinkText hover:bg-[#FFE0EB]"
+                              >
+                                <Trash2 className="w-4 h-4" strokeWidth={1.75} />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <span>Chuyển vào thùng rác</span>
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
                       </div>
                     );
@@ -1045,8 +1105,103 @@ export const StudentListPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* MOBILE LIST CARDS */}
+              <div className="md:hidden divide-y divide-[#F3D9E3]">
+                {displayStudents.slice(0, 10).map((student, idx) => {
+                  const isEven = idx % 2 === 1;
+                  const avatarBgClass = isEven
+                    ? 'bg-[#DCEBFA] text-[#1F4E79]'
+                    : 'bg-[#FFE0EB] text-brand-pinkText';
+
+                  return (
+                    <div key={student.id} className="p-4 flex flex-col gap-3 bg-white">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className={`w-10 h-10 rounded-[10px] ${avatarBgClass} font-bold text-[13px] flex items-center justify-center flex-shrink-0`}
+                          >
+                            {getInitials(student.fullName)}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-bold text-[15px] text-brand-text leading-tight truncate">
+                              {student.fullName}
+                            </div>
+                            <div className="text-[12px] text-brand-subtext truncate mt-0.5">
+                              {student.email}
+                            </div>
+                          </div>
+                        </div>
+                        <span className="font-mono text-[12px] font-bold text-brand-text bg-[#FFF6F9] border border-[#F3D9E3] px-2 py-0.5 rounded-[8px] flex-shrink-0">
+                          {student.studentCode}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {student.classes.map((cls, cIdx) => (
+                            <Badge key={cIdx} variant="classChip">
+                              {cls}
+                            </Badge>
+                          ))}
+                        </div>
+                        <div>
+                          {student.status === 'Đang học' && (
+                            <Badge variant="studying" className="px-2.5 py-1 font-bold text-[12px] rounded-[10px] whitespace-nowrap">
+                              <Check className="w-3.5 h-3.5" strokeWidth={2} />
+                              <span>Đang học</span>
+                            </Badge>
+                          )}
+                          {student.status === 'Bảo lưu' && (
+                            <Badge variant="reserved" className="px-2.5 py-1 font-bold text-[12px] rounded-[10px] whitespace-nowrap">
+                              <Pause className="w-3.5 h-3.5" strokeWidth={2} />
+                              <span>Bảo lưu</span>
+                            </Badge>
+                          )}
+                          {student.status === 'Nghỉ học' && (
+                            <Badge variant="leave" className="px-2.5 py-1 font-bold text-[12px] rounded-[10px] whitespace-nowrap">
+                              <Minus className="w-3.5 h-3.5" strokeWidth={2} />
+                              <span>Nghỉ học</span>
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#F3D9E3]/60">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setViewingStudent(student)}
+                          className="w-11 h-11 text-[#1F4E79] hover:bg-[#E9F3FF]"
+                          aria-label="Xem thông tin"
+                        >
+                          <Eye className="w-4 h-4" strokeWidth={1.75} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenEditDialog(student)}
+                          className="w-11 h-11 text-[#1F4E79] hover:bg-[#E9F3FF]"
+                          aria-label="Sửa học sinh"
+                        >
+                          <Pencil className="w-4 h-4" strokeWidth={1.75} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setSoftDeleteTarget(student)}
+                          className="w-11 h-11 text-brand-pinkText hover:bg-[#FFE0EB]"
+                          aria-label="Chuyển vào thùng rác"
+                        >
+                          <Trash2 className="w-4 h-4" strokeWidth={1.75} />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
               {/* FOOTER */}
-              <div className="h-[52px] px-6 border-t border-[#F3D9E3] flex items-center justify-between flex-shrink-0 bg-white">
+              <div className="min-h-[52px] px-4 lg:px-6 py-3 lg:py-0 border-t border-[#F3D9E3] flex flex-col sm:flex-row items-center justify-between gap-2 flex-shrink-0 bg-white">
                 <span className="text-[13px] font-semibold text-brand-subtext">
                   Hiển thị 1–10 trên 42 học sinh
                 </span>
@@ -1144,7 +1299,7 @@ export const StudentListPage: React.FC = () => {
               onSubmit={handleEditSubmit}
               className="flex-1 overflow-y-auto pr-1 py-1 space-y-3.5 my-1"
             >
-              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
                 {/* Field 1: Mã học sinh (read-only) */}
                 <div className="space-y-1">
                   <Label className="text-[12px] font-bold text-brand-text">Mã học sinh</Label>

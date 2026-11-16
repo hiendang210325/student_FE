@@ -3,8 +3,25 @@
 @tailwind utilities;
 
 @layer base {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+    font-size: 14px;
+  }
+
   body {
     @apply bg-brand-page text-brand-text font-nunito antialiased;
+    min-height: 100dvh;
+  }
+
+  /* Tránh iOS Safari tự động phóng to màn hình khi chạm vào ô nhập liệu trên di động */
+  @media (max-width: 767px) {
+    input,
+    textarea,
+    select {
+      font-size: 16px;
+    }
   }
 }
 

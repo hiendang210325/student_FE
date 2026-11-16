@@ -70,7 +70,7 @@ export const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full min-h-[976px] p-4 sm:p-6 lg:p-8 flex flex-col justify-between gap-6 overflow-x-hidden box-border max-w-[1440px] mx-auto select-none bg-brand-page text-brand-text">
+    <div className="w-full lg:min-h-[976px] p-0 lg:p-8 flex flex-col justify-between gap-4 md:gap-5 lg:gap-6 overflow-x-hidden box-border max-w-[1440px] mx-auto select-none bg-brand-page text-brand-text">
       {/* Toast Notice */}
       {actionNotice && (
         <div className="fixed bottom-6 right-6 z-50 bg-brand-text text-white px-4 py-2.5 rounded-xl shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
@@ -100,8 +100,8 @@ export const DashboardPage: React.FC = () => {
               </span>
             </div>
 
-            {/* STICKERS: exactly 2 small flat pastel vector stickers placed here */}
-            <div className="flex items-center gap-2 pl-1 sm:pl-3">
+            {/* STICKERS: exactly 2 small flat pastel vector stickers placed here (ẩn dưới md) */}
+            <div className="hidden md:flex items-center gap-2 pl-1 sm:pl-3">
               {/* Sticker 1: pastel pink star */}
               <svg
                 className="w-6 h-6 text-brand-pinkAccent animate-pulse"
@@ -129,67 +129,46 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
         </div>
-
-        {/* Right side: Two action buttons */}
-        <div className="flex items-center gap-3">
-          {/* Secondary Button: Bell icon, #CFE8FF background, #1F4E79 text */}
-          <button
-            onClick={() => showNotice('Đã mở hộp thoại gửi thông báo cho phụ huynh & học sinh')}
-            className="h-[44px] px-4 rounded-xl bg-brand-blueBtn text-brand-blueText hover:bg-[#b8ddff] font-bold text-[14px] flex items-center gap-2 transition-colors active:scale-95 shadow-sm cursor-pointer"
-          >
-            <Bell className="w-5 h-5 flex-shrink-0" strokeWidth={1.75} />
-            <span>Gửi thông báo</span>
-          </button>
-
-          {/* Primary Button: Check icon, #D6336C background, white text */}
-          <button
-            onClick={() => showNotice('Đã mở giao diện điểm danh nhanh hôm nay')}
-            className="h-[44px] px-5 rounded-xl bg-brand-raspberry text-white hover:bg-[#be265d] font-bold text-[14px] flex items-center gap-2 shadow-sm transition-colors active:scale-95 cursor-pointer"
-          >
-            <Check className="w-5 h-5 flex-shrink-0" strokeWidth={2} />
-            <span>Điểm danh</span>
-          </button>
-        </div>
       </header>
 
-      {/* ==================== ROW 2: FOUR EQUAL KPI TILES ==================== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 lg:gap-6 flex-shrink-0">
+      {/* ==================== ROW 2: FOUR EQUAL KPI TILES (2x2 trên mobile & md, 4 cột trên lg) ==================== */}
+      <div className="grid grid-cols-2 lg:grid-cols-12 gap-3 md:gap-4 lg:gap-6 flex-shrink-0">
         {/* KPI 1: 3 cols, #DCEBFA icon chip with #1F4E79 icon */}
-        <div className="lg:col-span-3 bg-white border border-brand-border rounded-2xl p-5 shadow-card flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-brand-blueChip flex items-center justify-center text-brand-blueText flex-shrink-0">
+        <div className="lg:col-span-3 bg-white border border-brand-border rounded-2xl p-3.5 md:p-5 shadow-card flex items-center justify-between min-w-0">
+          <div className="flex items-center gap-2.5 md:gap-3.5 min-w-0">
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-brand-blueChip flex items-center justify-center text-brand-blueText flex-shrink-0">
               <Users className="w-5 h-5" strokeWidth={1.75} />
             </div>
-            <div className="flex flex-col">
-              <div className="flex items-baseline gap-1.5">
-                <span className="font-serif-title text-[30px] font-bold text-brand-text leading-none">
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-baseline gap-1.5 flex-wrap">
+                <span className="font-serif-title text-[24px] md:text-[30px] font-bold text-brand-text leading-none">
                   42
                 </span>
-                <span className="text-[14px] font-bold text-brand-subtext leading-none">
+                <span className="text-[13px] md:text-[14px] font-bold text-brand-subtext leading-none">
                   Học sinh
                 </span>
               </div>
-              <span className="text-[12px] font-medium text-brand-subtext mt-1">trong 5 lớp</span>
+              <span className="text-[12px] font-medium text-brand-subtext mt-1 truncate">trong 5 lớp</span>
             </div>
           </div>
         </div>
 
         {/* KPI 2: 3 cols, #FFE0EB icon chip with #A61E4D icon */}
-        <div className="lg:col-span-3 bg-white border border-brand-border rounded-2xl p-5 shadow-card flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-brand-pinkChip flex items-center justify-center text-brand-pinkText flex-shrink-0">
+        <div className="lg:col-span-3 bg-white border border-brand-border rounded-2xl p-3.5 md:p-5 shadow-card flex items-center justify-between min-w-0">
+          <div className="flex items-center gap-2.5 md:gap-3.5 min-w-0">
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-brand-pinkChip flex items-center justify-center text-brand-pinkText flex-shrink-0">
               <Clock className="w-5 h-5" strokeWidth={1.75} />
             </div>
-            <div className="flex flex-col">
-              <div className="flex items-baseline gap-1.5">
-                <span className="font-serif-title text-[30px] font-bold text-brand-text leading-none">
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-baseline gap-1.5 flex-wrap">
+                <span className="font-serif-title text-[24px] md:text-[30px] font-bold text-brand-text leading-none">
                   5
                 </span>
-                <span className="text-[14px] font-bold text-brand-subtext leading-none">
+                <span className="text-[13px] md:text-[14px] font-bold text-brand-subtext leading-none">
                   Buổi học hôm nay
                 </span>
               </div>
-              <span className="text-[12px] font-medium text-brand-subtext mt-1">
+              <span className="text-[12px] font-medium text-brand-subtext mt-1 truncate">
                 2 đã điểm danh
               </span>
             </div>
@@ -197,41 +176,41 @@ export const DashboardPage: React.FC = () => {
         </div>
 
         {/* KPI 3: 3 cols, #DCEBFA icon chip with #1F4E79 icon */}
-        <div className="lg:col-span-3 bg-white border border-brand-border rounded-2xl p-5 shadow-card flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-brand-blueChip flex items-center justify-center text-brand-blueText flex-shrink-0">
+        <div className="lg:col-span-3 bg-white border border-brand-border rounded-2xl p-3.5 md:p-5 shadow-card flex items-center justify-between min-w-0">
+          <div className="flex items-center gap-2.5 md:gap-3.5 min-w-0">
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-brand-blueChip flex items-center justify-center text-brand-blueText flex-shrink-0">
               <FileText className="w-5 h-5" strokeWidth={1.75} />
             </div>
-            <div className="flex flex-col">
-              <div className="flex items-baseline gap-1.5">
-                <span className="font-serif-title text-[30px] font-bold text-brand-text leading-none">
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-baseline gap-1.5 flex-wrap">
+                <span className="font-serif-title text-[24px] md:text-[30px] font-bold text-brand-text leading-none">
                   3
                 </span>
-                <span className="text-[14px] font-bold text-brand-subtext leading-none">
+                <span className="text-[13px] md:text-[14px] font-bold text-brand-subtext leading-none">
                   Đơn chờ duyệt
                 </span>
               </div>
-              <span className="text-[12px] font-medium text-brand-subtext mt-1">cần xử lý</span>
+              <span className="text-[12px] font-medium text-brand-subtext mt-1 truncate">cần xử lý</span>
             </div>
           </div>
         </div>
 
         {/* KPI 4: 3 cols, #FFE0EB icon chip with #A61E4D icon */}
-        <div className="lg:col-span-3 bg-white border border-brand-border rounded-2xl p-5 shadow-card flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-brand-pinkChip flex items-center justify-center text-brand-pinkText flex-shrink-0">
+        <div className="lg:col-span-3 bg-white border border-brand-border rounded-2xl p-3.5 md:p-5 shadow-card flex items-center justify-between min-w-0">
+          <div className="flex items-center gap-2.5 md:gap-3.5 min-w-0">
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-brand-pinkChip flex items-center justify-center text-brand-pinkText flex-shrink-0">
               <DollarSign className="w-5 h-5" strokeWidth={1.75} />
             </div>
-            <div className="flex flex-col">
-              <div className="flex items-baseline gap-1.5">
-                <span className="font-serif-title text-[28px] font-bold text-brand-text leading-none">
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-baseline gap-1.5 flex-wrap">
+                <span className="font-serif-title text-[22px] md:text-[28px] font-bold text-brand-text leading-none">
                   73,8%
                 </span>
-                <span className="text-[14px] font-bold text-brand-subtext leading-none">
+                <span className="text-[13px] md:text-[14px] font-bold text-brand-subtext leading-none">
                   Học phí
                 </span>
               </div>
-              <span className="text-[12px] font-medium text-brand-subtext mt-1">
+              <span className="text-[12px] font-medium text-brand-subtext mt-1 truncate">
                 7 hoá đơn chưa đóng
               </span>
             </div>
@@ -353,9 +332,9 @@ export const DashboardPage: React.FC = () => {
           {/* 3 rows */}
           <div className="flex-1 flex flex-col justify-between divide-y divide-[#F3D9E3] py-1">
             {leaveRequests.map((req) => (
-              <div key={req.id} className="flex items-center justify-between py-2.5">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2">
+              <div key={req.id} className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 py-2.5">
+                <div className="flex flex-col gap-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[14px] font-bold text-brand-text">
                       {req.studentName}
                     </span>
@@ -370,19 +349,19 @@ export const DashboardPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex items-center gap-2">
+                {/* Actions: full-width dưới chữ trên mobile */}
+                <div className="flex items-center gap-2 w-full md:w-auto">
                   {req.status === 'PENDING' ? (
                     <>
                       <button
                         onClick={() => handleApprove(req.id, req.studentName)}
-                        className="px-3 py-1.5 rounded-lg bg-brand-blueAction text-white text-[12px] font-bold hover:bg-[#255b8b] transition-colors shadow-xs active:scale-95 cursor-pointer"
+                        className="flex-1 md:flex-initial min-h-[44px] md:min-h-0 px-3 py-1.5 rounded-lg bg-brand-blueAction text-white text-[13px] md:text-[12px] font-bold hover:bg-[#255b8b] transition-colors shadow-xs active:scale-95 cursor-pointer"
                       >
                         Duyệt
                       </button>
                       <button
                         onClick={() => handleReject(req.id, req.studentName)}
-                        className="px-2 py-1.5 text-[12px] font-semibold text-brand-subtext hover:text-brand-text transition-colors cursor-pointer"
+                        className="flex-1 md:flex-initial min-h-[44px] md:min-h-0 px-2 py-1.5 rounded-lg border border-brand-border md:border-0 text-[13px] md:text-[12px] font-semibold text-brand-subtext hover:text-brand-text transition-colors cursor-pointer"
                       >
                         Từ chối
                       </button>
@@ -643,8 +622,8 @@ export const DashboardPage: React.FC = () => {
           </div>
         </section>
 
-        {/* CARD 3 (4 columns): "Thông báo gần đây" */}
-        <section className="lg:col-span-4 bg-white border border-brand-border rounded-2xl p-5 shadow-card flex flex-col justify-between">
+        {/* CARD 3 (4 columns trên lg, full-width hàng 2 trên md): "Thông báo gần đây" */}
+        <section className="md:col-span-2 lg:col-span-4 bg-white border border-brand-border rounded-2xl p-5 shadow-card flex flex-col justify-between min-w-0">
           <div className="flex items-center justify-between pb-1.5 border-b border-brand-border">
             <h2 className="font-serif-title text-[18px] font-bold text-brand-text">
               Thông báo gần đây

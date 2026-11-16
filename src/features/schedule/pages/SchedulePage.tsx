@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   Plus,
   Bell,
@@ -252,17 +252,6 @@ const WEEK_SESSIONS: ScheduleSession[] = [
   },
 ];
 
-// Danh sách các ngày trong tuần hiển thị ở đầu bảng lịch
-const DAYS_OF_WEEK = [
-  { shortName: 'T2', dateNumber: '09', isToday: false },
-  { shortName: 'T3', dateNumber: '10', isToday: true },
-  { shortName: 'T4', dateNumber: '11', isToday: false },
-  { shortName: 'T5', dateNumber: '12', isToday: false },
-  { shortName: 'T6', dateNumber: '13', isToday: false },
-  { shortName: 'T7', dateNumber: '14', isToday: false },
-  { shortName: 'CN', dateNumber: '15', isToday: false },
-];
-
 // Trục thời gian từ 07:00 đến 21:00 (14 khoảng giờ)
 const TIME_SLOTS = [
   '07:00',
@@ -367,63 +356,6 @@ const WEEKLY_CHIPS: MonthSessionChip[][] = [
   [CHIP_LOP_12],
 ];
 
-// Danh sách 42 ô ngày (6 hàng tuần × 7 ngày: 26/10 -> 06/12)
-const MONTH_DAY_CELLS: MonthDayCell[] = [
-  // Tuần 1: 26/10 đến 01/11 (Các ngày ngoài tháng 11 có độ mờ thấp, không có chip)
-  { id: 'm-26-10', dayNumber: 26, isCurrentMonth: false, chips: [] },
-  { id: 'm-27-10', dayNumber: 27, isCurrentMonth: false, chips: [] },
-  { id: 'm-28-10', dayNumber: 28, isCurrentMonth: false, chips: [] },
-  { id: 'm-29-10', dayNumber: 29, isCurrentMonth: false, chips: [] },
-  { id: 'm-30-10', dayNumber: 30, isCurrentMonth: false, chips: [] },
-  { id: 'm-31-10', dayNumber: 31, isCurrentMonth: false, chips: [] },
-  { id: 'm-01-11', dayNumber: 1, isCurrentMonth: true, chips: [] },
-
-  // Tuần 2: 02/11 đến 08/11 (Bắt đầu áp dụng lịch cố định hàng tuần)
-  { id: 'm-02-11', dayNumber: 2, isCurrentMonth: true, chips: WEEKLY_CHIPS[0] },
-  { id: 'm-03-11', dayNumber: 3, isCurrentMonth: true, chips: WEEKLY_CHIPS[1] },
-  { id: 'm-04-11', dayNumber: 4, isCurrentMonth: true, chips: WEEKLY_CHIPS[2] },
-  { id: 'm-05-11', dayNumber: 5, isCurrentMonth: true, chips: WEEKLY_CHIPS[3] },
-  { id: 'm-06-11', dayNumber: 6, isCurrentMonth: true, chips: WEEKLY_CHIPS[4] },
-  { id: 'm-07-11', dayNumber: 7, isCurrentMonth: true, chips: WEEKLY_CHIPS[5] },
-  { id: 'm-08-11', dayNumber: 8, isCurrentMonth: true, chips: WEEKLY_CHIPS[6] },
-
-  // Tuần 3: 09/11 đến 15/11 (Tuần hiện tại có ngày 10 là Hôm nay)
-  { id: 'm-09-11', dayNumber: 9, isCurrentMonth: true, chips: WEEKLY_CHIPS[0] },
-  { id: 'm-10-11', dayNumber: 10, isCurrentMonth: true, isToday: true, chips: WEEKLY_CHIPS[1] },
-  { id: 'm-11-11', dayNumber: 11, isCurrentMonth: true, chips: WEEKLY_CHIPS[2] },
-  { id: 'm-12-11', dayNumber: 12, isCurrentMonth: true, chips: WEEKLY_CHIPS[3] },
-  { id: 'm-13-11', dayNumber: 13, isCurrentMonth: true, chips: WEEKLY_CHIPS[4] },
-  { id: 'm-14-11', dayNumber: 14, isCurrentMonth: true, chips: WEEKLY_CHIPS[5] },
-  { id: 'm-15-11', dayNumber: 15, isCurrentMonth: true, chips: WEEKLY_CHIPS[6] },
-
-  // Tuần 4: 16/11 đến 22/11
-  { id: 'm-16-11', dayNumber: 16, isCurrentMonth: true, chips: WEEKLY_CHIPS[0] },
-  { id: 'm-17-11', dayNumber: 17, isCurrentMonth: true, chips: WEEKLY_CHIPS[1] },
-  { id: 'm-18-11', dayNumber: 18, isCurrentMonth: true, chips: WEEKLY_CHIPS[2] },
-  { id: 'm-19-11', dayNumber: 19, isCurrentMonth: true, chips: WEEKLY_CHIPS[3] },
-  { id: 'm-20-11', dayNumber: 20, isCurrentMonth: true, chips: WEEKLY_CHIPS[4] },
-  { id: 'm-21-11', dayNumber: 21, isCurrentMonth: true, chips: WEEKLY_CHIPS[5] },
-  { id: 'm-22-11', dayNumber: 22, isCurrentMonth: true, chips: WEEKLY_CHIPS[6] },
-
-  // Tuần 5: 23/11 đến 29/11
-  { id: 'm-23-11', dayNumber: 23, isCurrentMonth: true, chips: WEEKLY_CHIPS[0] },
-  { id: 'm-24-11', dayNumber: 24, isCurrentMonth: true, chips: WEEKLY_CHIPS[1] },
-  { id: 'm-25-11', dayNumber: 25, isCurrentMonth: true, chips: WEEKLY_CHIPS[2] },
-  { id: 'm-26-11', dayNumber: 26, isCurrentMonth: true, chips: WEEKLY_CHIPS[3] },
-  { id: 'm-27-11', dayNumber: 27, isCurrentMonth: true, chips: WEEKLY_CHIPS[4] },
-  { id: 'm-28-11', dayNumber: 28, isCurrentMonth: true, chips: WEEKLY_CHIPS[5] },
-  { id: 'm-29-11', dayNumber: 29, isCurrentMonth: true, chips: WEEKLY_CHIPS[6] },
-
-  // Tuần 6: 30/11 đến 06/12 (Ngày 30/11 trong tháng 11; từ 01/12 đến 06/12 ngoài tháng)
-  { id: 'm-30-11', dayNumber: 30, isCurrentMonth: true, chips: WEEKLY_CHIPS[0] },
-  { id: 'm-01-12', dayNumber: 1, isCurrentMonth: false, chips: [] },
-  { id: 'm-02-12', dayNumber: 2, isCurrentMonth: false, chips: [] },
-  { id: 'm-03-12', dayNumber: 3, isCurrentMonth: false, chips: [] },
-  { id: 'm-04-12', dayNumber: 4, isCurrentMonth: false, chips: [] },
-  { id: 'm-05-12', dayNumber: 5, isCurrentMonth: false, chips: [] },
-  { id: 'm-06-12', dayNumber: 6, isCurrentMonth: false, chips: [] },
-];
-
 // Các tùy chọn thứ trong tuần cho Side Drawer Thêm lịch dạy
 const DRAWER_WEEKDAY_OPTIONS = [
   { key: 'T2', label: 'T2', fullName: 'Thứ 2' },
@@ -463,6 +395,157 @@ export const SchedulePage: React.FC = () => {
   const [activeTileMenuId, setActiveTileMenuId] = useState<number | null>(null);
   // Thông báo phản hồi Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Ngày/tháng/năm đang hiển thị trên lịch (mặc định 10/11/2026)
+  const [activeDate, setActiveDate] = useState<Date>(() => new Date(2026, 10, 10));
+  const [isCalendarPickerOpen, setIsCalendarPickerOpen] = useState<boolean>(false);
+  const [pickerMonth, setPickerMonth] = useState<number>(11);
+  const [pickerYear, setPickerYear] = useState<number>(2026);
+  const [pickerMode, setPickerMode] = useState<'day' | 'month'>('day');
+  const calendarPickerRef = useRef<HTMLDivElement>(null);
+
+  // Đóng popover lịch khi bấm ra ngoài
+  useEffect(() => {
+    if (!isCalendarPickerOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        calendarPickerRef.current &&
+        !calendarPickerRef.current.contains(event.target as Node)
+      ) {
+        setIsCalendarPickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isCalendarPickerOpen]);
+
+  const activeYear = activeDate.getFullYear();
+  const activeMonth = activeDate.getMonth() + 1;
+
+  // Tạo 42 ô ngày (6 hàng × 7 cột từ T2 -> CN) động theo tháng/năm đang chọn
+  const dynamicMonthCells = useMemo<MonthDayCell[]>(() => {
+    const firstOfMonth = new Date(activeYear, activeMonth - 1, 1);
+    const jsDay = firstOfMonth.getDay(); // CN=0, T2=1...
+    const startOffset = jsDay === 0 ? 6 : jsDay - 1;
+    const startDate = new Date(activeYear, activeMonth - 1, 1 - startOffset);
+    const scheduleStart = new Date(2026, 10, 2); // 02/11/2026
+
+    const cells: MonthDayCell[] = [];
+    for (let i = 0; i < 42; i++) {
+      const cellDate = new Date(
+        startDate.getFullYear(),
+        startDate.getMonth(),
+        startDate.getDate() + i
+      );
+      const cellDay = cellDate.getDate();
+      const cellMonth = cellDate.getMonth() + 1;
+      const cellYear = cellDate.getFullYear();
+      const inCurrentMonth = cellMonth === activeMonth && cellYear === activeYear;
+      const isToday =
+        cellDay === 10 && cellMonth === 11 && cellYear === 2026;
+      const mondayIdx = (cellDate.getDay() + 6) % 7; // 0: T2 .. 6: CN
+      const hasRecurringChips = inCurrentMonth && cellDate >= scheduleStart;
+
+      cells.push({
+        id: `${cellYear}-${cellMonth}-${cellDay}`,
+        dayNumber: cellDay,
+        isCurrentMonth: inCurrentMonth,
+        isToday,
+        chips: hasRecurringChips ? WEEKLY_CHIPS[mondayIdx] || [] : [],
+      });
+    }
+    return cells;
+  }, [activeYear, activeMonth]);
+
+  // Tạo danh sách 7 ngày (T2..CN) động cho chế độ xem Tuần
+  const dynamicWeekDays = useMemo(() => {
+    const jsDay = activeDate.getDay();
+    const mondayOffset = jsDay === 0 ? -6 : 1 - jsDay;
+    const monday = new Date(
+      activeDate.getFullYear(),
+      activeDate.getMonth(),
+      activeDate.getDate() + mondayOffset
+    );
+    const shortNames = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+
+    return shortNames.map((shortName, idx) => {
+      const d = new Date(
+        monday.getFullYear(),
+        monday.getMonth(),
+        monday.getDate() + idx
+      );
+      return {
+        shortName,
+        dateNumber: String(d.getDate()).padStart(2, '0'),
+        fullDate: d,
+        isToday:
+          d.getDate() === 10 &&
+          d.getMonth() === 10 &&
+          d.getFullYear() === 2026,
+      };
+    });
+  }, [activeDate]);
+
+  // Nhãn thời gian hiển thị trên thanh công cụ
+  const toolbarTimeLabel = useMemo(() => {
+    if (viewMode === 'month') {
+      return `Tháng ${String(activeMonth).padStart(2, '0')}/${activeYear}`;
+    }
+    const start = dynamicWeekDays[0].fullDate;
+    const end = dynamicWeekDays[6].fullDate;
+    const startStr = `${String(start.getDate()).padStart(2, '0')}/${String(
+      start.getMonth() + 1
+    ).padStart(2, '0')}`;
+    const endStr = `${String(end.getDate()).padStart(2, '0')}/${String(
+      end.getMonth() + 1
+    ).padStart(2, '0')}/${end.getFullYear()}`;
+    return `${startStr} – ${endStr}`;
+  }, [viewMode, activeMonth, activeYear, dynamicWeekDays]);
+
+  const handlePrevPeriod = () => {
+    if (viewMode === 'month') {
+      setActiveDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+    } else {
+      setActiveDate(
+        (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7)
+      );
+    }
+  };
+
+  const handleNextPeriod = () => {
+    if (viewMode === 'month') {
+      setActiveDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+    } else {
+      setActiveDate(
+        (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7)
+      );
+    }
+  };
+
+  const handleGoToday = () => {
+    setActiveDate(new Date(2026, 10, 10));
+    showToast(
+      viewMode === 'month'
+        ? 'Đang ở Tháng 11/2026 (Tháng hiện tại)'
+        : 'Đang ở tuần hiện tại'
+    );
+  };
+
+  const handleToggleCalendarPicker = () => {
+    setPickerMonth(activeMonth);
+    setPickerYear(activeYear);
+    setPickerMode('day');
+    setIsCalendarPickerOpen((prev) => !prev);
+  };
+
+  const getDaysInMonth = (month: number, year: number): number => {
+    return new Date(year, month, 0).getDate();
+  };
+
+  const getMondayStartOffset = (month: number, year: number): number => {
+    const jsDay = new Date(year, month - 1, 1).getDay();
+    return jsDay === 0 ? 6 : jsDay - 1;
+  };
 
   // Biểu mẫu Side Drawer Thêm lịch dạy
   const [drawerClass, setDrawerClass] = useState('Lớp 10');
@@ -525,23 +608,23 @@ export const SchedulePage: React.FC = () => {
   };
 
   return (
-    <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[976px]">
-      {/* Khung nội dung chuẩn 1200px với padding 32px (chiều rộng nội dung đúng 1136px) */}
-      <div className="w-[1200px] h-[976px] p-8 flex flex-col justify-between box-border select-none relative font-nunito">
+    <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[100dvh] lg:min-h-[976px]">
+      {/* Khung nội dung chuẩn 1200px trên desktop, co giãn theo viewport trên mobile/tablet */}
+      <div className="w-full lg:w-[1200px] lg:h-[976px] p-0 lg:p-8 flex flex-col gap-4 lg:gap-0 lg:justify-between box-border select-none relative font-nunito">
         {/* Thông báo dạng Toast hiển thị phản hồi tức thì */}
         {toastMessage && (
-          <div className="fixed bottom-6 right-6 z-50 bg-[#3B2A35] text-white px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+          <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 bg-[#3B2A35] text-white px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
             <CheckCircle2 className="w-4 h-4 text-[#CFE8FF]" />
             <span>{toastMessage}</span>
           </div>
         )}
 
-        {/* ==================== HÀNG 1: HEADER (88px) ==================== */}
-        <header className="h-[88px] flex items-center justify-between flex-shrink-0">
-          <div className="flex flex-col justify-center">
+        {/* ==================== HÀNG 1: HEADER ==================== */}
+        <header className="min-h-[72px] lg:h-[88px] flex flex-col md:flex-row md:items-center justify-between gap-3 flex-shrink-0">
+          <div className="flex flex-col justify-center min-w-0">
             {/* Tiêu đề trang và huy hiệu lịch cố định */}
-            <div className="flex items-center gap-3">
-              <h1 className="font-playfair text-[28px] font-bold text-[#3B2A35] leading-tight">
+            <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+              <h1 className="font-playfair text-[24px] lg:text-[28px] font-bold text-[#3B2A35] leading-tight">
                 Lịch học
               </h1>
               <span className="px-3 py-1 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] font-nunito text-[13px] font-bold tracking-wide">
@@ -552,13 +635,13 @@ export const SchedulePage: React.FC = () => {
             {/* Dòng ghi chú viết tay của giáo viên và 2 hình dán pastel */}
             <div className="flex items-center gap-3 mt-1.5">
               <div className="inline-block transform -rotate-1 origin-left">
-                <span className="font-playfair italic text-[15px] font-semibold text-[#A61E4D] squiggle-underline-note">
+                <span className="font-playfair italic text-[14px] lg:text-[15px] font-semibold text-[#A61E4D] squiggle-underline-note">
                   Tạo lịch một lần, tuần nào cũng tự hiện đến khi xóa nhé!
                 </span>
               </div>
 
-              {/* 2 hình dán vector phẳng pastel (ngôi sao và ngòi bút nhỏ) */}
-              <div className="flex items-center gap-2 pl-3">
+              {/* 2 hình dán vector phẳng pastel (ẩn trên mobile) */}
+              <div className="hidden md:flex items-center gap-2 pl-3">
                 {/* Hình dán 1: Ngôi sao pastel #F8A5C2 */}
                 <svg
                   className="w-6 h-6 text-[#F8A5C2] flex-shrink-0"
@@ -589,10 +672,10 @@ export const SchedulePage: React.FC = () => {
           </div>
 
           {/* Phía bên phải: Nút chính Thêm lịch dạy */}
-          <div className="flex items-center">
+          <div className="flex items-center w-full md:w-auto">
             <button
               onClick={() => setIsDrawerOpen(true)}
-              className="h-[44px] px-5 rounded-[10px] bg-[#D6336C] hover:bg-[#C2255C] text-white font-bold text-[14px] flex items-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
+              className="w-full md:w-auto h-[44px] px-5 rounded-[10px] bg-[#D6336C] hover:bg-[#C2255C] text-white font-bold text-[14px] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
             >
               <Plus className="w-4 h-4 text-white" strokeWidth={2} />
               <span>Thêm lịch dạy</span>
@@ -600,12 +683,12 @@ export const SchedulePage: React.FC = () => {
           </div>
         </header>
 
-        {/* ==================== HÀNG 2: BỐ CỤC 2 CỘT (800px) ==================== */}
-        <div className="w-[1136px] h-[800px] flex gap-[24px] flex-shrink-0">
-          {/* ========== CỘT BÊN TRÁI (4/12 chiều rộng, 366px): 2 THẺ ========== */}
-          <div className="w-[366px] h-[800px] flex flex-col justify-between flex-shrink-0">
-            {/* THẺ TRÊN: THẺ THÔNG BÁO "HÔM NAY" (~180px) */}
-            <div className="h-[180px] p-5 rounded-[16px] bg-[#DCEBFA] border border-[#CFE8FF] shadow-card flex flex-col justify-between flex-shrink-0">
+        {/* ==================== HÀNG 2: BỐ CỤC 2 CỘT (800px trên desktop) ==================== */}
+        <div className="w-full lg:w-[1136px] lg:h-[800px] flex flex-col lg:flex-row gap-4 lg:gap-[24px] flex-shrink-0">
+          {/* ========== CỘT BÊN TRÁI (4/12 chiều rộng trên lg, 366px): 2 THẺ ========== */}
+          <div className="w-full lg:w-[366px] lg:h-[800px] flex flex-col gap-4 lg:gap-0 lg:justify-between flex-shrink-0">
+            {/* THẺ TRÊN: THẺ THÔNG BÁO "HÔM NAY" */}
+            <div className="min-h-[140px] lg:h-[180px] p-4 lg:p-5 rounded-[16px] bg-[#DCEBFA] border border-[#CFE8FF] shadow-card flex flex-col justify-between gap-2 flex-shrink-0">
               {/* Nhãn HÔM NAY và ngày Thứ Ba 10/11/2026 */}
               <div>
                 <span className="font-nunito text-[12px] font-bold tracking-widest text-[#1F4E79] uppercase block mb-1">
@@ -646,10 +729,10 @@ export const SchedulePage: React.FC = () => {
               </div>
             </div>
 
-            {/* THẺ DƯỚI: THẺ "LỊCH CỐ ĐỊNH" (596px) */}
-            <div className="h-[596px] p-5 bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col justify-between flex-shrink-0">
+            {/* THẺ DƯỚI: THẺ "LỊCH CỐ ĐỊNH" (596px trên desktop) */}
+            <div className="lg:h-[596px] p-4 lg:p-5 bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col justify-between gap-3 lg:gap-0 flex-shrink-0">
               {/* Tiêu đề thẻ Lịch cố định */}
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between lg:mb-2">
                 <span className="font-nunito text-[12px] font-bold tracking-widest text-[#6B5560] uppercase">
                   LỊCH CỐ ĐỊNH
                 </span>
@@ -658,15 +741,15 @@ export const SchedulePage: React.FC = () => {
                 </span>
               </div>
 
-              {/* Lưới 6 ô vuông lịch học (2 cột × 3 hàng, tỉ lệ vuông 1:1) */}
-              <div className="grid grid-cols-2 gap-3 flex-1">
+              {/* Lưới 6 ô vuông lịch học (2 cột mobile, 3 cột tablet, 2 cột desktop) */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-3 lg:flex-1">
                 {INITIAL_FIXED_SCHEDULES.map((item) => (
                   <div
                     key={item.id}
                     style={{
                       backgroundColor: item.bgColor,
                     }}
-                    className="rounded-[16px] p-3.5 flex flex-col justify-between shadow-2xs relative select-none"
+                    className="aspect-square lg:aspect-auto rounded-[16px] p-3.5 flex flex-col justify-between shadow-2xs relative select-none"
                   >
                     {/* Hàng trên: Tên lớp và nút ba chấm ⋮ */}
                     <div className="flex items-start justify-between">
@@ -757,61 +840,192 @@ export const SchedulePage: React.FC = () => {
             </div>
           </div>
 
-          {/* ========== CỘT BÊN PHẢI (8/12 chiều rộng, 746px): THẺ THỜI KHÓA BIỂU CALENDAR (800px) ========== */}
-          <div className="w-[746px] h-[800px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col justify-between overflow-hidden relative flex-shrink-0">
-            {/* 1. THANH CÔNG CỤ TOOLBAR (64px) */}
-            <div className="h-[64px] px-6 border-b border-[#F3D9E3] flex items-center justify-between flex-shrink-0">
-              {/* Bên trái: Nút điều hướng và nhãn thời gian */}
-              <div className="flex items-center gap-2">
+          {/* ========== CỘT BÊN PHẢI (8/12 chiều rộng trên lg, 746px): THẺ THỜI KHÓA BIỂU CALENDAR ========== */}
+          <div className="w-full lg:w-[746px] lg:h-[800px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col justify-between overflow-hidden relative flex-shrink-0">
+            {/* 1. THANH CÔNG CỤ TOOLBAR */}
+            <div className="min-h-[64px] lg:h-[64px] px-4 lg:px-6 py-3 lg:py-0 border-b border-[#F3D9E3] flex flex-wrap items-center justify-between gap-2.5 flex-shrink-0">
+              {/* Bên trái: Nút điều hướng, nhãn thời gian và icon xem lịch / chuyển tháng, năm */}
+              <div ref={calendarPickerRef} className="relative flex flex-wrap items-center gap-1.5 lg:gap-2">
                 <button
-                  onClick={() =>
-                    showToast(
-                      viewMode === 'month'
-                        ? 'Chuyển về Tháng 10/2026'
-                        : 'Chuyển về tuần trước'
-                    )
-                  }
-                  className="w-8 h-8 rounded-[10px] bg-[#E9F3FF] text-[#1F4E79] hover:bg-[#CFE8FF] flex items-center justify-center font-bold text-sm cursor-pointer transition-colors"
+                  type="button"
+                  onClick={handlePrevPeriod}
+                  className="w-9 h-9 lg:w-8 lg:h-8 rounded-[10px] bg-[#E9F3FF] text-[#1F4E79] hover:bg-[#CFE8FF] flex items-center justify-center font-bold text-sm cursor-pointer transition-colors"
                   title={viewMode === 'month' ? 'Tháng trước' : 'Tuần trước'}
                 >
                   <ChevronLeft className="w-4 h-4" strokeWidth={2} />
                 </button>
                 <button
-                  onClick={() =>
-                    showToast(
-                      viewMode === 'month'
-                        ? 'Chuyển sang Tháng 12/2026'
-                        : 'Chuyển sang tuần sau'
-                    )
-                  }
-                  className="w-8 h-8 rounded-[10px] bg-[#E9F3FF] text-[#1F4E79] hover:bg-[#CFE8FF] flex items-center justify-center font-bold text-sm cursor-pointer transition-colors"
+                  type="button"
+                  onClick={handleNextPeriod}
+                  className="w-9 h-9 lg:w-8 lg:h-8 rounded-[10px] bg-[#E9F3FF] text-[#1F4E79] hover:bg-[#CFE8FF] flex items-center justify-center font-bold text-sm cursor-pointer transition-colors"
                   title={viewMode === 'month' ? 'Tháng sau' : 'Tuần sau'}
                 >
                   <ChevronRight className="w-4 h-4" strokeWidth={2} />
                 </button>
                 <button
-                  onClick={() =>
-                    showToast(
-                      viewMode === 'month'
-                        ? 'Đang ở Tháng 11/2026 (Tháng hiện tại)'
-                        : 'Đang ở tuần hiện tại'
-                    )
-                  }
-                  className="h-8 px-3 rounded-[8px] bg-[#E9F3FF] text-[#1F4E79] hover:bg-[#CFE8FF] font-nunito text-[12px] font-bold cursor-pointer transition-colors ml-1"
+                  type="button"
+                  onClick={handleGoToday}
+                  className="h-9 lg:h-8 px-3 rounded-[8px] bg-[#E9F3FF] text-[#1F4E79] hover:bg-[#CFE8FF] font-nunito text-[12px] font-bold cursor-pointer transition-colors lg:ml-1"
                 >
                   Hôm nay
                 </button>
                 <span
-                  className={`font-playfair font-bold text-[#3B2A35] ml-3 ${
-                    viewMode === 'month' ? 'text-[20px]' : 'text-[18px]'
+                  className={`font-playfair font-bold text-[#3B2A35] ml-1 lg:ml-3 ${
+                    viewMode === 'month' ? 'text-[17px] lg:text-[20px]' : 'text-[16px] lg:text-[18px]'
                   }`}
                 >
-                  {viewMode === 'month' ? 'Tháng 11/2026' : '09/11 – 15/11/2026'}
+                  {toolbarTimeLabel}
                 </span>
+
+                {/* Icon xem lịch và chuyển nhanh ngày, tháng, năm */}
+                <button
+                  type="button"
+                  onClick={handleToggleCalendarPicker}
+                  className={`w-8 h-8 rounded-[10px] flex items-center justify-center transition-colors cursor-pointer ml-0.5 ${
+                    isCalendarPickerOpen
+                      ? 'bg-[#2F6FA8] text-white'
+                      : 'bg-[#E9F3FF] text-[#1F4E79] hover:bg-[#CFE8FF]'
+                  }`}
+                  title="Xem lịch và chuyển tháng, năm"
+                  aria-label="Xem lịch và chuyển tháng, năm"
+                >
+                  <CalendarIcon className="w-4 h-4" strokeWidth={1.75} />
+                </button>
+
+                {/* Popover xem lịch chọn Ngày / Tháng / Năm */}
+                {isCalendarPickerOpen && (
+                  <div className="absolute left-0 top-[44px] z-50 w-[300px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-[0_12px_32px_rgba(59,42,53,0.16)] p-4">
+                    {/* Thanh điều hướng tháng/năm */}
+                    <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#F3D9E3]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (pickerMode === 'month') {
+                            setPickerYear((y) => y - 1);
+                          } else if (pickerMonth === 1) {
+                            setPickerMonth(12);
+                            setPickerYear((y) => y - 1);
+                          } else {
+                            setPickerMonth((m) => m - 1);
+                          }
+                        }}
+                        className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[#1F4E79] hover:bg-[#DCEBFA] transition-colors cursor-pointer"
+                        aria-label={pickerMode === 'month' ? 'Năm trước' : 'Tháng trước'}
+                      >
+                        <ChevronLeft className="w-4 h-4" strokeWidth={1.75} />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPickerMode((prev) => (prev === 'day' ? 'month' : 'day'))
+                        }
+                        className="px-2.5 py-1 rounded-[8px] font-playfair text-[16px] font-bold text-[#3B2A35] hover:bg-[#FFF6F9] transition-colors cursor-pointer"
+                        title="Bấm để chuyển nhanh Tháng và Năm"
+                      >
+                        {pickerMode === 'month'
+                          ? `Năm ${pickerYear}`
+                          : `Tháng ${String(pickerMonth).padStart(2, '0')}/${pickerYear}`}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (pickerMode === 'month') {
+                            setPickerYear((y) => y + 1);
+                          } else if (pickerMonth === 12) {
+                            setPickerMonth(1);
+                            setPickerYear((y) => y + 1);
+                          } else {
+                            setPickerMonth((m) => m + 1);
+                          }
+                        }}
+                        className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[#1F4E79] hover:bg-[#DCEBFA] transition-colors cursor-pointer"
+                        aria-label={pickerMode === 'month' ? 'Năm sau' : 'Tháng sau'}
+                      >
+                        <ChevronRight className="w-4 h-4" strokeWidth={1.75} />
+                      </button>
+                    </div>
+
+                    {pickerMode === 'month' ? (
+                      <div className="grid grid-cols-3 gap-2">
+                        {Array.from({ length: 12 }, (_, idx) => idx + 1).map((month) => {
+                          const isCurrent =
+                            month === activeMonth && pickerYear === activeYear;
+                          return (
+                            <button
+                              key={month}
+                              type="button"
+                              onClick={() => {
+                                setPickerMonth(month);
+                                setActiveDate(new Date(pickerYear, month - 1, 1));
+                                setPickerMode('day');
+                              }}
+                              className={`h-[36px] rounded-[10px] text-[13px] font-bold transition-colors cursor-pointer ${
+                                isCurrent
+                                  ? 'bg-[#2F6FA8] text-white'
+                                  : 'bg-[#FFF6F9] text-[#3B2A35] hover:bg-[#DCEBFA] hover:text-[#1F4E79]'
+                              }`}
+                            >
+                              Tháng {month}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-7 gap-1 mb-1.5 text-center">
+                          {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((wd) => (
+                            <span
+                              key={wd}
+                              className="text-[12px] font-bold text-[#6B5560] py-1"
+                            >
+                              {wd}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="grid grid-cols-7 gap-1">
+                          {Array.from(
+                            { length: getMondayStartOffset(pickerMonth, pickerYear) },
+                            (_, i) => (
+                              <div key={`empty-${i}`} className="h-[34px]" />
+                            )
+                          )}
+                          {Array.from(
+                            { length: getDaysInMonth(pickerMonth, pickerYear) },
+                            (_, i) => i + 1
+                          ).map((day) => {
+                            const isSelected =
+                              day === activeDate.getDate() &&
+                              pickerMonth === activeMonth &&
+                              pickerYear === activeYear;
+                            return (
+                              <button
+                                key={day}
+                                type="button"
+                                onClick={() => {
+                                  setActiveDate(new Date(pickerYear, pickerMonth - 1, day));
+                                  setIsCalendarPickerOpen(false);
+                                }}
+                                className={`h-[34px] rounded-[8px] text-[13px] font-bold transition-colors cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-[#2F6FA8] text-white'
+                                    : 'text-[#3B2A35] hover:bg-[#DCEBFA] hover:text-[#1F4E79]'
+                                }`}
+                              >
+                                {day}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Bên phải: Nút chuyển đổi Tuần | Tháng với Tháng kích hoạt (#2F6FA8 nền, chữ trắng) */}
-              <div className="h-9 p-1 rounded-[10px] bg-[#E9F3FF] flex items-center gap-1">
+              {/* Bên phải: Nút chuyển đổi Tuần | Tháng (full width trên mobile) */}
+              <div className="w-full md:w-auto h-9 p-1 rounded-[10px] bg-[#E9F3FF] grid grid-cols-2 md:flex items-center gap-1">
                 <button
                   onClick={() => setViewMode('week')}
                   className={`px-3 py-1 rounded-[8px] text-[13px] font-bold transition-all cursor-pointer ${
@@ -850,9 +1064,9 @@ export const SchedulePage: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Lưới 6 hàng tuần × 7 cột ngày lấp đầy toàn bộ chiều cao thẻ (26/10 đến 06/12) */}
+                {/* Lưới 6 hàng tuần × 7 cột ngày lấp đầy toàn bộ chiều cao thẻ */}
                 <div className="flex-1 grid grid-cols-7 grid-rows-6 bg-white overflow-hidden">
-                  {MONTH_DAY_CELLS.map((cell, idx) => {
+                  {dynamicMonthCells.map((cell, idx) => {
                     const isLastCol = (idx + 1) % 7 === 0;
                     const isLastRow = idx >= 35;
                     const maxChips = 3;
@@ -862,7 +1076,7 @@ export const SchedulePage: React.FC = () => {
                     return (
                       <div
                         key={cell.id}
-                        className={`pt-1 pb-1 px-1.5 flex flex-col justify-start overflow-hidden border-[#F3D9E3] select-none ${
+                        className={`min-h-[62px] md:min-h-[108px] lg:min-h-0 pt-1 pb-1 px-1 md:px-1.5 flex flex-col justify-start overflow-hidden border-[#F3D9E3] select-none ${
                           !isLastCol ? 'border-r' : ''
                         } ${!isLastRow ? 'border-b' : ''} ${
                           cell.isToday ? 'bg-[#F7FBFF]' : ''
@@ -877,7 +1091,7 @@ export const SchedulePage: React.FC = () => {
                             </div>
                           ) : (
                             <span
-                              className={`text-[14px] font-bold pl-0.5 leading-none ${
+                              className={`text-[13px] md:text-[14px] font-bold pl-0.5 leading-none ${
                                 cell.isCurrentMonth
                                   ? 'text-[#3B2A35]'
                                   : 'text-[#6B5560] opacity-40'
@@ -888,9 +1102,35 @@ export const SchedulePage: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Danh sách các chip buổi dạy nhỏ của ngày (tối đa 3 chip/ô, radius 8px, 26px high) */}
+                        {/* Mobile: hiển thị tối đa 3 chấm màu + "+N" */}
                         {cell.isCurrentMonth && cell.chips.length > 0 && (
-                          <div className="flex flex-col gap-[2px] overflow-hidden flex-1">
+                          <div className="flex md:hidden flex-wrap items-center gap-1 pt-0.5">
+                            {visibleChips.map((chip, chipIdx) => (
+                              <button
+                                key={chipIdx}
+                                type="button"
+                                style={{ backgroundColor: chip.textColor }}
+                                onClick={() =>
+                                  showToast(
+                                    `Buổi dạy ${chip.label} ngày ${cell.dayNumber}/11`
+                                  )
+                                }
+                                className="w-2 h-2 rounded-full flex-shrink-0 cursor-pointer"
+                                title={chip.label}
+                                aria-label={chip.label}
+                              />
+                            ))}
+                            {remainingCount > 0 && (
+                              <span className="text-[10px] font-bold text-[#2F6FA8] leading-none">
+                                +{remainingCount}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Tablet & Desktop: Danh sách các chip buổi dạy nhỏ của ngày (tối đa 3 chip/ô, radius 8px, 26px high) */}
+                        {cell.isCurrentMonth && cell.chips.length > 0 && (
+                          <div className="hidden md:flex flex-col gap-[2px] overflow-hidden flex-1">
                             {visibleChips.map((chip, chipIdx) => (
                               <div
                                 key={chipIdx}
@@ -932,13 +1172,14 @@ export const SchedulePage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              /* KHUNG LƯỚI THỜI KHÓA BIỂU THEO TUẦN (736px) */
-              <div className="flex-1 flex flex-col overflow-hidden relative">
+              /* KHUNG LƯỚI THỜI KHÓA BIỂU THEO TUẦN (736px trên desktop, cuộn ngang trên mobile/tablet) */
+              <div className="flex-1 flex flex-col overflow-x-auto overflow-y-hidden relative">
+                <div className="min-w-[640px] flex-1 flex flex-col min-h-[680px] lg:min-h-0">
               {/* Hàng tiêu đề 7 ngày trong tuần (44px) */}
               <div className="h-[44px] border-b border-[#F3D9E3] grid grid-cols-[54px_repeat(7,1fr)] bg-[#FCF8FA] flex-shrink-0">
                 {/* Góc trống giao nhau với cột giờ */}
-                <div className="border-r border-[#F3D9E3]" />
-                {DAYS_OF_WEEK.map((day, idx) => (
+                <div className="sticky left-0 z-20 bg-[#FCF8FA] border-r border-[#F3D9E3]" />
+                {dynamicWeekDays.map((day, idx) => (
                   <div
                     key={idx}
                     className={`flex items-center justify-center gap-1.5 border-r border-[#F3D9E3] last:border-r-0 ${
@@ -968,8 +1209,8 @@ export const SchedulePage: React.FC = () => {
 
               {/* Khu vực lưới các khung giờ (07:00 - 21:00) và các buổi dạy */}
               <div className="flex-1 relative overflow-hidden grid grid-cols-[54px_repeat(7,1fr)]">
-                {/* Cột trục giờ bên trái */}
-                <div className="border-r border-[#F3D9E3] bg-[#FCF8FA]/60 relative">
+                {/* Cột trục giờ bên trái (cố định khi cuộn ngang) */}
+                <div className="sticky left-0 z-20 border-r border-[#F3D9E3] bg-[#FCF8FA] relative">
                   {TIME_SLOTS.map((time, idx) => (
                     <div
                       key={idx}
@@ -982,7 +1223,7 @@ export const SchedulePage: React.FC = () => {
                 </div>
 
                 {/* 7 cột ngày chứa các đường kẻ ngang và các khối buổi học */}
-                {DAYS_OF_WEEK.map((day, colIdx) => (
+                {dynamicWeekDays.map((day, colIdx) => (
                   <div
                     key={colIdx}
                     className={`relative border-r border-[#F3D9E3] last:border-r-0 ${
@@ -1109,6 +1350,7 @@ export const SchedulePage: React.FC = () => {
                   </div>
                 ))}
               </div>
+                </div>
             </div>
           )}
         </div>
@@ -1117,16 +1359,20 @@ export const SchedulePage: React.FC = () => {
         {/* ==================== SIDE DRAWER: THÊM LỊCH DẠY ==================== */}
         {isDrawerOpen && (
           <div
-            className="fixed inset-0 z-50 bg-[#3B2A35]/35 flex justify-end animate-in fade-in duration-200"
+            className="fixed inset-0 z-50 bg-[#3B2A35]/35 flex items-end md:items-stretch justify-center md:justify-end animate-in fade-in duration-200"
             onClick={() => setIsDrawerOpen(false)}
           >
-            {/* Thẻ ngăn kéo Drawer: rộng 480px, chiều cao toàn màn hình, nền trắng, bo góc trái 16px, bóng đổ mềm */}
+            {/* Bottom sheet trên mobile, ngăn kéo phải trên tablet/desktop */}
             <div
-              className="w-[480px] h-full bg-white rounded-l-[16px] shadow-[-12px_0_40px_rgba(59,42,53,0.18)] flex flex-col justify-between overflow-hidden relative select-none animate-in slide-in-from-right duration-250"
+              className="w-full md:w-[min(480px,90vw)] lg:w-[480px] max-h-[90dvh] md:max-h-none md:h-full bg-white rounded-t-[20px] md:rounded-t-none md:rounded-l-[16px] shadow-[-12px_0_40px_rgba(59,42,53,0.18)] flex flex-col justify-between overflow-hidden relative select-none animate-in slide-in-from-bottom md:slide-in-from-right duration-250"
               onClick={(e) => e.stopPropagation()}
             >
+              {/* Thanh kéo nhỏ trên mobile */}
+              <div className="md:hidden pt-2.5 pb-1 flex justify-center flex-shrink-0">
+                <span className="w-10 h-1 rounded-full bg-[#E5D3DC]" />
+              </div>
               {/* Phần đầu Drawer: Tiêu đề và nút đóng */}
-              <div className="px-6 py-5 border-b border-[#F3D9E3] flex items-start justify-between flex-shrink-0">
+              <div className="px-5 md:px-6 py-4 md:py-5 border-b border-[#F3D9E3] flex items-start justify-between flex-shrink-0">
                 <div>
                   <h2 className="font-playfair text-[22px] font-bold text-[#3B2A35] leading-tight">
                     Thêm lịch dạy
@@ -1161,11 +1407,16 @@ export const SchedulePage: React.FC = () => {
                       onChange={(e) => setDrawerClass(e.target.value)}
                       className="w-full h-[48px] px-4 rounded-[12px] border border-[#9C6B84] text-[14px] font-semibold text-[#3B2A35] bg-white ring-2 ring-[#2F6FA8] outline-none appearance-none cursor-pointer pr-10"
                     >
-                      <option value="Lớp 10">Lớp 10</option>
+                      <option value="Lớp 1">Lớp 1</option>
+                      <option value="Lớp 2">Lớp 2</option>
+                      <option value="Lớp 3">Lớp 3</option>
+                      <option value="Lớp 4">Lớp 4</option>
+                      <option value="Lớp 5">Lớp 5</option>
                       <option value="Lớp 6">Lớp 6</option>
                       <option value="Lớp 7">Lớp 7</option>
                       <option value="Lớp 8">Lớp 8</option>
                       <option value="Lớp 9">Lớp 9</option>
+                      <option value="Lớp 10">Lớp 10</option>
                       <option value="Lớp 11">Lớp 11</option>
                       <option value="Lớp 12">Lớp 12</option>
                     </select>
@@ -1181,7 +1432,7 @@ export const SchedulePage: React.FC = () => {
                   <label className="block text-[14px] font-bold text-[#3B2A35] mb-2">
                     Các thứ trong tuần
                   </label>
-                  <div className="flex items-center justify-between gap-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-1.5">
                     {DRAWER_WEEKDAY_OPTIONS.map((day) => {
                       const isSelected = drawerWeekdays.includes(day.key);
                       return (
@@ -1335,14 +1586,18 @@ export const SchedulePage: React.FC = () => {
         {/* ==================== HỘP THOẠI XÁC NHẬN: XÓA LỊCH DẠY LỚP 10 ==================== */}
         {isDeleteDialogOpen && (
           <div
-            className="fixed inset-0 z-50 bg-[#3B2A35]/35 flex items-center justify-center p-4 animate-in fade-in duration-200"
+            className="fixed inset-0 z-50 bg-[#3B2A35]/35 flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in duration-200"
             onClick={() => setIsDeleteDialogOpen(false)}
           >
-            {/* Thẻ Hộp thoại: căn giữa, rộng 480px, nền trắng, bo góc 20px, đệm 24px, bóng đổ mềm */}
+            {/* Bottom sheet trên mobile, căn giữa trên tablet/desktop */}
             <div
-              className="w-[480px] bg-white rounded-[20px] p-6 shadow-[0_20px_50px_rgba(59,42,53,0.22)] border border-[#F3D9E3] flex flex-col gap-5 select-none relative animate-in zoom-in-95 duration-200"
+              className="w-full md:w-[480px] max-h-[90dvh] overflow-y-auto bg-white rounded-t-[20px] md:rounded-[20px] p-5 md:p-6 shadow-[0_20px_50px_rgba(59,42,53,0.22)] border border-[#F3D9E3] flex flex-col gap-4 md:gap-5 select-none relative animate-in slide-in-from-bottom md:zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
             >
+              {/* Thanh kéo nhỏ trên mobile */}
+              <div className="md:hidden -mt-2 pb-1 flex justify-center flex-shrink-0">
+                <span className="w-10 h-1 rounded-full bg-[#E5D3DC]" />
+              </div>
               {/* Phía trên: Huy hiệu icon hình tròn 48px (nền #FFE3E3, biểu tượng thùng rác #B02525) */}
               <div className="w-12 h-12 rounded-full bg-[#FFE3E3] flex items-center justify-center flex-shrink-0">
                 <Trash2 className="w-6 h-6 text-[#B02525]" strokeWidth={2} />
@@ -1363,13 +1618,13 @@ export const SchedulePage: React.FC = () => {
                 Lịch này sẽ biến mất khỏi lịch học từ hôm nay trở đi. Các buổi đã dạy và dữ liệu điểm danh cũ vẫn được giữ. Chỉ Admin mới xóa được lịch dạy.
               </p>
 
-              {/* Các nút bấm căn phải, chiều cao 48px */}
-              <div className="flex items-center justify-end gap-3 pt-2">
+              {/* Các nút bấm: xếp dọc full-width trên mobile, căn phải trên tablet/desktop */}
+              <div className="flex flex-col-reverse md:flex-row items-stretch md:items-center justify-end gap-2.5 md:gap-3 pt-2">
                 {/* Nút Hủy (dạng text button, chữ #6B5560) */}
                 <button
                   type="button"
                   onClick={() => setIsDeleteDialogOpen(false)}
-                  className="h-[48px] px-5 rounded-[12px] text-[#6B5560] hover:text-[#3B2A35] hover:bg-slate-50 font-bold text-[14px] transition-colors cursor-pointer"
+                  className="w-full md:w-auto h-[48px] px-5 rounded-[12px] text-[#6B5560] hover:text-[#3B2A35] hover:bg-slate-50 font-bold text-[14px] transition-colors cursor-pointer"
                 >
                   Hủy
                 </button>
@@ -1378,7 +1633,7 @@ export const SchedulePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleConfirmDeleteSchedule}
-                  className="h-[48px] px-6 rounded-[12px] bg-[#B02525] hover:bg-[#961F1F] text-white font-bold text-[14px] flex items-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
+                  className="w-full md:w-auto h-[48px] px-6 rounded-[12px] bg-[#B02525] hover:bg-[#961F1F] text-white font-bold text-[14px] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
                 >
                   <Trash2 className="w-4 h-4 text-white" strokeWidth={2} />
                   <span>Xóa lịch</span>

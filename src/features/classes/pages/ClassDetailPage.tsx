@@ -189,20 +189,20 @@ export const ClassDetailPage: React.FC = () => {
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[976px]">
-        {/* Khung nội dung chuẩn 1200px với padding 32px (chiều rộng nội dung đúng 1136px) */}
-        <div className="w-[1200px] h-[976px] p-8 flex flex-col justify-between box-border select-none relative">
+      <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[100dvh] lg:min-h-[976px]">
+        {/* Khung nội dung chuẩn 1200px trên desktop, co giãn theo viewport trên mobile/tablet */}
+        <div className="w-full lg:w-[1200px] lg:h-[976px] p-0 lg:p-8 flex flex-col gap-4 lg:gap-0 lg:justify-between box-border select-none relative">
         {/* Thông báo dạng Toast hiển thị phản hồi tức thì */}
         {toastMessage && (
-          <div className="fixed bottom-6 right-6 z-50 bg-[#3B2A35] text-white px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+          <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 bg-[#3B2A35] text-white px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             <span>{toastMessage}</span>
           </div>
         )}
 
-        {/* ==================== HÀNG 1: HEADER (88px) ==================== */}
-        <header className="h-[88px] flex items-center justify-between flex-shrink-0">
-          <div className="flex flex-col justify-center">
+        {/* ==================== HÀNG 1: HEADER ==================== */}
+        <header className="min-h-[72px] lg:h-[88px] flex flex-col md:flex-row md:items-center justify-between gap-3 flex-shrink-0">
+          <div className="flex flex-col justify-center min-w-0">
             {/* Dòng Breadcrumb trên tiêu đề: nút mũi tên quay lại và đường dẫn */}
             <div className="flex items-center gap-1.5 mb-1 text-[14px] text-[#6B5560]">
               <button
@@ -223,8 +223,8 @@ export const ClassDetailPage: React.FC = () => {
             </div>
 
             {/* Tiêu đề trang và huy hiệu sĩ số */}
-            <div className="flex items-center gap-3">
-              <h1 className="font-playfair text-[28px] font-bold text-[#3B2A35] leading-tight">
+            <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+              <h1 className="font-playfair text-[24px] lg:text-[28px] font-bold text-[#3B2A35] leading-tight">
                 Lớp 10
               </h1>
               <span className="px-3 py-1 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] font-nunito text-[13px] font-bold tracking-wide">
@@ -235,13 +235,13 @@ export const ClassDetailPage: React.FC = () => {
             {/* Dòng ghi chú viết tay của giáo viên và 2 hình dán pastel */}
             <div className="flex items-center gap-3 mt-1.5">
               <div className="inline-block transform -rotate-1 origin-left">
-                <span className="font-playfair italic text-[15px] font-semibold text-[#A61E4D] squiggle-underline-note">
+                <span className="font-playfair italic text-[14px] lg:text-[15px] font-semibold text-[#A61E4D] squiggle-underline-note">
                   Thêm học sinh đã tạo ở mục Học sinh vào lớp này nhé!
                 </span>
               </div>
 
-              {/* 2 hình dán vector phẳng pastel cách các phần tử 24px */}
-              <div className="flex items-center gap-2 ml-6">
+              {/* 2 hình dán vector phẳng pastel (ẩn trên mobile) */}
+              <div className="hidden md:flex items-center gap-2 ml-6">
                 {/* Hình dán 1: Ngôi sao pastel #F8A5C2 */}
                 <svg
                   className="w-6 h-6 text-[#F8A5C2] flex-shrink-0"
@@ -272,11 +272,11 @@ export const ClassDetailPage: React.FC = () => {
           </div>
 
           {/* Phía bên phải: Nút Thêm học sinh */}
-          <div className="flex items-center">
+          <div className="flex items-center w-full md:w-auto">
             {/* Nút: Thêm học sinh (nền #CFE8FF, chữ #1F4E79) */}
             <button
               onClick={handleAddStudentAction}
-              className="h-[44px] px-4 rounded-[10px] bg-[#CFE8FF] hover:bg-[#BDE0FF] text-[#1F4E79] font-bold text-[14px] flex items-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
+              className="w-full md:w-auto h-[44px] px-4 rounded-[10px] bg-[#CFE8FF] hover:bg-[#BDE0FF] text-[#1F4E79] font-bold text-[14px] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
             >
               <UserPlus className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
               <span>Thêm học sinh</span>
@@ -284,11 +284,10 @@ export const ClassDetailPage: React.FC = () => {
           </div>
         </header>
 
-        {/* ==================== HÀNG 2: THẺ TRẮNG DUY NHẤT (800px) ==================== */}
-        {/* Thẻ trắng bo góc 16px, viền 1px #F3D9E3, chiếm trọn chiều cao còn lại 800px */}
-        <div className="w-[1136px] h-[800px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col justify-between overflow-hidden flex-shrink-0">
-          {/* Thanh tiêu đề thẻ (72px) */}
-          <div className="h-[72px] px-6 flex items-center justify-between border-b border-[#F3D9E3] flex-shrink-0">
+        {/* ==================== HÀNG 2: THẺ TRẮNG DUY NHẤT ==================== */}
+        <div className="w-full lg:w-[1136px] lg:h-[800px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col justify-between overflow-hidden flex-shrink-0">
+          {/* Thanh tiêu đề thẻ */}
+          <div className="min-h-[60px] lg:h-[72px] px-4 lg:px-6 py-3 lg:py-0 flex items-center justify-between border-b border-[#F3D9E3] flex-shrink-0">
             <h2 className="font-playfair text-[18px] font-bold text-[#3B2A35]">
               Danh sách học sinh lớp 10
             </h2>
@@ -297,18 +296,18 @@ export const ClassDetailPage: React.FC = () => {
             </span>
           </div>
 
-          {/* Tiêu đề bảng (48px): Nền #DCEBFA, chữ #1F4E79, 13px semibold */}
-          <div className="h-[48px] bg-[#DCEBFA] text-[#1F4E79] text-[13px] font-semibold flex items-center border-b border-[#F3D9E3] flex-shrink-0">
-            <div className="w-[130px] pl-6 flex-shrink-0">Mã học sinh</div>
-            <div className="w-[330px] flex-shrink-0">Họ và tên</div>
-            <div className="w-[120px] text-center flex-shrink-0">Giới tính</div>
-            <div className="w-[220px] flex-shrink-0">Số điện thoại phụ huynh</div>
-            <div className="w-[170px] flex-shrink-0">Trạng thái</div>
-            <div className="w-[164px] pr-6 text-center flex-shrink-0">Thao tác</div>
+          {/* Tiêu đề bảng (ẩn trên mobile, ẩn Giới tính & SĐT trên tablet) */}
+          <div className="hidden md:grid md:grid-cols-[110px_1.5fr_140px_120px] lg:flex h-[48px] bg-[#DCEBFA] text-[#1F4E79] text-[13px] font-semibold items-center border-b border-[#F3D9E3] flex-shrink-0">
+            <div className="lg:w-[130px] pl-4 lg:pl-6 flex-shrink-0">Mã học sinh</div>
+            <div className="lg:w-[330px] flex-shrink-0">Họ và tên</div>
+            <div className="hidden lg:block lg:w-[120px] text-center flex-shrink-0">Giới tính</div>
+            <div className="hidden lg:block lg:w-[220px] flex-shrink-0">Số điện thoại phụ huynh</div>
+            <div className="lg:w-[170px] flex-shrink-0">Trạng thái</div>
+            <div className="lg:w-[164px] pr-4 lg:pr-6 text-center flex-shrink-0">Thao tác</div>
           </div>
 
-          {/* Đúng 10 hàng học sinh (mỗi hàng cao 64px, tổng 640px) */}
-          <div className="flex-1 flex flex-col">
+          {/* Bảng Tablet/Desktop */}
+          <div className="hidden md:flex flex-1 flex-col">
             {students.map((student, index) => {
               const isPinkAvatar = index % 2 === 0;
               const isStudying = student.status === 'Đang học';
@@ -317,16 +316,15 @@ export const ClassDetailPage: React.FC = () => {
               return (
                 <div
                   key={student.id}
-                  className="h-[64px] bg-white hover:bg-[#FFF6F9] border-b border-[#F3D9E3] flex items-center transition-colors select-none text-[14px]"
+                  className="md:grid md:grid-cols-[110px_1.5fr_140px_120px] lg:flex h-[64px] bg-white hover:bg-[#FFF6F9] border-b border-[#F3D9E3] items-center transition-colors select-none text-[14px]"
                 >
-                  {/* Cột 1: Mã học sinh (130px) */}
-                  <div className="w-[130px] pl-6 font-semibold text-[#3B2A35] flex-shrink-0">
+                  {/* Cột 1: Mã học sinh */}
+                  <div className="lg:w-[130px] pl-4 lg:pl-6 font-semibold text-[#3B2A35] flex-shrink-0">
                     {student.studentCode}
                   </div>
 
-                  {/* Cột 2: Họ và tên kèm Avatar và Email (330px) */}
-                  <div className="w-[330px] flex items-center gap-3 flex-shrink-0 pr-4">
-                    {/* Avatar chữ cái đầu 36px xen kẽ hồng và xanh */}
+                  {/* Cột 2: Họ và tên kèm Avatar và Email */}
+                  <div className="lg:w-[330px] flex items-center gap-3 flex-shrink-0 pr-4 min-w-0">
                     <div
                       className={`w-9 h-9 rounded-[10px] flex items-center justify-center font-bold text-[13px] flex-shrink-0 ${
                         isPinkAvatar
@@ -336,28 +334,28 @@ export const ClassDetailPage: React.FC = () => {
                     >
                       {getInitials(student.fullName)}
                     </div>
-                    <div className="flex flex-col truncate">
-                      <span className="font-bold text-[#3B2A35] leading-tight truncate">
+                    <div className="flex flex-col truncate min-w-0">
+                      <span className="font-bold text-[#3B2A35] leading-tight truncate" title={student.fullName}>
                         {student.fullName}
                       </span>
-                      <span className="text-[12px] text-[#6B5560] leading-none mt-1 truncate">
+                      <span className="text-[12px] text-[#6B5560] leading-none mt-1 truncate" title={student.email}>
                         {student.email}
                       </span>
                     </div>
                   </div>
 
-                  {/* Cột 3: Giới tính (120px) */}
-                  <div className="w-[120px] text-center font-medium text-[#3B2A35] flex-shrink-0">
+                  {/* Cột 3: Giới tính (ẩn trên tablet) */}
+                  <div className="hidden lg:block lg:w-[120px] text-center font-medium text-[#3B2A35] flex-shrink-0">
                     {student.gender}
                   </div>
 
-                  {/* Cột 4: Số điện thoại phụ huynh (220px) */}
-                  <div className="w-[220px] font-medium text-[#3B2A35] tracking-tight flex-shrink-0">
+                  {/* Cột 4: Số điện thoại phụ huynh (ẩn trên tablet) */}
+                  <div className="hidden lg:block lg:w-[220px] font-medium text-[#3B2A35] tracking-tight flex-shrink-0">
                     {student.parentPhone}
                   </div>
 
-                  {/* Cột 5: Trạng thái (170px) có cả biểu tượng và văn bản */}
-                  <div className="w-[170px] flex-shrink-0">
+                  {/* Cột 5: Trạng thái */}
+                  <div className="lg:w-[170px] flex-shrink-0">
                     {isStudying ? (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] text-[12px] font-bold">
                         <Check className="w-3.5 h-3.5 text-[#1F4E79]" strokeWidth={2.2} />
@@ -371,8 +369,8 @@ export const ClassDetailPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Cột 6: Thao tác - Nút Điểm danh và Nút Xóa khỏi lớp cho từng học sinh */}
-                  <div className="w-[164px] pr-6 flex justify-center items-center gap-1.5 flex-shrink-0">
+                  {/* Cột 6: Thao tác */}
+                  <div className="lg:w-[164px] pr-4 lg:pr-6 flex justify-center items-center gap-1.5 flex-shrink-0">
                     {/* Nút Điểm danh từng học sinh */}
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -414,8 +412,83 @@ export const ClassDetailPage: React.FC = () => {
             })}
           </div>
 
+          {/* MOBILE CARDS */}
+          <div className="md:hidden divide-y divide-[#F3D9E3]">
+            {students.map((student, index) => {
+              const isPinkAvatar = index % 2 === 0;
+              const isStudying = student.status === 'Đang học';
+              const isAttended = attendedStudentIds.includes(student.id);
+
+              return (
+                <div key={student.id} className="p-4 flex flex-col gap-3 bg-white">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={`w-10 h-10 rounded-[10px] flex items-center justify-center font-bold text-[13px] flex-shrink-0 ${
+                          isPinkAvatar
+                            ? 'bg-[#FFE0EB] text-[#A61E4D]'
+                            : 'bg-[#DCEBFA] text-[#1F4E79]'
+                        }`}
+                      >
+                        {getInitials(student.fullName)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-[15px] text-[#3B2A35] leading-tight truncate">
+                          {student.fullName}
+                        </div>
+                        <div className="text-[12px] text-[#6B5560] truncate mt-0.5">
+                          {student.email}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="font-mono text-[12px] font-bold text-[#3B2A35] bg-[#FFF6F9] border border-[#F3D9E3] px-2 py-0.5 rounded-[8px] flex-shrink-0">
+                      {student.studentCode}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#F3D9E3]/60">
+                    <div>
+                      {isStudying ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] text-[12px] font-bold">
+                          <Check className="w-3.5 h-3.5 text-[#1F4E79]" strokeWidth={2.2} />
+                          <span>Đang học</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[10px] bg-[#FFE0EB] text-[#A61E4D] text-[12px] font-bold">
+                          <Pause className="w-3.5 h-3.5 text-[#A61E4D]" strokeWidth={2} />
+                          <span>Bảo lưu</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleToggleAttendance(student)}
+                        className={`w-11 h-11 rounded-[10px] flex items-center justify-center transition-all cursor-pointer ${
+                          isAttended
+                            ? 'bg-[#DCEBFA] text-[#1F4E79] shadow-xs'
+                            : 'text-[#6B5560] bg-[#FFF6F9] hover:text-[#1F4E79] hover:bg-[#DCEBFA]'
+                        }`}
+                        aria-label={`Điểm danh cho ${student.fullName}`}
+                      >
+                        <UserCheck className="w-5 h-5" strokeWidth={1.75} />
+                      </button>
+                      <button
+                        onClick={() => handleRemoveFromClass(student)}
+                        className="w-11 h-11 rounded-[10px] flex items-center justify-center text-[#A61E4D] bg-[#FFF6F9] hover:bg-[#FFE0EB] transition-colors cursor-pointer"
+                        aria-label={`Xóa ${student.fullName} khỏi lớp`}
+                      >
+                        <UserMinus className="w-5 h-5" strokeWidth={1.75} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           {/* Chân thẻ cố định (40px): Hiển thị tổng số học sinh của Lớp 10 */}
-          <div className="h-[40px] px-6 border-t border-[#F3D9E3] bg-[#FCF8FA] flex items-center justify-between flex-shrink-0">
+          <div className="min-h-[40px] px-4 lg:px-6 border-t border-[#F3D9E3] bg-[#FCF8FA] flex items-center justify-between flex-shrink-0">
             <span className="font-nunito text-[13px] text-[#6B5560] font-medium">
               Lớp 10 có {students.length} học sinh
             </span>

@@ -14,6 +14,11 @@ import { StudentDetailPage } from '@/features/students/pages/StudentDetailPage';
 import { ClassListPage } from '@/features/classes/pages/ClassListPage';
 import { ClassDetailPage } from '@/features/classes/pages/ClassDetailPage';
 import { SchedulePage } from '@/features/schedule/pages/SchedulePage';
+import { HomeworkPage } from '@/features/homework/pages/HomeworkPage';
+import { LeaveRequestsPage } from '@/features/leave-requests/pages/LeaveRequestsPage';
+import { TuitionPage } from '@/features/tuition/pages/TuitionPage';
+import { TuitionClassDetailPage } from '@/features/tuition/pages/TuitionClassDetailPage';
+import { NotificationsPage } from '@/features/notifications/pages/NotificationsPage';
 
 const PageLoader = () => (
   <div className="flex h-[50vh] items-center justify-center">
@@ -44,6 +49,11 @@ export const AppRoutes: React.FC = () => {
           <Route path={ROUTES.CLASSES} element={<ClassListPage />} />
           <Route path={ROUTES.CLASS_DETAIL} element={<ClassDetailPage />} />
           <Route path={ROUTES.SCHEDULE} element={<SchedulePage />} />
+          <Route path={ROUTES.HOMEWORK} element={<HomeworkPage />} />
+          <Route path={ROUTES.LEAVE_REQUESTS} element={<LeaveRequestsPage />} />
+          <Route path={ROUTES.TUITION} element={<TuitionPage />} />
+          <Route path={ROUTES.TUITION_CLASS_DETAIL} element={<TuitionClassDetailPage />} />
+          <Route path={ROUTES.NOTIFICATIONS} element={<NotificationsPage />} />
           <Route
             path={ROUTES.GRADES}
             element={

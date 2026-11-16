@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore, AppViewRole } from '@/store/useAuthStore';
 import { ROUTES } from '@/routes/paths';
 import { APP_ROLES } from '@/config/constants';
 import logoImage from '@/assets/logo/logo.png';
@@ -15,7 +15,7 @@ const REMOTE_LOGO_URL =
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login } = useAuthStore();
+  const { login, activeRole, setActiveRole } = useAuthStore();
 
   const [username, setUsername] = useState('nguyenvana@email.com');
   const [password, setPassword] = useState('');
@@ -24,6 +24,8 @@ export const LoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [logoSrc, setLogoSrc] = useState(logoImage || REMOTE_LOGO_URL);
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+  // Vai trò chọn tạm thời khi chưa nối backend
+  const [selectedRole, setSelectedRole] = useState<AppViewRole>(activeRole);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,13 +35,14 @@ export const LoginPage: React.FC = () => {
     try {
       // Mô phỏng yêu cầu gửi dữ liệu xác thực đăng nhập
       setTimeout(() => {
+        setActiveRole(selectedRole);
         login(
           {
             id: 1,
             username: username,
-            fullName: 'Nguyễn Văn A',
+            fullName: selectedRole === 'student' ? 'Nguyễn Minh Anh' : 'Nguyễn Văn A',
             email: username,
-            role: APP_ROLES.ADMIN,
+            role: selectedRole === 'student' ? APP_ROLES.STUDENT : APP_ROLES.ADMIN,
             isActive: true,
           },
           'demo_access_token_token'
@@ -56,13 +59,13 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="font-nunito text-brand-textDark bg-brand-bgPink antialiased selection:bg-brand-marginPink selection:text-brand-textDark m-0 p-0 overflow-x-hidden min-h-screen flex flex-col justify-center">
+    <div className="font-nunito text-brand-textDark bg-brand-bgPink antialiased selection:bg-brand-marginPink selection:text-brand-textDark m-0 p-0 overflow-x-hidden min-h-[100dvh] flex flex-col justify-center">
       {/* Desktop Screen Container (1440x900 base aspect) */}
-      <main className="w-full min-h-screen flex flex-col lg:flex-row">
+      <main className="w-full min-h-[100dvh] flex flex-col lg:flex-row">
         {/* ==========================================
-             LEFT PANEL (~58% width): Ruled notebook page
+             LEFT PANEL (~58% width): Ruled notebook page (ẩn trên di động/tablet nhỏ, giữ nguyên từ lg)
              ========================================== */}
-        <section className="w-full lg:w-[58%] min-h-[560px] lg:min-h-screen notebook-paper flex flex-col justify-between p-8 sm:p-12 lg:p-16 relative overflow-hidden">
+        <section className="hidden lg:flex w-full lg:w-[58%] lg:min-h-[100dvh] notebook-paper flex-col justify-between p-16 relative overflow-hidden">
           {/* Vector Sticker 1: Tiny Pastel Blue Star in Top-Right Left Panel */}
           <div
             className="absolute top-10 right-14 pointer-events-none select-none"
@@ -131,20 +134,24 @@ export const LoginPage: React.FC = () => {
               </div>
             </div>
           </div>
-
-          {/* Notebook Bottom Note / Tag */}
-          <div className="z-10 pl-6 sm:pl-10 text-xs text-brand-textMuted font-medium flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-brand-focusBlue"></span>
-            <span>
-              Hệ thống phân quyền thông minh: Tự động điều hướng Học sinh, Giáo viên &amp; Quản trị viên
-            </span>
-          </div>
         </section>
 
         {/* ==========================================
              RIGHT PANEL (~42% width): Soft pink background & Login Card
              ========================================== */}
-        <section className="w-full lg:w-[42%] bg-brand-bgPink flex items-center justify-center p-6 sm:p-10 lg:p-12 relative overflow-hidden">
+        <section className="w-full flex-1 lg:flex-initial lg:w-[42%] bg-brand-bgPink flex flex-col items-center justify-center p-4 sm:p-8 lg:p-12 relative overflow-hidden">
+          {/* Logo thu gọn trên di động và máy tính bảng (ẩn từ lg vì đã có bảng trái) */}
+          <div className="lg:hidden flex flex-col items-center mb-5 text-center">
+            <img
+              src={logoSrc}
+              onError={() => setLogoSrc(REMOTE_LOGO_URL)}
+              alt="Logo Lớp Văn chị Vân"
+              className="w-20 h-20 object-contain select-none pointer-events-none drop-shadow-sm mb-2"
+            />
+            <span className="font-playfair font-bold text-2xl text-brand-textDark">
+              Lớp Văn chị Vân
+            </span>
+          </div>
           {/* Vector Sticker 3: Small Pastel Blue Tiny Open Book / Quill outside card edges */}
           <div
             className="absolute top-8 right-8 pointer-events-none select-none hidden sm:block"
@@ -263,6 +270,37 @@ export const LoginPage: React.FC = () => {
                 >
                   Quên mật khẩu?
                 </button>
+              </div>
+
+              {/* Chọn vai trò tạm thời để xem giao diện Admin / Học sinh (ẩn khi nối backend) */}
+              <div className="space-y-1.5 pt-0.5">
+                <Label className="text-xs font-nunito font-bold text-[#6B5560]">
+                  Chọn vai trò xem (tạm thời)
+                </Label>
+                <div className="p-1 rounded-xl bg-[#FFF6F9] border border-[#F3D9E3] grid grid-cols-2 gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole('admin')}
+                    className={`h-9 rounded-lg text-[13px] font-nunito font-bold transition-all cursor-pointer ${
+                      selectedRole === 'admin'
+                        ? 'bg-[#D6336C] text-white shadow-2xs'
+                        : 'text-[#6B5560] hover:text-[#3B2A35]'
+                    }`}
+                  >
+                    Admin / Giáo viên
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRole('student')}
+                    className={`h-9 rounded-lg text-[13px] font-nunito font-bold transition-all cursor-pointer ${
+                      selectedRole === 'student'
+                        ? 'bg-[#2F6FA8] text-white shadow-2xs'
+                        : 'text-[#6B5560] hover:text-[#3B2A35]'
+                    }`}
+                  >
+                    Học sinh
+                  </button>
+                </div>
               </div>
 
               {/* Primary Button: full width, 48px high, #D6336C, white text */}

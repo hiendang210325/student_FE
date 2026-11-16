@@ -19,6 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { TileGrid } from '@/components/common/TileGrid/TileGrid';
 
 // Danh sách ban đầu 12 lớp học với bảng màu chuẩn thẩm mỹ
 const INITIAL_CLASS_TILES: ClassTileItem[] = [
@@ -212,9 +213,9 @@ export const ClassListPage: React.FC = () => {
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[1024px]">
-        {/* Khung chứa chuẩn 1200px với padding 32px (chiều rộng nội dung đúng 1136px) */}
-        <div className="w-[1200px] min-h-[1024px] p-8 flex flex-col justify-between box-border select-none relative">
+      <div className="w-full flex justify-center bg-[#FFF6F9] lg:min-h-[1024px]">
+        {/* Khung chứa chuẩn 1200px trên lg, co giãn đầy đủ trên di động và máy tính bảng */}
+        <div className="w-full lg:w-[1200px] lg:min-h-[1024px] p-0 lg:p-8 flex flex-col justify-start lg:justify-between gap-4 md:gap-6 box-border select-none relative">
           {/* Thông báo dạng Toast hiển thị phản hồi tức thì */}
           {toastMessage && (
             <div className="fixed bottom-6 right-6 z-50 bg-[#3B2A35] text-white px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
@@ -223,12 +224,12 @@ export const ClassListPage: React.FC = () => {
             </div>
           )}
 
-          {/* ==================== HÀNG 1: TIÊU ĐỀ ĐẦU TRANG (88px) ==================== */}
-          <header className="h-[88px] flex items-center justify-between flex-shrink-0">
-            <div className="flex flex-col justify-center">
+          {/* ==================== HÀNG 1: TIÊU ĐỀ ĐẦU TRANG (88px trên lg) ==================== */}
+          <header className="min-h-[72px] lg:h-[88px] flex flex-col md:flex-row md:items-center justify-between gap-3 flex-shrink-0">
+            <div className="flex flex-col justify-center min-w-0">
               {/* Tiêu đề trang và huy hiệu sĩ số */}
-              <div className="flex items-center gap-3">
-                <h1 className="font-playfair text-[28px] font-bold text-[#3B2A35] leading-tight">
+              <div className="flex flex-wrap items-center gap-2.5 md:gap-3">
+                <h1 className="font-playfair text-[24px] lg:text-[28px] font-bold text-[#3B2A35] leading-tight">
                   Lớp học
                 </h1>
                 <span className="px-3 py-1 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] font-nunito text-[13px] font-bold tracking-wide">
@@ -239,13 +240,13 @@ export const ClassListPage: React.FC = () => {
               {/* Dòng ghi chú viết tay đặc trưng của giáo viên và 2 hình dán pastel */}
               <div className="flex items-center gap-3 mt-1.5">
                 <div className="inline-block transform -rotate-1 origin-left">
-                  <span className="font-playfair italic text-[15px] font-semibold text-[#A61E4D] squiggle-underline-note">
+                  <span className="font-playfair italic text-[14px] lg:text-[15px] font-semibold text-[#A61E4D] squiggle-underline-note">
                     Bấm vào một lớp để xem học sinh và điểm danh nhé!
                   </span>
                 </div>
 
-                {/* 2 hình dán vector phẳng pastel (ngôi sao và ngòi bút nhỏ) */}
-                <div className="flex items-center gap-2 pl-3">
+                {/* 2 hình dán vector phẳng pastel (ẩn dưới md) */}
+                <div className="hidden md:flex items-center gap-2 pl-3">
                   {/* Hình dán 1: Ngôi sao pastel phẳng #F8A5C2 */}
                   <svg
                     className="w-6 h-6 text-[#F8A5C2] flex-shrink-0"
@@ -276,10 +277,10 @@ export const ClassListPage: React.FC = () => {
             </div>
 
             {/* Phía bên phải: Nút Thêm lớp học cho Admin */}
-            <div className="flex items-center">
+            <div className="flex items-center w-full md:w-auto">
               <button
                 onClick={handleOpenCreate}
-                className="h-[44px] px-4 rounded-[10px] bg-[#CFE8FF] hover:bg-[#BDE0FF] text-[#1F4E79] font-bold text-[14px] flex items-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
+                className="w-full md:w-auto min-h-[44px] h-[44px] px-4 rounded-[10px] bg-[#CFE8FF] hover:bg-[#BDE0FF] text-[#1F4E79] font-bold text-[14px] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
               >
                 <Plus className="w-4 h-4 text-[#1F4E79]" strokeWidth={2} />
                 <span>Thêm lớp học</span>
@@ -287,9 +288,8 @@ export const ClassListPage: React.FC = () => {
             </div>
           </header>
 
-          {/* ==================== HÀNG 2: LƯỚI CÁC Ô VUÔNG LỚP HỌC (1136px) ==================== */}
-          {/* Lưới 4 cột, mỗi ô vuông đúng 266×266px với khoảng cách 24px */}
-          <div className="w-[1136px] grid grid-cols-4 gap-[24px] flex-shrink-0 py-2">
+          {/* ==================== HÀNG 2: LƯỚI CÁC Ô VUÔNG LỚP HỌC (2/3/4 cột) ==================== */}
+          <TileGrid className="lg:w-[1136px] flex-shrink-0 py-1 lg:py-2">
             {classes.map((item) => {
               const isHovered = hoveredTileId === item.id;
               const { bg, border, text } = item.colorTheme;
@@ -304,7 +304,7 @@ export const ClassListPage: React.FC = () => {
                     backgroundColor: bg,
                     borderColor: isHovered ? text : border,
                   }}
-                  className={`group w-[266px] h-[266px] rounded-[20px] p-6 box-border flex flex-col justify-between cursor-pointer transition-all duration-200 relative select-none ${
+                  className={`group aspect-square w-full lg:w-[266px] lg:h-[266px] rounded-[16px] lg:rounded-[20px] p-4 md:p-5 lg:p-6 box-border flex flex-col justify-between cursor-pointer transition-all duration-200 relative select-none ${
                     isHovered
                       ? 'border-2 -translate-y-1 shadow-[0_8px_16px_rgba(59,42,53,0.12)]'
                       : 'border shadow-[0_1px_2px_rgba(59,42,53,0.06)]'
@@ -367,29 +367,29 @@ export const ClassListPage: React.FC = () => {
 
                   {/* Khu vực chân ô: Tên lớp học bên trái và vòng tròn mũi tên bên phải */}
                   <div className="flex items-end justify-between w-full">
-                    {/* Neo góc dưới bên trái: Tên lớp bằng Playfair Display 40px và số lượng học sinh */}
-                    <div className="flex flex-col">
+                    {/* Neo góc dưới bên trái: Tên lớp 28px trên mobile, 40px trên lg */}
+                    <div className="flex flex-col min-w-0">
                       <span
-                        className="font-playfair text-[40px] font-bold leading-none tracking-tight"
+                        className="font-playfair text-[28px] md:text-[34px] lg:text-[40px] font-bold leading-none tracking-tight truncate"
                         style={{ color: text }}
                       >
                         {item.name}
                       </span>
-                      <div className="flex items-center gap-2 mt-2 font-nunito text-[16px] text-[#3B2A35] font-semibold leading-none">
+                      <div className="flex items-center gap-1.5 lg:gap-2 mt-1.5 lg:mt-2 font-nunito text-[14px] lg:text-[16px] text-[#3B2A35] font-semibold leading-none">
                         <Users className="w-4 h-4 text-[#3B2A35] flex-shrink-0" strokeWidth={1.75} />
-                        <span>{item.studentCount} học sinh</span>
+                        <span className="truncate">{item.studentCount} học sinh</span>
                       </div>
                     </div>
 
                     {/* Góc dưới bên phải: Vòng tròn trắng 36px với biểu tượng chevron-right */}
-                    <div className="w-[36px] h-[36px] rounded-full bg-white flex items-center justify-center shadow-xs text-[#3B2A35] flex-shrink-0">
+                    <div className="w-8 h-8 lg:w-[36px] lg:h-[36px] rounded-full bg-white flex items-center justify-center shadow-xs text-[#3B2A35] flex-shrink-0">
                       <ChevronRight className="w-4 h-4 text-[#3B2A35]" strokeWidth={1.75} />
                     </div>
                   </div>
                 </div>
               );
             })}
-          </div>
+          </TileGrid>
 
           {/* Hộp thoại Modal Thêm/Sửa Lớp học & Đổi màu sắc */}
           <ClassFormModal

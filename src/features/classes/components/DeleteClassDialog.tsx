@@ -44,12 +44,12 @@ export const DeleteClassDialog: React.FC<DeleteClassDialogProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <DialogFooter className="pt-3 border-t border-[#F3D9E3]/70 flex flex-row items-center justify-end gap-3 sm:gap-3">
+        <DialogFooter className="pt-3 border-t border-[#F3D9E3]/70 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3">
           <Button
             type="button"
             variant="ghost"
             onClick={onClose}
-            className="h-[44px] px-5 rounded-[10px] text-[#6B5560] hover:text-[#3B2A35] hover:bg-slate-50 text-[14px] font-semibold"
+            className="w-full sm:w-auto h-[44px] px-5 rounded-[10px] text-[#6B5560] hover:text-[#3B2A35] hover:bg-slate-50 text-[14px] font-semibold"
           >
             Hủy
           </Button>
@@ -59,7 +59,7 @@ export const DeleteClassDialog: React.FC<DeleteClassDialogProps> = ({
               onConfirm();
               onClose();
             }}
-            className="h-[44px] px-6 rounded-[10px] bg-[#2F6FA8] hover:bg-[#1F4E79] text-white font-bold text-[14px] shadow-xs active:scale-95"
+            className="w-full sm:w-auto h-[44px] px-6 rounded-[10px] bg-[#2F6FA8] hover:bg-[#1F4E79] text-white font-bold text-[14px] shadow-xs active:scale-95"
           >
             Xác nhận xóa
           </Button>

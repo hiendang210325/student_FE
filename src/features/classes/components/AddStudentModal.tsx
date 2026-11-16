@@ -125,16 +125,20 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-[rgba(59,42,53,0.35)] flex items-center justify-center p-4 backdrop-blur-[0.5px] select-none"
+      className="fixed inset-0 z-50 bg-[rgba(59,42,53,0.35)] flex items-end md:items-center justify-center p-0 md:p-4 backdrop-blur-[0.5px] select-none"
       onClick={onClose}
     >
-      {/* Khung Hộp thoại Modal: Rộng 720px, Cao 640px, Bo góc 20px, Nền trắng, Đổ bóng mềm */}
+      {/* Bottom sheet trên mobile, hộp thoại căn giữa trên tablet/desktop */}
       <div
-        className="w-[720px] h-[640px] bg-white rounded-[20px] shadow-2xl flex flex-col justify-between overflow-hidden border border-[#F3D9E3] relative z-50"
+        className="w-full md:w-[min(720px,92vw)] lg:w-[720px] max-h-[90dvh] lg:h-[640px] bg-white rounded-t-[20px] md:rounded-[20px] shadow-2xl flex flex-col justify-between overflow-hidden border border-[#F3D9E3] relative z-50"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ==================== PHẦN 1: ĐẦU TRANG MODAL (88px) ==================== */}
-        <div className="h-[88px] px-8 flex items-center justify-between border-b border-[#F3D9E3] flex-shrink-0">
+        {/* Thanh kéo nhỏ trên mobile */}
+        <div className="md:hidden pt-2.5 pb-1 flex justify-center flex-shrink-0">
+          <span className="w-10 h-1 rounded-full bg-[#E5D3DC]" />
+        </div>
+        {/* ==================== PHẦN 1: ĐẦU TRANG MODAL ==================== */}
+        <div className="min-h-[72px] lg:h-[88px] px-5 md:px-8 py-3 lg:py-0 flex items-center justify-between border-b border-[#F3D9E3] flex-shrink-0">
           <div className="flex flex-col">
             <h2 className="font-playfair text-[22px] font-bold text-[#3B2A35] leading-tight">
               Thêm học sinh vào Lớp 10
@@ -283,27 +287,27 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
           })}
         </div>
 
-        {/* ==================== PHẦN 4: CHÂN MODAL CỐ ĐỊNH (80px) ==================== */}
-        <div className="h-[80px] px-8 flex items-center justify-between border-t border-[#F3D9E3] bg-[#FCF8FA] flex-shrink-0">
+        {/* ==================== PHẦN 4: CHÂN MODAL CỐ ĐỊNH ==================== */}
+        <div className="min-h-[72px] lg:h-[80px] px-5 md:px-8 py-3 lg:py-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 border-t border-[#F3D9E3] bg-[#FCF8FA] flex-shrink-0">
           {/* Bên trái: Chip đếm số lượng học sinh được chọn */}
-          <span className="px-3.5 py-1.5 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] font-nunito text-[13px] font-bold">
+          <span className="px-3.5 py-1.5 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] font-nunito text-[13px] font-bold text-center sm:text-left">
             Đã chọn {selectedIds.length} học sinh
           </span>
 
           {/* Bên phải: Nút Hủy và Nút Thêm học sinh chính */}
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
             {/* Nút chữ Hủy */}
             <button
               onClick={onClose}
-              className="px-4 py-2 text-[14px] font-semibold text-[#6B5560] hover:text-[#3B2A35] transition-colors cursor-pointer"
+              className="w-full sm:w-auto h-[44px] sm:h-auto px-4 py-2 text-[14px] font-semibold text-[#6B5560] hover:text-[#3B2A35] transition-colors cursor-pointer"
             >
               Hủy
             </button>
 
-            {/* Nút chính: Thêm vào Lớp 10 (nền quả mâm xôi #D6336C, chữ trắng, cao 48px) */}
+            {/* Nút chính: Thêm vào Lớp 10 */}
             <button
               onClick={handleConfirm}
-              className="h-[48px] px-6 rounded-[10px] bg-[#D6336C] hover:bg-[#C2255C] text-white font-bold text-[14px] transition-all shadow-xs active:scale-95 cursor-pointer flex items-center justify-center"
+              className="w-full sm:w-auto h-[48px] px-6 rounded-[10px] bg-[#D6336C] hover:bg-[#C2255C] text-white font-bold text-[14px] transition-all shadow-xs active:scale-95 cursor-pointer flex items-center justify-center"
             >
               Thêm {selectedIds.length} học sinh vào Lớp 10
             </button>

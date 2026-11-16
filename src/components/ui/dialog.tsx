@@ -35,11 +35,14 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-[500px] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-[12px] border border-[#F3D9E3] bg-white p-6 sm:p-7 shadow-[0_16px_40px_rgba(59,42,53,0.16)] duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
+        "fixed inset-x-0 bottom-0 top-auto z-50 grid w-full max-h-[90dvh] overflow-y-auto translate-x-0 translate-y-0 gap-4 rounded-t-[20px] border border-[#F3D9E3] bg-white p-5 pb-[calc(20px+env(safe-area-inset-bottom))] shadow-[0_16px_40px_rgba(59,42,53,0.16)] duration-200 md:inset-x-auto md:bottom-auto md:left-[50%] md:top-[50%] md:max-w-[500px] md:max-h-[90dvh] md:translate-x-[-50%] md:translate-y-[-50%] md:rounded-[12px] md:p-6 sm:p-7 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-bottom md:data-[state=closed]:zoom-out-95 md:data-[state=open]:zoom-in-95",
         className
       )}
       {...props}
     >
+      <div className="md:hidden -mt-1 pb-1 flex justify-center">
+        <span className="w-10 h-1 rounded-full bg-[#E5D3DC]" />
+      </div>
       {children}
       <DialogPrimitive.Close className="absolute right-4 top-4 rounded-[10px] p-1.5 text-[#6B5560] transition-colors hover:bg-slate-100 hover:text-brand-text focus:outline-none focus:ring-2 focus:ring-[#2F6FA8]/20 cursor-pointer">
         <X className="h-4 w-4" />
