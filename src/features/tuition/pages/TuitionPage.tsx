@@ -13,7 +13,7 @@ interface TuitionClassTile {
   studentCount: number;
   tone: TileColorTone;
 }
-
+ 
 // Danh sách đúng 12 ô lớp học xếp theo bàn cờ:
 // Hàng 1: hồng, xanh, hồng, xanh
 // Hàng 2: xanh, hồng, xanh, hồng
@@ -66,22 +66,22 @@ export const TuitionPage: React.FC = () => {
     <div className="w-full flex justify-center bg-[#FFF6F9] lg:min-h-[1024px] font-nunito text-[#3B2A35]">
       {/* Khung vùng chính 1200px trên lg, co giãn đầy đủ trên di động và máy tính bảng */}
       <div className="w-full lg:w-[1200px] lg:min-h-[1024px] p-0 lg:p-8 flex flex-col justify-start gap-4 md:gap-6 box-border select-none">
-        {/* ==================== HÀNG 1: HEADER (88px trên lg) ==================== */}
+        {/* ==================== HÀNG 1: TIÊU ĐỀ ĐẦU TRANG (88px trên lg) ==================== */}
         <header className="min-h-[72px] lg:h-[88px] w-full lg:w-[1136px] flex items-center justify-between flex-shrink-0">
-          {/* Bên trái: Tiêu đề "Học phí" + Chip "Tháng 11/2026" + Dòng ghi chú viết tay của giáo viên */}
+          {/* Bên trái: Tiêu đề "Học phí" + Thẻ "Tháng 11/2026" + Dòng ghi chú viết tay của giáo viên */}
           <div className="flex flex-col justify-center min-w-0">
             <div className="flex flex-wrap items-center gap-2.5 md:gap-3">
               <h1 className="font-playfair text-[24px] lg:text-[28px] font-bold text-[#3B2A35] leading-tight">
                 Học phí
               </h1>
-              {/* Chip "Tháng 11/2026" (icon lịch, nền #DCEBFA, chữ #1F4E79) */}
+              {/* Thẻ "Tháng 11/2026" (biểu tượng lịch, nền #DCEBFA, chữ #1F4E79) */}
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] text-[13px] font-bold tracking-wide">
                 <Calendar className="w-3.5 h-3.5 text-[#1F4E79] flex-shrink-0" strokeWidth={1.75} />
                 <span>Tháng 11/2026</span>
               </span>
             </div>
 
-            {/* Dòng ghi chú viết tay đặc trưng kèm gạch chân lượn sóng và 2 sticker vector phẳng */}
+            {/* Dòng ghi chú viết tay đặc trưng kèm gạch chân lượn sóng và 2 hình dán vector phẳng */}
             <div className="flex items-center mt-1.5">
               <div className="inline-block transform -rotate-1 origin-left">
                 <span className="font-playfair italic text-[14px] lg:text-[15px] font-semibold text-[#A61E4D] squiggle-underline-note">
@@ -89,9 +89,9 @@ export const TuitionPage: React.FC = () => {
                 </span>
               </div>
 
-              {/* Đúng 2 sticker vector phẳng pastel (ẩn dưới md) */}
+              {/* Đúng 2 hình dán vector phẳng pastel (ẩn dưới md) */}
               <div className="hidden md:flex items-center gap-2 ml-[24px]">
-                {/* Sticker 1: Ngôi sao pastel phẳng #F8A5C2 (24px) */}
+                {/* Hình dán 1: Ngôi sao pastel phẳng #F8A5C2 (24px) */}
                 <svg
                   className="w-6 h-6 text-[#F8A5C2] flex-shrink-0"
                   viewBox="0 0 24 24"
@@ -101,7 +101,7 @@ export const TuitionPage: React.FC = () => {
                   <path d="M12 2l2.75 6.63L22 9.24l-5.45 4.73L18.18 21 12 17.27 5.82 21l1.63-7.03L2 9.24l7.25-.61L12 2z" />
                 </svg>
 
-                {/* Sticker 2: Ngòi bút nhỏ pastel phẳng #2F6FA8 (24px) */}
+                {/* Hình dán 2: Ngòi bút nhỏ pastel phẳng #2F6FA8 (24px) */}
                 <svg
                   className="w-6 h-6 text-[#2F6FA8] flex-shrink-0"
                   fill="none"
@@ -154,7 +154,7 @@ export const TuitionPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Hàng dưới: Tên lớp (28px mobile -> 40px lg) + sĩ số bên trái & Vòng tròn mũi tên bên phải */}
+                {/* Hàng dưới: Tên lớp (28px di động -> 40px màn hình lớn) + sĩ số bên trái & Vòng tròn mũi tên bên phải */}
                 <div className="flex items-end justify-between w-full gap-2">
                   {/* Neo góc dưới bên trái */}
                   <div className="flex flex-col min-w-0">
@@ -173,7 +173,7 @@ export const TuitionPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Góc dưới bên phải: Vòng tròn trắng 36px với biểu tượng chevron-right (#3B2A35) */}
+                  {/* Góc dưới bên phải: Vòng tròn trắng 36px với biểu tượng mũi tên phải (#3B2A35) */}
                   <div className="w-8 h-8 lg:w-[36px] lg:h-[36px] rounded-full bg-white flex items-center justify-center text-[#3B2A35] flex-shrink-0">
                     <ChevronRight className="w-4 h-4 text-[#3B2A35]" strokeWidth={1.75} />
                   </div>

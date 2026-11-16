@@ -200,7 +200,7 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
             />
           </div>
 
-          {/* ==================== CHỌN MÀU SẮC Ô VUÔNG (COLOR THEME) ==================== */}
+          {/* ==================== CHỌN BẢNG MÀU CHO Ô VUÔNG ==================== */}
           <div className="space-y-2.5 pt-1">
             <div className="flex items-center justify-between">
               <Label className="text-[13px] font-bold text-[#3B2A35] flex items-center gap-1.5">
@@ -212,7 +212,7 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
               </span>
             </div>
 
-            {/* Bảng 6 màu Preset Pastel thiết kế sẵn */}
+            {/* Bảng 6 bộ màu pastel thiết kế sẵn */}
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {PRESET_COLOR_THEMES.map((theme) => {
                 const isSelected =
@@ -243,7 +243,7 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
               })}
             </div>
 
-            {/* Tùy chỉnh màu tự do (Custom Color Picker) */}
+            {/* Tùy chỉnh màu tự do (Bảng chọn màu tùy chỉnh) */}
             <div className="pt-2 border-t border-[#F3D9E3]/70">
               <div className="flex items-center justify-between mb-2">
                 <button
@@ -317,7 +317,7 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
               )}
             </div>
 
-            {/* ==================== XEM TRƯỚC Ô VUÔNG TRỰC TIẾP (LIVE PREVIEW) ==================== */}
+            {/* ==================== XEM TRƯỚC Ô VUÔNG TRỰC TIẾP ==================== */}
             <div className="pt-2">
               <span className="text-[11px] font-bold text-[#6B5560] block mb-1.5 uppercase tracking-wider">
                 Xem trước ô vuông hiển thị

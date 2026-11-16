@@ -12,7 +12,7 @@ export const Header: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Notification button */}
+        {/* Nút chuông thông báo */}
         <button className="relative rounded-[10px] p-2 text-slate-500 hover:bg-slate-100 transition-colors">
           <Bell className="w-5 h-5" />
           <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-[4px] bg-rose-500 ring-2 ring-white" />
@@ -20,7 +20,7 @@ export const Header: React.FC = () => {
 
         <div className="h-6 w-px bg-slate-200" />
 
-        {/* User profile dropdown/info */}
+        {/* Menu thả xuống / thông tin tài khoản người dùng */}
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-brand-100 text-brand-700 font-bold text-sm">
             {user?.fullName?.charAt(0) || <UserIcon className="w-5 h-5" />}

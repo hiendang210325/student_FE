@@ -30,12 +30,12 @@ export const AppRoutes: React.FC = () => {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        {/* Public Routes with AuthLayout */}
+        {/* Các tuyến đường công khai với AuthLayout */}
         <Route element={<AuthLayout />}>
           <Route path={ROUTES.LOGIN} element={<LoginPage />} />
         </Route>
 
-        {/* Protected Routes with MainLayout */}
+        {/* Các tuyến đường được bảo vệ với MainLayout */}
         <Route
           element={
             <ProtectedRoute>
@@ -74,7 +74,7 @@ export const AppRoutes: React.FC = () => {
           />
         </Route>
 
-        {/* Fallback 404 */}
+        {/* Tuyến đường dự phòng khi không tìm thấy trang 404 */}
         <Route path="*" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
       </Routes>
     </Suspense>

@@ -60,13 +60,13 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="font-nunito text-brand-textDark bg-brand-bgPink antialiased selection:bg-brand-marginPink selection:text-brand-textDark m-0 p-0 overflow-x-hidden min-h-[100dvh] flex flex-col justify-center">
-      {/* Desktop Screen Container (1440x900 base aspect) */}
+      {/* Khung màn hình máy tính bàn (tỉ lệ chuẩn 1440x900) */}
       <main className="w-full min-h-[100dvh] flex flex-col lg:flex-row">
         {/* ==========================================
-             LEFT PANEL (~58% width): Ruled notebook page (ẩn trên di động/tablet nhỏ, giữ nguyên từ lg)
+             BẢNG BÊN TRÁI (~58% chiều rộng): Trang vở kẻ ô li (ẩn trên di động/máy tính bảng nhỏ, giữ nguyên từ lg)
              ========================================== */}
         <section className="hidden lg:flex w-full lg:w-[58%] lg:min-h-[100dvh] notebook-paper flex-col justify-between p-16 relative overflow-hidden">
-          {/* Vector Sticker 1: Tiny Pastel Blue Star in Top-Right Left Panel */}
+          {/* Hình dán Vector 1: Ngôi sao xanh pastel nhỏ ở góc trên bên phải bảng trái */}
           <div
             className="absolute top-10 right-14 pointer-events-none select-none"
             aria-hidden="true"
@@ -82,7 +82,7 @@ export const LoginPage: React.FC = () => {
             </svg>
           </div>
 
-          {/* Vector Sticker 2: Small Pastel Pink Heart in Bottom-Left Left Panel */}
+          {/* Hình dán Vector 2: Trái tim hồng pastel nhỏ ở góc dưới bên trái bảng trái */}
           <div
             className="absolute bottom-12 left-20 pointer-events-none select-none"
             aria-hidden="true"
@@ -98,7 +98,7 @@ export const LoginPage: React.FC = () => {
             </svg>
           </div>
 
-          {/* Upper Branding & Headings */}
+          {/* Nhận diện thương hiệu & Tiêu đề phía trên */}
           <div className="z-10 pl-6 sm:pl-10 max-w-xl">
             {/* Logo */}
             <div className="mb-6">
@@ -110,18 +110,18 @@ export const LoginPage: React.FC = () => {
               />
             </div>
 
-            {/* Heading */}
+            {/* Tiêu đề chính */}
             <h1 className="font-playfair font-bold text-4xl sm:text-5xl text-brand-textDark tracking-tight mb-3">
               Lớp Văn chị Vân
             </h1>
 
-            {/* One-line description */}
+            {/* Mô tả ngắn một dòng */}
             <p className="font-nunito font-semibold text-lg sm:text-xl text-brand-textMuted leading-relaxed">
               Quản lý lịch học, điểm danh, bài tập và học phí cho lớp dạy thêm.
             </p>
           </div>
 
-          {/* Signature Element: Handwritten-style teacher's margin note */}
+          {/* Điểm nhấn thương hiệu: Ghi chú lề viết tay đặc trưng của giáo viên */}
           <div className="z-10 pl-6 sm:pl-10 my-10 lg:my-14 max-w-md">
             <div className="inline-block transform -rotate-2 hover:rotate-0 transition-transform duration-300">
               <div className="bg-[#FFF9EC]/90 px-4 py-2.5 rounded-lg border border-[#F8A5C2]/40 shadow-xs">
@@ -137,7 +137,7 @@ export const LoginPage: React.FC = () => {
         </section>
 
         {/* ==========================================
-             RIGHT PANEL (~42% width): Soft pink background & Login Card
+             BẢNG BÊN PHẢI (~42% chiều rộng): Nền hồng phấn mềm mại & Thẻ đăng nhập
              ========================================== */}
         <section className="w-full flex-1 lg:flex-initial lg:w-[42%] bg-brand-bgPink flex flex-col items-center justify-center p-4 sm:p-8 lg:p-12 relative overflow-hidden">
           {/* Logo thu gọn trên di động và máy tính bảng (ẩn từ lg vì đã có bảng trái) */}
@@ -152,7 +152,7 @@ export const LoginPage: React.FC = () => {
               Lớp Văn chị Vân
             </span>
           </div>
-          {/* Vector Sticker 3: Small Pastel Blue Tiny Open Book / Quill outside card edges */}
+          {/* Hình dán Vector 3: Cuốn sách mở / Ngòi bút xanh pastel nhỏ bên ngoài mép thẻ */}
           <div
             className="absolute top-8 right-8 pointer-events-none select-none hidden sm:block"
             aria-hidden="true"
@@ -173,9 +173,9 @@ export const LoginPage: React.FC = () => {
             </svg>
           </div>
 
-          {/* White Login Card: 24px radius, soft flat shadow, no glass effect */}
+          {/* Thẻ đăng nhập màu trắng: Bo góc 24px, bóng phẳng nhẹ, không hiệu ứng kính */}
           <div className="w-full max-w-[440px] bg-white rounded-[24px] p-8 sm:p-10 shadow-[0_8px_30px_rgb(214,51,108,0.08)] border border-[#F8A5C2]/30 relative z-10">
-            {/* Header */}
+            {/* Phần đầu thẻ đăng nhập */}
             <div className="mb-8">
               <h2 className="font-playfair font-bold text-3xl sm:text-[34px] text-brand-textDark leading-tight mb-2">
                 Chào mừng trở lại
@@ -185,16 +185,16 @@ export const LoginPage: React.FC = () => {
               </p>
             </div>
 
-            {/* Error Message if any */}
+            {/* Thông báo lỗi nếu có */}
             {error && (
               <div className="mb-5 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-700 font-medium">
                 {error}
               </div>
             )}
 
-            {/* Login Form */}
+            {/* Biểu mẫu đăng nhập */}
             <form className="space-y-5" onSubmit={handleSubmit}>
-              {/* Field 1: Tên đăng nhập hoặc email */}
+              {/* Trường 1: Tên đăng nhập hoặc email */}
               <div className="space-y-2">
                 <Label
                   htmlFor="username"
@@ -216,7 +216,7 @@ export const LoginPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Field 2: Mật khẩu (with show/hide eye icon at the right) */}
+              {/* Trường 2: Mật khẩu (kèm biểu tượng mắt ẩn/hiện ở bên phải) */}
               <div className="space-y-2">
                 <Label
                   htmlFor="password"
@@ -235,7 +235,7 @@ export const LoginPage: React.FC = () => {
                     className="h-[48px] pl-4 pr-12 rounded-xl font-nunito font-medium text-brand-textDark bg-white text-base transition-all duration-150 border border-brand-inputBorder focus-visible:border-brand-focusBlue focus-visible:ring-2 focus-visible:ring-brand-focusBlue/20 placeholder:text-brand-textMuted/70"
                     required
                   />
-                  {/* Show/Hide Password Eye Button */}
+                  {/* Nút biểu tượng mắt ẩn/hiện mật khẩu */}
                   <button
                     type="button"
                     id="togglePasswordBtn"
@@ -254,7 +254,7 @@ export const LoginPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Auxiliary options: Ghi nhớ & Quên mật khẩu */}
+              {/* Tùy chọn phụ: Ghi nhớ đăng nhập & Quên mật khẩu */}
               <div className="flex items-center justify-between text-xs pt-0.5">
                 <label className="flex items-center gap-2 cursor-pointer text-slate-600 font-nunito font-medium select-none">
                   <input
@@ -303,7 +303,7 @@ export const LoginPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Primary Button: full width, 48px high, #D6336C, white text */}
+              {/* Nút hành động chính: Chiều rộng 100%, cao 48px, màu #D6336C, chữ trắng */}
               <div className="pt-2">
                 <Button
                   type="submit"
@@ -321,7 +321,7 @@ export const LoginPage: React.FC = () => {
                 </Button>
               </div>
 
-              {/* Footnote under button: Phụ huynh không cần đăng nhập */}
+              {/* Ghi chú dưới nút: Phụ huynh không cần đăng nhập */}
               <div className="pt-1 text-center">
                 <p className="font-nunito font-semibold text-xs sm:text-[13px] text-brand-textMuted leading-relaxed">
                   Phụ huynh không cần đăng nhập — mở link hoá đơn do lớp gửi.
@@ -332,7 +332,7 @@ export const LoginPage: React.FC = () => {
         </section>
       </main>
 
-      {/* Forgot Password Modal (shadcn UI Dialog with Email -> OTP -> New Password with strength validation) */}
+      {/* Hộp thoại Quên mật khẩu (Email -> OTP -> Mật khẩu mới với kiểm tra độ mạnh) */}
       <ForgotPasswordModal
         isOpen={isForgotModalOpen}
         onClose={() => setIsForgotModalOpen(false)}

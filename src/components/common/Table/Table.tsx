@@ -98,7 +98,7 @@ export function Table<T extends object>({
         })}
       </div>
 
-      {/* Chế độ Tablet (md) & Desktop (lg+): Bảng chuẩn, ẩn cột priority='low' dưới lg */}
+      {/* Chế độ Máy tính bảng (md) & Máy tính bàn (lg+): Bảng chuẩn, ẩn cột ưu tiên thấp (priority='low') dưới màn hình lg */}
       <div className="hidden md:block w-full overflow-hidden rounded-[16px] border border-[#F3D9E3] bg-white shadow-card">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-[14px] text-[#3B2A35]">

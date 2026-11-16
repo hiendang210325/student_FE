@@ -322,10 +322,10 @@ export const LeaveRequestsPage: React.FC = () => {
       <div className="w-full flex justify-center bg-[#FFF6F9] lg:min-h-[976px] font-nunito text-[#3B2A35]">
         {/* Khung chính 1200px trên lg, co giãn đầy đủ trên di động và máy tính bảng */}
         <div className="w-full lg:w-[1200px] lg:h-[976px] p-0 lg:p-8 flex flex-col justify-between gap-4 md:gap-6 box-border select-none">
-          {/* ==================== HÀNG 1: HEADER (88px trên lg) ==================== */}
+          {/* ==================== HÀNG 1: TIÊU ĐỀ ĐẦU TRANG (88px trên lg) ==================== */}
           <header className="min-h-[72px] lg:h-[88px] w-full lg:w-[1136px] flex items-center justify-between flex-shrink-0">
             <div className="flex flex-col justify-center min-w-0">
-              {/* Tiêu đề "Đơn xin nghỉ" Playfair Display 24/28px cạnh chip "1 đơn chờ duyệt" */}
+              {/* Tiêu đề "Đơn xin nghỉ" Playfair Display 24/28px cạnh thẻ "1 đơn chờ duyệt" */}
               <div className="flex flex-wrap items-center gap-2.5 md:gap-3">
                 <h1 className="font-playfair text-[24px] lg:text-[28px] font-bold text-[#3B2A35] leading-tight">
                   Đơn xin nghỉ
@@ -336,7 +336,7 @@ export const LeaveRequestsPage: React.FC = () => {
                 </span>
               </div>
 
-              {/* Dòng ghi chú viết tay đặc trưng kèm gạch chân lượn sóng và 2 sticker vector phẳng */}
+              {/* Dòng ghi chú viết tay đặc trưng kèm gạch chân lượn sóng và 2 hình dán vector phẳng */}
               <div className="flex items-center mt-1.5">
                 <div className="inline-block transform -rotate-1 origin-left">
                   <span className="font-playfair italic text-[14px] lg:text-[15px] font-semibold text-[#A61E4D] squiggle-underline-note">
@@ -344,7 +344,7 @@ export const LeaveRequestsPage: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Đúng 2 sticker vector phẳng pastel (ẩn dưới md) */}
+                {/* Đúng 2 hình dán vector phẳng pastel (ẩn dưới md) */}
                 <div className="hidden md:flex items-center gap-2 ml-[24px]">
                   <svg
                     className="w-6 h-6 text-[#F8A5C2] flex-shrink-0"
@@ -392,7 +392,7 @@ export const LeaveRequestsPage: React.FC = () => {
 
               {/* 4 trường nhập liệu cách nhau 24px, nhãn 14px phía trên, ô cao 48px, viền #9C6B84, bo góc 12px */}
               <div className="flex-1 flex flex-col gap-[24px] my-[24px] min-h-0">
-                {/* Trường 1: "Tên" (chỉ đọc, nền #FFF6F9, icon khóa bên phải) */}
+                {/* Trường 1: "Tên" (chỉ đọc, nền #FFF6F9, biểu tượng khóa bên phải) */}
                 <div className="flex-shrink-0">
                   <label className="block font-nunito text-[14px] font-bold text-[#3B2A35] mb-2">
                     Tên
@@ -405,7 +405,7 @@ export const LeaveRequestsPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Trường 2: "Lớp" (select, giá trị "Lớp 9", đang hiển thị trạng thái focus viền 2px #2F6FA8) */}
+                {/* Trường 2: "Lớp" (hộp chọn, giá trị "Lớp 9", trạng thái viền nét 2px #2F6FA8) */}
                 <div className="flex-shrink-0">
                   <label
                     htmlFor="student-leave-class"
@@ -433,7 +433,7 @@ export const LeaveRequestsPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Trường 3: "Ngày tháng năm" (ô chọn ngày kèm icon lịch, giá trị "12/11/2026") */}
+                {/* Trường 3: "Ngày tháng năm" (ô chọn ngày kèm biểu tượng lịch, giá trị "12/11/2026") */}
                 <div className="flex-shrink-0">
                   <label
                     htmlFor="student-leave-date"
@@ -456,7 +456,7 @@ export const LeaveRequestsPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Trường 4: "Lí do nghỉ" (textarea lớn tự giãn lấp đầy chiều cao còn lại của thẻ, kèm bộ đếm "118/300") */}
+                {/* Trường 4: "Lí do nghỉ" (khung văn bản lớn tự giãn lấp đầy chiều cao còn lại của thẻ, kèm bộ đếm "118/300") */}
                 <div className="flex-1 flex flex-col min-h-0">
                   <label
                     htmlFor="student-leave-reason"
@@ -517,7 +517,7 @@ export const LeaveRequestsPage: React.FC = () => {
                     key={item.id}
                     className="flex-1 px-6 flex items-center justify-between gap-3 hover:bg-[#FFF6F9]/60 transition-colors"
                   >
-                    {/* Bên trái: Ngày nghỉ in đậm 16px + Chip "Lớp 9" + Lý do 1 dòng 14px #6B5560 */}
+                    {/* Bên trái: Ngày nghỉ in đậm 16px + Thẻ "Lớp 9" + Lý do 1 dòng 14px #6B5560 */}
                     <div className="flex flex-col justify-center min-w-0 flex-1">
                       <div className="flex items-center gap-2.5">
                         <span className="font-nunito text-[16px] font-bold text-[#3B2A35] leading-tight">
@@ -579,22 +579,22 @@ export const LeaveRequestsPage: React.FC = () => {
     <div className="w-full flex justify-center bg-[#FFF6F9] lg:min-h-[1024px] font-nunito text-[#3B2A35] relative">
       {/* Khung vùng chính 1200px trên lg, co giãn đầy đủ trên di động và máy tính bảng */}
       <div className="w-full lg:w-[1200px] lg:min-h-[1024px] p-0 lg:p-8 flex flex-col justify-start gap-4 md:gap-6 box-border select-none">
-        {/* ==================== HÀNG 1: HEADER (88px trên lg) ==================== */}
+        {/* ==================== HÀNG 1: TIÊU ĐỀ ĐẦU TRANG (88px trên lg) ==================== */}
         <header className="min-h-[72px] lg:h-[88px] w-full lg:w-[1136px] flex flex-col lg:flex-row lg:items-center justify-between gap-3 flex-shrink-0">
-          {/* Bên trái: Tiêu đề + Chip "3 đơn chờ duyệt" + Dòng ghi chú viết tay của giáo viên */}
+          {/* Bên trái: Tiêu đề + Thẻ "3 đơn chờ duyệt" + Dòng ghi chú viết tay của giáo viên */}
           <div className="flex flex-col justify-center min-w-0">
             <div className="flex flex-wrap items-center gap-2.5 md:gap-3">
               <h1 className="font-playfair text-[24px] lg:text-[28px] font-bold text-[#3B2A35] leading-tight">
                 Đơn xin nghỉ
               </h1>
-              {/* Chip "3 đơn chờ duyệt" (#FFE0EB background, #A61E4D text, clock icon) */}
+              {/* Thẻ "3 đơn chờ duyệt" (nền #FFE0EB, chữ #A61E4D, biểu tượng đồng hồ) */}
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[10px] bg-[#FFE0EB] text-[#A61E4D] text-[13px] font-bold tracking-wide">
                 <Clock className="w-3.5 h-3.5 text-[#A61E4D] flex-shrink-0" strokeWidth={1.75} />
                 <span>{pendingCount} đơn chờ duyệt</span>
               </span>
             </div>
 
-            {/* Dòng ghi chú viết tay đặc trưng kèm gạch chân lượn sóng và 2 sticker vector phẳng */}
+            {/* Dòng ghi chú viết tay đặc trưng kèm gạch chân lượn sóng và 2 hình dán vector phẳng */}
             <div className="flex items-center mt-1.5">
               <div className="inline-block transform -rotate-1 origin-left">
                 <span className="font-playfair italic text-[14px] lg:text-[15px] font-semibold text-[#A61E4D] squiggle-underline-note">
@@ -602,9 +602,9 @@ export const LeaveRequestsPage: React.FC = () => {
                 </span>
               </div>
 
-              {/* Đúng 2 sticker vector phẳng pastel (ẩn dưới md) */}
+              {/* Đúng 2 hình dán vector phẳng pastel (ẩn dưới md) */}
               <div className="hidden md:flex items-center gap-2 ml-[24px] mr-[24px]">
-                {/* Sticker 1: Ngôi sao pastel phẳng #F8A5C2 (24px) */}
+                {/* Hình dán 1: Ngôi sao pastel phẳng #F8A5C2 (24px) */}
                 <svg
                   className="w-6 h-6 text-[#F8A5C2] flex-shrink-0"
                   viewBox="0 0 24 24"
@@ -614,7 +614,7 @@ export const LeaveRequestsPage: React.FC = () => {
                   <path d="M12 2l2.75 6.63L22 9.24l-5.45 4.73L18.18 21 12 17.27 5.82 21l1.63-7.03L2 9.24l7.25-.61L12 2z" />
                 </svg>
 
-                {/* Sticker 2: Ngòi bút nhỏ pastel phẳng #2F6FA8 (24px) */}
+                {/* Hình dán 2: Ngòi bút nhỏ pastel phẳng #2F6FA8 (24px) */}
                 <svg
                   className="w-6 h-6 text-[#2F6FA8] flex-shrink-0"
                   fill="none"
@@ -745,14 +745,14 @@ export const LeaveRequestsPage: React.FC = () => {
         </TileGrid>
       </div>
 
-      {/* ==================== HỘP THOẠI MODAL: "ĐƠN XIN NGHỈ HỌC" ==================== */}
-      {/* Lớp phủ mờ rgba(59,42,53,0.35), bottom sheet trên di động và modal giữa trên md+ */}
+      {/* ==================== HỘP THOẠI: "ĐƠN XIN NGHỈ HỌC" ==================== */}
+      {/* Lớp phủ mờ rgba(59,42,53,0.35), bảng trượt đáy trên di động và hộp thoại căn giữa trên md+ */}
       {selectedRequest && (
         <div
           className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-[#3B2A35]/35 p-0 md:p-4"
           onClick={() => setSelectedRequest(null)}
         >
-          {/* Hộp thoại Modal: bottom sheet trên mobile, 560px căn giữa trên md+ */}
+          {/* Hộp thoại: bảng trượt đáy trên di động, 560px căn giữa trên md+ */}
           <div
             className="w-full md:w-[560px] max-w-full max-h-[90dvh] overflow-y-auto bg-white rounded-t-[20px] md:rounded-[20px] p-5 md:p-[32px] border border-[#F3D9E3] shadow-[0_16px_40px_rgba(59,42,53,0.16)] box-border flex flex-col select-none"
             onClick={(e) => e.stopPropagation()}
@@ -760,9 +760,9 @@ export const LeaveRequestsPage: React.FC = () => {
             aria-modal="true"
             aria-labelledby="leave-modal-title"
           >
-            {/* Header của Modal */}
+            {/* Phần đầu hộp thoại */}
             <div className="flex items-start justify-between gap-4">
-              {/* Cụm bên trái: Vòng tròn icon 48px (#FFE0EB, icon tài liệu #A61E4D) + Tiêu đề Playfair Display 24px + Thời gian gửi */}
+              {/* Cụm bên trái: Vòng tròn biểu tượng 48px (#FFE0EB, biểu tượng tài liệu #A61E4D) + Tiêu đề Playfair Display 24px + Thời gian gửi */}
               <div className="flex items-center gap-3.5">
                 <div className="w-[48px] h-[48px] rounded-full bg-[#FFE0EB] flex items-center justify-center text-[#A61E4D] flex-shrink-0">
                   <FileText className="w-6 h-6 text-[#A61E4D]" strokeWidth={1.75} />
@@ -816,7 +816,7 @@ export const LeaveRequestsPage: React.FC = () => {
             {/* Đường kẻ phân cách 1px #F3D9E3 */}
             <div className="h-[1px] w-full bg-[#F3D9E3] my-5" />
 
-            {/* 4 trường chỉ đọc (Read-only fields: không viền input, nhãn 13px #6B5560, hộp #FFF6F9 bo góc 12px, padding 12px, chữ 16px #3B2A35, icon khóa nhỏ #6B5560 bên phải) */}
+            {/* 4 trường chỉ đọc: không viền nhập, nhãn 13px #6B5560, hộp #FFF6F9 bo góc 12px, đệm trong 12px, chữ 16px #3B2A35, biểu tượng khóa nhỏ #6B5560 bên phải */}
             <div className="space-y-4">
               {/* Trường 1: Tên */}
               <div>
@@ -874,7 +874,7 @@ export const LeaveRequestsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Dòng ghi chú thông tin (nền #E9F3FF, bo góc 12px, icon info, chữ 13px #1F4E79) */}
+            {/* Dòng ghi chú thông tin (nền #E9F3FF, bo góc 12px, biểu tượng thông tin, chữ 13px #1F4E79) */}
             <div className="mt-5 rounded-[12px] bg-[#E9F3FF] p-3 flex items-center gap-2.5">
               <Info className="w-4 h-4 text-[#1F4E79] flex-shrink-0" strokeWidth={1.75} />
               <span className="font-nunito text-[13px] font-semibold text-[#1F4E79] leading-snug">
@@ -882,7 +882,7 @@ export const LeaveRequestsPage: React.FC = () => {
               </span>
             </div>
 
-            {/* Chân Modal: các nút cao 48px căn phải ("Đóng", "Từ chối", "Duyệt đơn") */}
+            {/* Chân hộp thoại: các nút cao 48px căn phải ("Đóng", "Từ chối", "Duyệt đơn") */}
             <div className="mt-6 flex items-center justify-end gap-3">
               {/* Nút chữ "Đóng" (#6B5560) */}
               <button
@@ -893,7 +893,7 @@ export const LeaveRequestsPage: React.FC = () => {
                 Đóng
               </button>
 
-              {/* Nút viền "Từ chối" (icon x, viền và chữ #A61E4D) */}
+              {/* Nút viền "Từ chối" (biểu tượng x, viền và chữ #A61E4D) */}
               <button
                 type="button"
                 onClick={handleRejectRequest}
@@ -903,7 +903,7 @@ export const LeaveRequestsPage: React.FC = () => {
                 <span>Từ chối</span>
               </button>
 
-              {/* Nút chính "Duyệt đơn" (icon check, nền #D6336C, chữ trắng) */}
+              {/* Nút chính "Duyệt đơn" (biểu tượng dấu tích, nền #D6336C, chữ trắng) */}
               <button
                 type="button"
                 onClick={handleApproveRequest}

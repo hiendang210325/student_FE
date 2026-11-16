@@ -266,7 +266,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[480px] p-6 sm:p-8 overflow-hidden">
-        {/* Subtle Step Dots Header */}
+        {/* Phần đầu: Các chấm chỉ báo bước */}
         {step !== 'SUCCESS' && (
           <div className="flex items-center justify-between pb-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
@@ -321,7 +321,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
           </div>
         )}
 
-        {/* STEP 1: ENTER EMAIL */}
+        {/* BƯỚC 1: NHẬP EMAIL */}
         {step === 'EMAIL' && (
           <form onSubmit={handleEmailSubmit} className="space-y-5 pt-2">
             <DialogHeader className="text-left space-y-1">
@@ -376,7 +376,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
           </form>
         )}
 
-        {/* STEP 2: ENTER OTP CODE */}
+        {/* BƯỚC 2: NHẬP MÃ OTP */}
         {step === 'OTP' && (
           <form onSubmit={handleOtpSubmit} className="space-y-5 pt-2">
             <DialogHeader className="text-left space-y-1">
@@ -392,7 +392,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
               </DialogDescription>
             </DialogHeader>
 
-            {/* 6 Digit Inputs */}
+            {/* 6 ô nhập chữ số OTP */}
             <div className="space-y-2">
               <Label className="font-nunito font-bold text-sm text-brand-textDark block text-center sm:text-left">
                 Mã xác thực 6 số
@@ -424,7 +424,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
               )}
             </div>
 
-            {/* Resend OTP timer */}
+            {/* Bộ đếm thời gian gửi lại mã OTP */}
             <div className="text-center text-xs font-nunito text-slate-500 py-1">
               {isCounting ? (
                 <span>
@@ -455,7 +455,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
           </form>
         )}
 
-        {/* STEP 3: ENTER NEW PASSWORD & CONFIRMATION */}
+        {/* BƯỚC 3: NHẬP MẬT KHẨU MỚI & XÁC NHẬN */}
         {step === 'NEW_PASSWORD' && (
           <form onSubmit={handleResetPasswordSubmit} className="space-y-4 pt-2">
             <DialogHeader className="text-left space-y-1">
@@ -470,7 +470,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
               </DialogDescription>
             </DialogHeader>
 
-            {/* Input 1: Mật khẩu mới */}
+            {/* Ô nhập 1: Mật khẩu mới */}
             <div className="space-y-1.5">
               <Label
                 htmlFor="new-password"
@@ -503,28 +503,28 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 </button>
               </div>
 
-              {/* Password Strength Meter: Đỏ đậm -> Đỏ -> Vàng -> Xanh */}
+              {/* Thước đo độ mạnh mật khẩu: Đỏ đậm -> Đỏ -> Vàng -> Xanh */}
               <div className="pt-1.5">
                 <div className="grid grid-cols-4 gap-1.5 h-2 w-full">
-                  {/* Segment 1: Rất yếu (Đỏ đậm) */}
+                  {/* Phân đoạn 1: Rất yếu (Đỏ đậm) */}
                   <div
                     className={`h-full rounded-full transition-all duration-300 ${
                       strength.score >= 1 ? strength.barColor : 'bg-slate-200'
                     }`}
                   />
-                  {/* Segment 2: Yếu (Đỏ) */}
+                  {/* Phân đoạn 2: Yếu (Đỏ) */}
                   <div
                     className={`h-full rounded-full transition-all duration-300 ${
                       strength.score >= 2 ? strength.barColor : 'bg-slate-200'
                     }`}
                   />
-                  {/* Segment 3: Trung bình (Vàng) */}
+                  {/* Phân đoạn 3: Trung bình (Vàng) */}
                   <div
                     className={`h-full rounded-full transition-all duration-300 ${
                       strength.score >= 3 ? strength.barColor : 'bg-slate-200'
                     }`}
                   />
-                  {/* Segment 4: Mạnh (Xanh) */}
+                  {/* Phân đoạn 4: Mạnh (Xanh) */}
                   <div
                     className={`h-full rounded-full transition-all duration-300 ${
                       strength.score >= 4 ? strength.barColor : 'bg-slate-200'
@@ -534,7 +534,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
               </div>
             </div>
 
-            {/* Input 2: Xác nhận mật khẩu mới (với viền đỏ nếu không khớp) */}
+            {/* Ô nhập 2: Xác nhận mật khẩu mới (với viền đỏ nếu không khớp) */}
             <div className="space-y-1.5 pt-1">
               <Label
                 htmlFor="confirm-password"
@@ -579,7 +579,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 </button>
               </div>
 
-              {/* Error warning in red if mismatch */}
+              {/* Cảnh báo lỗi màu đỏ nếu mật khẩu không khớp */}
               {isPasswordMismatch && (
                 <p className="text-xs text-red-600 flex items-center gap-1 font-semibold font-nunito mt-1">
                   <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
@@ -600,7 +600,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
           </form>
         )}
 
-        {/* STEP 4: SUCCESS */}
+        {/* BƯỚC 4: THÀNH CÔNG */}
         {step === 'SUCCESS' && (
           <div className="text-center py-4 space-y-4">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm animate-in zoom-in-75 duration-300">

@@ -71,7 +71,7 @@ export const DashboardPage: React.FC = () => {
 
   return (
     <div className="w-full lg:min-h-[976px] p-0 lg:p-8 flex flex-col justify-between gap-4 md:gap-5 lg:gap-6 overflow-x-hidden box-border max-w-[1440px] mx-auto select-none bg-brand-page text-brand-text">
-      {/* Toast Notice */}
+      {/* Thông báo nổi */}
       {actionNotice && (
         <div className="fixed bottom-6 right-6 z-50 bg-brand-text text-white px-4 py-2.5 rounded-xl shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -79,9 +79,9 @@ export const DashboardPage: React.FC = () => {
         </div>
       )}
 
-      {/* ==================== ROW 1: HEADER (88px) ==================== */}
+      {/* ==================== HÀNG 1: TIÊU ĐỀ ĐẦU TRANG (88px) ==================== */}
       <header className="min-h-[88px] flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative flex-shrink-0">
-        {/* Left side: Greeting + Date Chip + Margin note */}
+        {/* Bên trái: Lời chào + Thẻ ngày tháng + Ghi chú lề */}
         <div className="flex flex-col justify-center">
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="font-serif-title text-[24px] sm:text-[28px] font-bold text-brand-text leading-tight">
@@ -92,7 +92,7 @@ export const DashboardPage: React.FC = () => {
             </span>
           </div>
 
-          {/* Signature handwritten-style teacher note with hand-drawn squiggle underline */}
+          {/* Ghi chú viết tay đặc trưng của giáo viên kèm đường gạch chân lượn sóng */}
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-2">
             <div className="inline-block transform -rotate-1 origin-left">
               <span className="font-serif-title italic text-[14px] sm:text-[15px] font-semibold text-brand-pinkText squiggle-underline-note">
@@ -100,9 +100,9 @@ export const DashboardPage: React.FC = () => {
               </span>
             </div>
 
-            {/* STICKERS: exactly 2 small flat pastel vector stickers placed here (ẩn dưới md) */}
+            {/* NHÃN DÁN: Đúng 2 hình dán vector phẳng pastel đặt tại đây (ẩn dưới md) */}
             <div className="hidden md:flex items-center gap-2 pl-1 sm:pl-3">
-              {/* Sticker 1: pastel pink star */}
+              {/* Hình dán 1: Ngôi sao hồng pastel */}
               <svg
                 className="w-6 h-6 text-brand-pinkAccent animate-pulse"
                 viewBox="0 0 24 24"
@@ -111,7 +111,7 @@ export const DashboardPage: React.FC = () => {
               >
                 <path d="M12 2l2.75 6.63L22 9.24l-5.45 4.73L18.18 21 12 17.27 5.82 21l1.63-7.03L2 9.24l7.25-.61L12 2z" />
               </svg>
-              {/* Sticker 2: pastel blue quill */}
+              {/* Hình dán 2: Ngòi bút xanh pastel */}
               <svg
                 className="w-6 h-6 text-brand-blueAction"
                 fill="none"
@@ -131,9 +131,9 @@ export const DashboardPage: React.FC = () => {
         </div>
       </header>
 
-      {/* ==================== ROW 2: FOUR EQUAL KPI TILES (2x2 trên mobile & md, 4 cột trên lg) ==================== */}
+      {/* ==================== HÀNG 2: BỐN Ô THỐNG KÊ ĐỀU NHAU (2x2 trên di động & md, 4 cột trên lg) ==================== */}
       <div className="grid grid-cols-2 lg:grid-cols-12 gap-3 md:gap-4 lg:gap-6 flex-shrink-0">
-        {/* KPI 1: 3 cols, #DCEBFA icon chip with #1F4E79 icon */}
+        {/* Thống kê 1: 3 cột, ô biểu tượng #DCEBFA với biểu tượng #1F4E79 */}
         <div className="lg:col-span-3 bg-white border border-brand-border rounded-2xl p-3.5 md:p-5 shadow-card flex items-center justify-between min-w-0">
           <div className="flex items-center gap-2.5 md:gap-3.5 min-w-0">
             <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-brand-blueChip flex items-center justify-center text-brand-blueText flex-shrink-0">
@@ -153,7 +153,7 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI 2: 3 cols, #FFE0EB icon chip with #A61E4D icon */}
+        {/* Thống kê 2: 3 cột, ô biểu tượng #FFE0EB với biểu tượng #A61E4D */}
         <div className="lg:col-span-3 bg-white border border-brand-border rounded-2xl p-3.5 md:p-5 shadow-card flex items-center justify-between min-w-0">
           <div className="flex items-center gap-2.5 md:gap-3.5 min-w-0">
             <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-brand-pinkChip flex items-center justify-center text-brand-pinkText flex-shrink-0">
@@ -175,7 +175,7 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI 3: 3 cols, #DCEBFA icon chip with #1F4E79 icon */}
+        {/* Thống kê 3: 3 cột, ô biểu tượng #DCEBFA với biểu tượng #1F4E79 */}
         <div className="lg:col-span-3 bg-white border border-brand-border rounded-2xl p-3.5 md:p-5 shadow-card flex items-center justify-between min-w-0">
           <div className="flex items-center gap-2.5 md:gap-3.5 min-w-0">
             <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-brand-blueChip flex items-center justify-center text-brand-blueText flex-shrink-0">
@@ -195,7 +195,7 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* KPI 4: 3 cols, #FFE0EB icon chip with #A61E4D icon */}
+        {/* Thống kê 4: 3 cột, ô biểu tượng #FFE0EB với biểu tượng #A61E4D */}
         <div className="lg:col-span-3 bg-white border border-brand-border rounded-2xl p-3.5 md:p-5 shadow-card flex items-center justify-between min-w-0">
           <div className="flex items-center gap-2.5 md:gap-3.5 min-w-0">
             <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-brand-pinkChip flex items-center justify-center text-brand-pinkText flex-shrink-0">
@@ -218,11 +218,11 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ==================== ROW 3: TWO CARDS (7 cols & 5 cols) ==================== */}
+      {/* ==================== HÀNG 3: HAI THẺ NỘI DUNG (7 cột & 5 cột) ==================== */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6 flex-shrink-0">
-        {/* CARD 1 (7 columns): "Lịch học hôm nay" */}
+        {/* THẺ 1 (7 cột): "Lịch học hôm nay" */}
         <section className="lg:col-span-7 bg-white border border-brand-border rounded-2xl p-5 shadow-card flex flex-col justify-between">
-          {/* Header */}
+          {/* Tiêu đề thẻ */}
           <div className="flex items-center justify-between pb-2 border-b border-brand-border">
             <div className="flex items-center gap-2">
               <h2 className="font-serif-title text-[18px] font-bold text-brand-text">
@@ -235,9 +235,9 @@ export const DashboardPage: React.FC = () => {
             <span className="text-[13px] font-semibold text-brand-subtext">09/11/2026</span>
           </div>
 
-          {/* 5 equal rows */}
+          {/* 5 hàng đều nhau */}
           <div className="flex-1 flex flex-col justify-between divide-y divide-[#F3D9E3] py-0.5">
-            {/* Row 1 */}
+            {/* Hàng 1 */}
             <div className="flex flex-wrap items-center justify-between py-2 px-1 gap-2">
               <div className="flex items-center gap-3">
                 <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[12px] font-bold bg-[#E9F3FF] text-[#1F4E79]">
@@ -252,7 +252,7 @@ export const DashboardPage: React.FC = () => {
               </span>
             </div>
 
-            {/* Row 2 */}
+            {/* Hàng 2 */}
             <div className="flex flex-wrap items-center justify-between py-2 px-1 gap-2">
               <div className="flex items-center gap-3">
                 <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[12px] font-bold bg-[#E9F3FF] text-[#1F4E79]">
@@ -267,7 +267,7 @@ export const DashboardPage: React.FC = () => {
               </span>
             </div>
 
-            {/* Row 3 (4px pink accent bar on left edge) */}
+            {/* Hàng 3 (vạch nhấn màu hồng 4px ở mép trái) */}
             <div className="flex flex-wrap items-center justify-between py-2 pl-2 pr-1 border-l-4 border-brand-pinkAccent gap-2">
               <div className="flex items-center gap-3">
                 <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[12px] font-bold bg-[#E9F3FF] text-[#1F4E79]">
@@ -282,7 +282,7 @@ export const DashboardPage: React.FC = () => {
               </span>
             </div>
 
-            {/* Row 4 */}
+            {/* Hàng 4 */}
             <div className="flex flex-wrap items-center justify-between py-2 px-1 gap-2">
               <div className="flex items-center gap-3">
                 <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[12px] font-bold bg-[#E9F3FF] text-[#1F4E79]">
@@ -297,7 +297,7 @@ export const DashboardPage: React.FC = () => {
               </span>
             </div>
 
-            {/* Row 5 */}
+            {/* Hàng 5 */}
             <div className="flex flex-wrap items-center justify-between py-2 px-1 gap-2">
               <div className="flex items-center gap-3">
                 <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[12px] font-bold bg-[#E9F3FF] text-[#1F4E79]">
@@ -314,9 +314,9 @@ export const DashboardPage: React.FC = () => {
           </div>
         </section>
 
-        {/* CARD 2 (5 columns): "Đơn xin nghỉ chờ duyệt" */}
+        {/* THẺ 2 (5 cột): "Đơn xin nghỉ chờ duyệt" */}
         <section className="lg:col-span-5 bg-white border border-brand-border rounded-2xl p-5 shadow-card flex flex-col justify-between">
-          {/* Header */}
+          {/* Tiêu đề thẻ */}
           <div className="flex items-center justify-between pb-2 border-b border-brand-border">
             <div className="flex items-center gap-2">
               <h2 className="font-serif-title text-[18px] font-bold text-brand-text">
@@ -329,7 +329,7 @@ export const DashboardPage: React.FC = () => {
             <span className="text-[13px] font-semibold text-brand-subtext">Ưu tiên xử lý</span>
           </div>
 
-          {/* 3 rows */}
+          {/* 3 hàng */}
           <div className="flex-1 flex flex-col justify-between divide-y divide-[#F3D9E3] py-1">
             {leaveRequests.map((req) => (
               <div key={req.id} className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 py-2.5">
@@ -349,7 +349,7 @@ export const DashboardPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Actions: full-width dưới chữ trên mobile */}
+                {/* Các nút thao tác: Chiều rộng 100% dưới chữ trên di động */}
                 <div className="flex items-center gap-2 w-full md:w-auto">
                   {req.status === 'PENDING' ? (
                     <>
@@ -380,9 +380,9 @@ export const DashboardPage: React.FC = () => {
         </section>
       </div>
 
-      {/* ==================== ROW 4: THREE EQUAL CARDS (4 cols each) ==================== */}
+      {/* ==================== HÀNG 4: BA THẺ NỘI DUNG ĐỀU NHAU (mỗi thẻ 4 cột) ==================== */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4 lg:gap-6 flex-shrink-0">
-        {/* CARD 1 (4 columns): "Học phí tháng 11" */}
+        {/* THẺ 1 (4 cột): "Học phí tháng 11" */}
         <section className="lg:col-span-4 bg-white border border-brand-border rounded-2xl p-5 shadow-card flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between pb-1.5 border-b border-brand-border">
@@ -392,7 +392,7 @@ export const DashboardPage: React.FC = () => {
               <span className="text-[12px] font-bold text-brand-subtext">Đợt 1</span>
             </div>
 
-            {/* Big percentage & Progress Bar */}
+            {/* Tỉ lệ phần trăm lớn & Thanh tiến độ */}
             <div className="mt-2.5 flex items-baseline justify-between">
               <span className="font-serif-title text-[28px] font-bold text-brand-pinkText leading-none">
                 73,8%
@@ -403,7 +403,7 @@ export const DashboardPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Progress Bar (track #FFE4EE, fill #F8A5C2, 12px high) */}
+            {/* Thanh tiến độ (rãnh #FFE4EE, màu điền #F8A5C2, cao 12px) */}
             <div className="w-full h-3 bg-[#FFE4EE] rounded-full overflow-hidden mt-2 border border-[#F3D9E3]">
               <div
                 className="h-full bg-brand-pinkAccent rounded-full transition-all duration-500"
@@ -412,7 +412,7 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Short list: Chưa đóng with 3 rows */}
+          {/* Danh sách ngắn: Chưa đóng gồm 3 hàng */}
           <div className="divide-y divide-[#F3D9E3] text-[13px] my-1">
             <div className="flex items-center justify-between py-1">
               <div className="flex items-center gap-1.5">
@@ -437,7 +437,7 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Footer link */}
+          {/* Liên kết chân thẻ */}
           <div className="pt-1.5 border-t border-brand-border flex items-center justify-between">
             <a
               href="#tuition-all"
@@ -454,9 +454,9 @@ export const DashboardPage: React.FC = () => {
           </div>
         </section>
 
-        {/* CARD 2 (4 columns): "Tháng 11/2026" calendar */}
+        {/* THẺ 2 (4 cột): Lịch "Tháng 11/2026" */}
         <section className="lg:col-span-4 bg-white border border-brand-border rounded-2xl p-5 shadow-card flex flex-col justify-between">
-          {/* Header */}
+          {/* Tiêu đề thẻ */}
           <div className="flex items-center justify-between pb-1 border-b border-brand-border">
             <h2 className="font-serif-title text-[18px] font-bold text-brand-text">
               Tháng 11/2026
@@ -467,9 +467,9 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Calendar Container: 6 full week rows */}
+          {/* Khung lịch: 6 hàng tuần đầy đủ */}
           <div className="flex-1 flex flex-col justify-between py-1">
-            {/* Weekday Header T2-CN */}
+            {/* Tiêu đề thứ trong tuần T2-CN */}
             <div className="grid grid-cols-7 text-center text-[12px] font-bold text-brand-subtext pb-1">
               <span>T2</span>
               <span>T3</span>
@@ -480,7 +480,7 @@ export const DashboardPage: React.FC = () => {
               <span>CN</span>
             </div>
 
-            {/* Week 1: 26 Oct -> 01 Nov */}
+            {/* Tuần 1: 26 Thg 10 -> 01 Thg 11 */}
             <div className="grid grid-cols-7 text-center text-[12px] h-[28px] items-center">
               <div className="flex flex-col items-center justify-center opacity-40 text-brand-subtext">
                 <span>26</span>
@@ -503,7 +503,7 @@ export const DashboardPage: React.FC = () => {
               <span className="text-brand-subtext opacity-40">01</span>
             </div>
 
-            {/* Week 2: 02 Nov -> 08 Nov */}
+            {/* Tuần 2: 02 Thg 11 -> 08 Thg 11 */}
             <div className="grid grid-cols-7 text-center text-[12px] h-[28px] items-center font-semibold text-brand-text">
               <div className="flex flex-col items-center justify-center">
                 <span>02</span>
@@ -526,9 +526,9 @@ export const DashboardPage: React.FC = () => {
               <span className="text-brand-subtext font-normal">08</span>
             </div>
 
-            {/* Week 3: 09 Nov (TODAY) -> 15 Nov */}
+            {/* Tuần 3: 09 Thg 11 (HÔM NAY) -> 15 Thg 11 */}
             <div className="grid grid-cols-7 text-center text-[12px] h-[28px] items-center font-semibold text-brand-text">
-              {/* 09: Today in #D6336C circle */}
+              {/* Ngày 09: Hôm nay trong vòng tròn #D6336C */}
               <div className="flex flex-col items-center justify-center">
                 <span className="w-6 h-6 rounded-full bg-brand-raspberry text-white flex items-center justify-center text-[11px] font-bold shadow-xs">
                   09
@@ -551,7 +551,7 @@ export const DashboardPage: React.FC = () => {
               <span className="text-brand-subtext font-normal">15</span>
             </div>
 
-            {/* Week 4: 16 Nov -> 22 Nov */}
+            {/* Tuần 4: 16 Thg 11 -> 22 Thg 11 */}
             <div className="grid grid-cols-7 text-center text-[12px] h-[28px] items-center font-semibold text-brand-text">
               <div className="flex flex-col items-center justify-center">
                 <span>16</span>
@@ -574,7 +574,7 @@ export const DashboardPage: React.FC = () => {
               <span className="text-brand-subtext font-normal">22</span>
             </div>
 
-            {/* Week 5: 23 Nov -> 29 Nov */}
+            {/* Tuần 5: 23 Thg 11 -> 29 Thg 11 */}
             <div className="grid grid-cols-7 text-center text-[12px] h-[28px] items-center font-semibold text-brand-text">
               <div className="flex flex-col items-center justify-center">
                 <span>23</span>
@@ -597,7 +597,7 @@ export const DashboardPage: React.FC = () => {
               <span className="text-brand-subtext font-normal">29</span>
             </div>
 
-            {/* Week 6: 30 Nov -> 06 Dec */}
+            {/* Tuần 6: 30 Thg 11 -> 06 Thg 12 */}
             <div className="grid grid-cols-7 text-center text-[12px] h-[28px] items-center font-semibold">
               <div className="flex flex-col items-center justify-center text-brand-text">
                 <span>30</span>
@@ -622,7 +622,7 @@ export const DashboardPage: React.FC = () => {
           </div>
         </section>
 
-        {/* CARD 3 (4 columns trên lg, full-width hàng 2 trên md): "Thông báo gần đây" */}
+        {/* THẺ 3 (4 cột trên lg, chiều rộng 100% hàng 2 trên md): "Thông báo gần đây" */}
         <section className="md:col-span-2 lg:col-span-4 bg-white border border-brand-border rounded-2xl p-5 shadow-card flex flex-col justify-between min-w-0">
           <div className="flex items-center justify-between pb-1.5 border-b border-brand-border">
             <h2 className="font-serif-title text-[18px] font-bold text-brand-text">
@@ -631,9 +631,9 @@ export const DashboardPage: React.FC = () => {
             <span className="text-[12px] font-semibold text-brand-subtext">Tự động</span>
           </div>
 
-          {/* 4 equal rows */}
+          {/* 4 hàng đều nhau */}
           <div className="flex-1 flex flex-col justify-between divide-y divide-[#F3D9E3] py-0.5">
-            {/* Row 1 */}
+            {/* Hàng 1 */}
             <div className="flex items-center justify-between py-1.5">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-brand-blueChip flex items-center justify-center text-brand-blueText flex-shrink-0">
@@ -652,7 +652,7 @@ export const DashboardPage: React.FC = () => {
               </span>
             </div>
 
-            {/* Row 2 */}
+            {/* Hàng 2 */}
             <div className="flex items-center justify-between py-1.5">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-brand-blueChip flex items-center justify-center text-brand-blueText flex-shrink-0">
@@ -671,7 +671,7 @@ export const DashboardPage: React.FC = () => {
               </span>
             </div>
 
-            {/* Row 3 */}
+            {/* Hàng 3 */}
             <div className="flex items-center justify-between py-1.5">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-brand-blueChip flex items-center justify-center text-brand-blueText flex-shrink-0">
@@ -690,7 +690,7 @@ export const DashboardPage: React.FC = () => {
               </span>
             </div>
 
-            {/* Row 4 */}
+            {/* Hàng 4 */}
             <div className="flex items-center justify-between py-1.5">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-brand-pinkChip flex items-center justify-center text-brand-pinkText flex-shrink-0">

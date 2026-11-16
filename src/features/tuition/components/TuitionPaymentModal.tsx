@@ -119,19 +119,19 @@ export const TuitionPaymentModal: React.FC<TuitionPaymentModalProps> = ({
       aria-modal="true"
       aria-labelledby="tuition-modal-title"
     >
-      {/* Bottom sheet trên mobile, hộp thoại căn giữa trên tablet/desktop */}
+      {/* Bảng trượt đáy trên di động, hộp thoại căn giữa trên máy tính bảng/máy tính bàn */}
       <div
         className="w-full md:w-[min(880px,92vw)] lg:w-[880px] max-h-[90dvh] lg:max-h-none lg:h-[700px] bg-white rounded-t-[20px] md:rounded-[20px] shadow-[0_20px_50px_rgba(59,42,53,0.18)] flex flex-col justify-between overflow-hidden font-nunito text-[#3B2A35]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Thanh kéo nhỏ trên mobile */}
+        {/* Thanh kéo nhỏ trên di động */}
         <div className="md:hidden pt-2.5 pb-1 flex justify-center flex-shrink-0">
           <span className="w-10 h-1 rounded-full bg-[#E5D3DC]" />
         </div>
-        {/* ==================== HEADER ==================== */}
+        {/* ==================== TIÊU ĐỀ ĐẦU HỘP THOẠI ==================== */}
         <div className="min-h-[68px] lg:h-[80px] px-4 lg:px-6 py-3 lg:py-0 border-b border-[#F3D9E3] flex items-center justify-between flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            {/* Icon chip tròn 48px */}
+            {/* Thẻ biểu tượng tròn 48px */}
             <div className="w-[44px] h-[44px] lg:w-[48px] lg:h-[48px] rounded-full bg-[#FFE0EB] flex items-center justify-center flex-shrink-0">
               <Wallet className="w-5 h-5 text-[#A61E4D]" strokeWidth={1.75} />
             </div>
@@ -158,9 +158,9 @@ export const TuitionPaymentModal: React.FC<TuitionPaymentModalProps> = ({
           </button>
         </div>
 
-        {/* ==================== BODY (cuộn trên mobile/tablet) ==================== */}
+        {/* ==================== THÂN HỘP THOẠI (cuộn trên di động/máy tính bảng) ==================== */}
         <div className="flex-1 px-4 lg:px-6 py-3 flex flex-col justify-between gap-3 overflow-y-auto lg:overflow-hidden">
-          {/* Phần trên: 2 cột xếp chồng trên mobile, chia 5/7 từ md trở lên */}
+          {/* Phần trên: 2 cột xếp chồng trên di động, chia 5/7 từ md trở lên */}
           <div className="lg:h-[336px] grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-[24px] flex-shrink-0">
             {/* CỘT TRÁI (5/12): Thẻ #FFF6F9 */}
             <div className="md:col-span-5 bg-[#FFF6F9] rounded-[16px] p-4 lg:p-5 flex flex-col justify-between gap-3 lg:gap-0 lg:h-full box-border">
@@ -299,7 +299,7 @@ export const TuitionPaymentModal: React.FC<TuitionPaymentModalProps> = ({
           </div>
         </div>
 
-        {/* ==================== FOOTER (cố định dưới đáy) ==================== */}
+        {/* ==================== CHÂN HỘP THOẠI (cố định dưới đáy) ==================== */}
         <div className="lg:h-[80px] px-4 lg:px-6 py-3 lg:py-0 border-t border-[#F3D9E3] flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 flex-shrink-0 bg-white">
           {/* Bên trái: 2 dòng trạng thái nhỏ */}
           <div className="flex flex-col gap-0.5 lg:gap-1 min-w-0">

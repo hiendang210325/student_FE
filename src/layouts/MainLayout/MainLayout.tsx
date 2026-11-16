@@ -5,7 +5,7 @@ import { Sidebar } from './Sidebar';
 export const MainLayout: React.FC = () => {
   return (
     <div className="min-h-[100dvh] bg-brand-page flex flex-col md:flex-row font-nunito text-brand-text overflow-x-hidden">
-      {/* Thanh điều hướng bên trái (Desktop 240px, Tablet rail 72px, Mobile topbar + drawer + bottom tab bar) */}
+      {/* Thanh điều hướng bên trái (Máy tính bàn 240px, Ray máy tính bảng 72px, Di động thanh trên + ngăn kéo + thanh tab đáy) */}
       <Sidebar />
 
       {/* Vùng nội dung chính */}

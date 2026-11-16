@@ -65,7 +65,7 @@ export const Modal: React.FC<ModalProps> = ({
         onClick={onClose}
       />
 
-      {/* Thân hộp thoại: Bottom sheet (max-h 90dvh) trên di động, Modal hoặc Drawer min(480px, 90vw) từ md */}
+      {/* Thân hộp thoại: Bảng trượt đáy (tối đa 90dvh) trên di động, Hộp thoại hoặc Ngăn kéo min(480px, 90vw) từ md */}
       <div
         className={cn(
           'relative w-full bg-white shadow-xl transition-all border border-[#F3D9E3] overflow-hidden flex flex-col',
@@ -75,7 +75,7 @@ export const Modal: React.FC<ModalProps> = ({
             : cn('md:rounded-[20px] md:max-h-[90dvh]', maxWidthStyles[maxWidth])
         )}
       >
-        {/* Thanh nắm kéo nhỏ trên cùng dành cho bottom sheet di động */}
+        {/* Thanh nắm kéo nhỏ trên cùng dành cho bảng trượt đáy di động */}
         <div className="md:hidden flex justify-center pt-2.5 pb-1 flex-shrink-0">
           <span className="w-10 h-1 rounded-full bg-[#F3D9E3]" />
         </div>

@@ -225,19 +225,19 @@ export const TuitionClassDetailPage: React.FC = () => {
   return (
     <TooltipProvider delayDuration={120}>
       <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[100dvh] lg:min-h-[976px] font-nunito text-[#3B2A35]">
-        {/* Vùng nội dung chính 1200px trên desktop, co giãn theo viewport trên mobile/tablet */}
+        {/* Vùng nội dung chính 1200px trên máy tính bàn, co giãn theo khung nhìn trên di động/máy tính bảng */}
         <div className="w-full lg:w-[1200px] lg:h-[976px] p-0 lg:p-8 flex flex-col gap-4 lg:gap-0 lg:justify-between box-border select-none relative">
-          {/* Thông báo Toast phản hồi khi lưu học phí */}
+          {/* Thông báo nổi phản hồi khi lưu học phí */}
           {toastMessage && (
             <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 bg-[#1F4E79] text-white px-4 py-3 rounded-[12px] shadow-lg text-[13px] font-bold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
               <Check className="w-4 h-4 text-white flex-shrink-0" strokeWidth={2.2} />
               <span>{toastMessage}</span>
             </div>
           )}
-          {/* ==================== HÀNG 1: HEADER ==================== */}
+          {/* ==================== HÀNG 1: TIÊU ĐỀ ĐẦU TRANG ==================== */}
           <header className="min-h-[72px] lg:h-[88px] w-full lg:w-[1136px] flex flex-col md:flex-row md:items-center justify-between gap-3 flex-shrink-0">
             <div className="flex flex-col justify-center min-w-0">
-              {/* Dòng Breadcrumb phía trên tiêu đề: nút mũi tên quay lại và "Học phí › Lớp 10" */}
+              {/* Thanh điều hướng phân cấp phía trên tiêu đề: nút mũi tên quay lại và "Học phí › Lớp 10" */}
               <div className="flex items-center gap-1.5 mb-1 text-[14px] text-[#6B5560]">
                 <button
                   type="button"
@@ -257,7 +257,7 @@ export const TuitionClassDetailPage: React.FC = () => {
                 <span className="text-[#6B5560] font-semibold">Lớp 10</span>
               </div>
 
-              {/* Tiêu đề "Học phí · Lớp 10" cạnh chip sĩ số */}
+              {/* Tiêu đề "Học phí · Lớp 10" cạnh thẻ sĩ số */}
               <div className="flex flex-wrap items-center gap-2 lg:gap-3">
                 <h1 className="font-playfair text-[24px] lg:text-[28px] font-bold text-[#3B2A35] leading-tight">
                   Học phí · Lớp 10
@@ -267,7 +267,7 @@ export const TuitionClassDetailPage: React.FC = () => {
                 </span>
               </div>
 
-              {/* Ghi chú viết tay của giáo viên dưới tiêu đề kèm gạch chân lượn sóng và 2 sticker pastel */}
+              {/* Ghi chú viết tay của giáo viên dưới tiêu đề kèm gạch chân lượn sóng và 2 hình dán pastel */}
               <div className="flex items-center mt-1.5">
                 <div className="inline-block transform -rotate-1 origin-left">
                   <span className="font-playfair italic text-[14px] lg:text-[15px] font-semibold text-[#A61E4D] squiggle-underline-note">
@@ -275,9 +275,9 @@ export const TuitionClassDetailPage: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Đúng 2 sticker vector phẳng pastel (ẩn trên mobile) */}
+                {/* Đúng 2 hình dán vector phẳng pastel (ẩn trên di động) */}
                 <div className="hidden md:flex items-center gap-2 ml-[24px]">
-                  {/* Sticker 1: Ngôi sao pastel #F8A5C2 (24px) */}
+                  {/* Hình dán 1: Ngôi sao pastel #F8A5C2 (24px) */}
                   <svg
                     className="w-6 h-6 text-[#F8A5C2] flex-shrink-0"
                     viewBox="0 0 24 24"
@@ -287,7 +287,7 @@ export const TuitionClassDetailPage: React.FC = () => {
                     <path d="M12 2l2.75 6.63L22 9.24l-5.45 4.73L18.18 21 12 17.27 5.82 21l1.63-7.03L2 9.24l7.25-.61L12 2z" />
                   </svg>
 
-                  {/* Sticker 2: Ngòi bút nhỏ pastel #2F6FA8 (24px) */}
+                  {/* Hình dán 2: Ngòi bút nhỏ pastel #2F6FA8 (24px) */}
                   <svg
                     className="w-6 h-6 text-[#2F6FA8] flex-shrink-0"
                     fill="none"
@@ -493,7 +493,7 @@ export const TuitionClassDetailPage: React.FC = () => {
               </span>
             </div>
 
-            {/* Tiêu đề bảng (ẩn trên mobile, ẩn SĐT phụ huynh trên tablet) */}
+            {/* Tiêu đề bảng (ẩn trên di động, ẩn SĐT phụ huynh trên máy tính bảng) */}
             <div className="hidden md:grid md:grid-cols-[120px_1.5fr_160px_100px] lg:flex h-[48px] bg-[#DCEBFA] text-[#1F4E79] text-[13px] font-semibold items-center border-b border-[#F3D9E3] flex-shrink-0">
               <div className="lg:w-[160px] pl-4 lg:pl-6 flex-shrink-0">Mã học sinh</div>
               <div className="lg:w-[340px] flex-shrink-0">Họ và tên</div>
@@ -502,7 +502,7 @@ export const TuitionClassDetailPage: React.FC = () => {
               <div className="lg:w-[156px] pr-4 lg:pr-6 text-center flex-shrink-0">Thao tác</div>
             </div>
 
-            {/* Bảng Tablet/Desktop */}
+            {/* Bảng hiển thị cho Máy tính bảng / Máy tính bàn */}
             <div className="hidden md:flex flex-1 flex-col">
               {students.map((student, index) => {
                 // Avatar 36px đan xen hồng (#FFE0EB / #A61E4D) và xanh (#DCEBFA / #1F4E79)
@@ -518,7 +518,7 @@ export const TuitionClassDetailPage: React.FC = () => {
                       {student.studentCode}
                     </div>
 
-                    {/* Cột 2: Họ và tên kèm avatar chữ cái đầu 36px */}
+                    {/* Cột 2: Họ và tên kèm ảnh đại diện chữ cái đầu 36px */}
                     <div className="lg:w-[340px] flex items-center gap-3 pr-4 flex-shrink-0 min-w-0">
                       <div
                         className={`w-[36px] h-[36px] rounded-full flex items-center justify-center font-bold text-[13px] flex-shrink-0 ${
@@ -534,7 +534,7 @@ export const TuitionClassDetailPage: React.FC = () => {
                       </span>
                     </div>
 
-                    {/* Cột 3: Số điện thoại phụ huynh (ẩn trên tablet) */}
+                    {/* Cột 3: Số điện thoại phụ huynh (ẩn trên máy tính bảng) */}
                     <div className="hidden lg:block lg:w-[260px] font-medium text-[#3B2A35] flex-shrink-0">
                       {student.parentPhone}
                     </div>
@@ -576,7 +576,7 @@ export const TuitionClassDetailPage: React.FC = () => {
               })}
             </div>
 
-            {/* MOBILE CARDS */}
+            {/* DANH SÁCH THẺ TRÊN DI ĐỘNG */}
             <div className="md:hidden divide-y divide-[#F3D9E3]">
               {students.map((student, index) => {
                 const isPinkAvatar = index % 2 === 0;
@@ -640,7 +640,7 @@ export const TuitionClassDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Hộp thoại Modal nhập học phí, nhận xét giáo viên và mã QR thanh toán */}
+        {/* Hộp thoại nhập học phí, nhận xét giáo viên và mã QR thanh toán */}
         <TuitionPaymentModal
           student={selectedStudent}
           classNameLabel="Lớp 10"

@@ -609,9 +609,9 @@ export const SchedulePage: React.FC = () => {
 
   return (
     <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[100dvh] lg:min-h-[976px]">
-      {/* Khung nội dung chuẩn 1200px trên desktop, co giãn theo viewport trên mobile/tablet */}
+      {/* Khung nội dung chuẩn 1200px trên máy tính bàn, co giãn theo khung nhìn trên di động/máy tính bảng */}
       <div className="w-full lg:w-[1200px] lg:h-[976px] p-0 lg:p-8 flex flex-col gap-4 lg:gap-0 lg:justify-between box-border select-none relative font-nunito">
-        {/* Thông báo dạng Toast hiển thị phản hồi tức thì */}
+        {/* Thông báo nổi hiển thị phản hồi tức thì */}
         {toastMessage && (
           <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 bg-[#3B2A35] text-white px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
             <CheckCircle2 className="w-4 h-4 text-[#CFE8FF]" />
@@ -619,7 +619,7 @@ export const SchedulePage: React.FC = () => {
           </div>
         )}
 
-        {/* ==================== HÀNG 1: HEADER ==================== */}
+        {/* ==================== HÀNG 1: TIÊU ĐỀ ĐẦU TRANG ==================== */}
         <header className="min-h-[72px] lg:h-[88px] flex flex-col md:flex-row md:items-center justify-between gap-3 flex-shrink-0">
           <div className="flex flex-col justify-center min-w-0">
             {/* Tiêu đề trang và huy hiệu lịch cố định */}
@@ -640,7 +640,7 @@ export const SchedulePage: React.FC = () => {
                 </span>
               </div>
 
-              {/* 2 hình dán vector phẳng pastel (ẩn trên mobile) */}
+              {/* 2 hình dán vector phẳng pastel (ẩn trên di động) */}
               <div className="hidden md:flex items-center gap-2 pl-3">
                 {/* Hình dán 1: Ngôi sao pastel #F8A5C2 */}
                 <svg
@@ -683,7 +683,7 @@ export const SchedulePage: React.FC = () => {
           </div>
         </header>
 
-        {/* ==================== HÀNG 2: BỐ CỤC 2 CỘT (800px trên desktop) ==================== */}
+        {/* ==================== HÀNG 2: BỐ CỤC 2 CỘT (800px trên máy tính bàn) ==================== */}
         <div className="w-full lg:w-[1136px] lg:h-[800px] flex flex-col lg:flex-row gap-4 lg:gap-[24px] flex-shrink-0">
           {/* ========== CỘT BÊN TRÁI (4/12 chiều rộng trên lg, 366px): 2 THẺ ========== */}
           <div className="w-full lg:w-[366px] lg:h-[800px] flex flex-col gap-4 lg:gap-0 lg:justify-between flex-shrink-0">
@@ -729,7 +729,7 @@ export const SchedulePage: React.FC = () => {
               </div>
             </div>
 
-            {/* THẺ DƯỚI: THẺ "LỊCH CỐ ĐỊNH" (596px trên desktop) */}
+            {/* THẺ DƯỚI: THẺ "LỊCH CỐ ĐỊNH" (596px trên máy tính bàn) */}
             <div className="lg:h-[596px] p-4 lg:p-5 bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col justify-between gap-3 lg:gap-0 flex-shrink-0">
               {/* Tiêu đề thẻ Lịch cố định */}
               <div className="flex items-center justify-between lg:mb-2">
@@ -741,7 +741,7 @@ export const SchedulePage: React.FC = () => {
                 </span>
               </div>
 
-              {/* Lưới 6 ô vuông lịch học (2 cột mobile, 3 cột tablet, 2 cột desktop) */}
+              {/* Lưới 6 ô vuông lịch học (2 cột di động, 3 cột máy tính bảng, 2 cột máy tính bàn) */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-3 lg:flex-1">
                 {INITIAL_FIXED_SCHEDULES.map((item) => (
                   <div
@@ -842,9 +842,9 @@ export const SchedulePage: React.FC = () => {
 
           {/* ========== CỘT BÊN PHẢI (8/12 chiều rộng trên lg, 746px): THẺ THỜI KHÓA BIỂU CALENDAR ========== */}
           <div className="w-full lg:w-[746px] lg:h-[800px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col justify-between overflow-hidden relative flex-shrink-0">
-            {/* 1. THANH CÔNG CỤ TOOLBAR */}
+            {/* 1. THANH CÔNG CỤ */}
             <div className="min-h-[64px] lg:h-[64px] px-4 lg:px-6 py-3 lg:py-0 border-b border-[#F3D9E3] flex flex-wrap items-center justify-between gap-2.5 flex-shrink-0">
-              {/* Bên trái: Nút điều hướng, nhãn thời gian và icon xem lịch / chuyển tháng, năm */}
+              {/* Bên trái: Nút điều hướng, nhãn thời gian và biểu tượng xem lịch / chuyển tháng, năm */}
               <div ref={calendarPickerRef} className="relative flex flex-wrap items-center gap-1.5 lg:gap-2">
                 <button
                   type="button"
@@ -877,7 +877,7 @@ export const SchedulePage: React.FC = () => {
                   {toolbarTimeLabel}
                 </span>
 
-                {/* Icon xem lịch và chuyển nhanh ngày, tháng, năm */}
+                {/* Biểu tượng xem lịch và chuyển nhanh ngày, tháng, năm */}
                 <button
                   type="button"
                   onClick={handleToggleCalendarPicker}
@@ -1024,7 +1024,7 @@ export const SchedulePage: React.FC = () => {
                 )}
               </div>
 
-              {/* Bên phải: Nút chuyển đổi Tuần | Tháng (full width trên mobile) */}
+              {/* Bên phải: Nút chuyển đổi Tuần | Tháng (chiều rộng 100% trên di động) */}
               <div className="w-full md:w-auto h-9 p-1 rounded-[10px] bg-[#E9F3FF] grid grid-cols-2 md:flex items-center gap-1">
                 <button
                   onClick={() => setViewMode('week')}
@@ -1102,7 +1102,7 @@ export const SchedulePage: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Mobile: hiển thị tối đa 3 chấm màu + "+N" */}
+                        {/* Di động: hiển thị tối đa 3 chấm màu + "+N" */}
                         {cell.isCurrentMonth && cell.chips.length > 0 && (
                           <div className="flex md:hidden flex-wrap items-center gap-1 pt-0.5">
                             {visibleChips.map((chip, chipIdx) => (
@@ -1128,7 +1128,7 @@ export const SchedulePage: React.FC = () => {
                           </div>
                         )}
 
-                        {/* Tablet & Desktop: Danh sách các chip buổi dạy nhỏ của ngày (tối đa 3 chip/ô, radius 8px, 26px high) */}
+                        {/* Máy tính bảng & Máy tính bàn: Danh sách thẻ buổi dạy nhỏ trong ngày (tối đa 3 thẻ/ô, bo góc 8px, cao 26px) */}
                         {cell.isCurrentMonth && cell.chips.length > 0 && (
                           <div className="hidden md:flex flex-col gap-[2px] overflow-hidden flex-1">
                             {visibleChips.map((chip, chipIdx) => (
@@ -1151,7 +1151,7 @@ export const SchedulePage: React.FC = () => {
                               </div>
                             ))}
 
-                            {/* Nếu có nhiều hơn 3 buổi thì hiển thị link "+N nữa" màu #2F6FA8 */}
+                            {/* Nếu có nhiều hơn 3 buổi thì hiển thị liên kết "+N nữa" màu #2F6FA8 */}
                             {remainingCount > 0 && (
                               <button
                                 onClick={() =>
@@ -1356,22 +1356,22 @@ export const SchedulePage: React.FC = () => {
         </div>
       </div>
 
-        {/* ==================== SIDE DRAWER: THÊM LỊCH DẠY ==================== */}
+        {/* ==================== NGĂN KÉO: THÊM LỊCH DẠY ==================== */}
         {isDrawerOpen && (
           <div
             className="fixed inset-0 z-50 bg-[#3B2A35]/35 flex items-end md:items-stretch justify-center md:justify-end animate-in fade-in duration-200"
             onClick={() => setIsDrawerOpen(false)}
           >
-            {/* Bottom sheet trên mobile, ngăn kéo phải trên tablet/desktop */}
+            {/* Bảng trượt đáy trên di động, ngăn kéo phải trên máy tính bảng/máy tính bàn */}
             <div
               className="w-full md:w-[min(480px,90vw)] lg:w-[480px] max-h-[90dvh] md:max-h-none md:h-full bg-white rounded-t-[20px] md:rounded-t-none md:rounded-l-[16px] shadow-[-12px_0_40px_rgba(59,42,53,0.18)] flex flex-col justify-between overflow-hidden relative select-none animate-in slide-in-from-bottom md:slide-in-from-right duration-250"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Thanh kéo nhỏ trên mobile */}
+              {/* Thanh kéo nhỏ trên di động */}
               <div className="md:hidden pt-2.5 pb-1 flex justify-center flex-shrink-0">
                 <span className="w-10 h-1 rounded-full bg-[#E5D3DC]" />
               </div>
-              {/* Phần đầu Drawer: Tiêu đề và nút đóng */}
+              {/* Phần đầu ngăn kéo: Tiêu đề và nút đóng */}
               <div className="px-5 md:px-6 py-4 md:py-5 border-b border-[#F3D9E3] flex items-start justify-between flex-shrink-0">
                 <div>
                   <h2 className="font-playfair text-[22px] font-bold text-[#3B2A35] leading-tight">
@@ -1396,7 +1396,7 @@ export const SchedulePage: React.FC = () => {
                 onSubmit={handleSaveDrawerSchedule}
                 className="flex-1 overflow-y-auto px-6 py-6 space-y-6"
               >
-                {/* Trường 1: Lớp (select, giá trị "Lớp 10", trạng thái focus viền 2px #2F6FA8) */}
+                {/* Trường 1: Lớp (hộp chọn, giá trị "Lớp 10", trạng thái viền nét 2px #2F6FA8 khi chọn) */}
                 <div>
                   <label className="block text-[14px] font-bold text-[#3B2A35] mb-2">
                     Lớp
@@ -1427,7 +1427,7 @@ export const SchedulePage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Trường 2: Các thứ trong tuần (hàng 7 chip 44px, chọn T3, T5, T7) */}
+                {/* Trường 2: Các thứ trong tuần (hàng 7 thẻ nút 44px, chọn T3, T5, T7) */}
                 <div>
                   <label className="block text-[14px] font-bold text-[#3B2A35] mb-2">
                     Các thứ trong tuần
@@ -1453,7 +1453,7 @@ export const SchedulePage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Trường 3: Giờ bắt đầu (18:00) và Giờ kết thúc (19:30) cạnh nhau kèm icon đồng hồ */}
+                {/* Trường 3: Giờ bắt đầu (18:00) và Giờ kết thúc (19:30) cạnh nhau kèm biểu tượng đồng hồ */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[14px] font-bold text-[#3B2A35] mb-2">
@@ -1513,7 +1513,7 @@ export const SchedulePage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Trường 5: Màu hiển thị (6 ô tròn 32px, #CFE3FF chọn với viền 2px #2F6FA8 và icon check, nút Ngẫu nhiên) */}
+                {/* Trường 5: Màu hiển thị (6 ô tròn 32px, #CFE3FF chọn với viền 2px #2F6FA8 và dấu tích, nút Ngẫu nhiên) */}
                 <div>
                   <label className="block text-[14px] font-bold text-[#3B2A35] mb-2">
                     Màu hiển thị
@@ -1589,16 +1589,16 @@ export const SchedulePage: React.FC = () => {
             className="fixed inset-0 z-50 bg-[#3B2A35]/35 flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in duration-200"
             onClick={() => setIsDeleteDialogOpen(false)}
           >
-            {/* Bottom sheet trên mobile, căn giữa trên tablet/desktop */}
+            {/* Bảng trượt đáy trên di động, căn giữa trên máy tính bảng/máy tính bàn */}
             <div
               className="w-full md:w-[480px] max-h-[90dvh] overflow-y-auto bg-white rounded-t-[20px] md:rounded-[20px] p-5 md:p-6 shadow-[0_20px_50px_rgba(59,42,53,0.22)] border border-[#F3D9E3] flex flex-col gap-4 md:gap-5 select-none relative animate-in slide-in-from-bottom md:zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Thanh kéo nhỏ trên mobile */}
+              {/* Thanh kéo nhỏ trên di động */}
               <div className="md:hidden -mt-2 pb-1 flex justify-center flex-shrink-0">
                 <span className="w-10 h-1 rounded-full bg-[#E5D3DC]" />
               </div>
-              {/* Phía trên: Huy hiệu icon hình tròn 48px (nền #FFE3E3, biểu tượng thùng rác #B02525) */}
+              {/* Phía trên: Huy hiệu biểu tượng tròn 48px (nền #FFE3E3, biểu tượng thùng rác #B02525) */}
               <div className="w-12 h-12 rounded-full bg-[#FFE3E3] flex items-center justify-center flex-shrink-0">
                 <Trash2 className="w-6 h-6 text-[#B02525]" strokeWidth={2} />
               </div>
@@ -1618,9 +1618,9 @@ export const SchedulePage: React.FC = () => {
                 Lịch này sẽ biến mất khỏi lịch học từ hôm nay trở đi. Các buổi đã dạy và dữ liệu điểm danh cũ vẫn được giữ. Chỉ Admin mới xóa được lịch dạy.
               </p>
 
-              {/* Các nút bấm: xếp dọc full-width trên mobile, căn phải trên tablet/desktop */}
+              {/* Các nút bấm: xếp dọc chiều rộng 100% trên di động, căn phải trên máy tính bảng/máy tính bàn */}
               <div className="flex flex-col-reverse md:flex-row items-stretch md:items-center justify-end gap-2.5 md:gap-3 pt-2">
-                {/* Nút Hủy (dạng text button, chữ #6B5560) */}
+                {/* Nút Hủy (dạng nút chữ, màu #6B5560) */}
                 <button
                   type="button"
                   onClick={() => setIsDeleteDialogOpen(false)}
@@ -1629,7 +1629,7 @@ export const SchedulePage: React.FC = () => {
                   Hủy
                 </button>
 
-                {/* Nút Xóa lịch (nền phủ #B02525, chữ trắng, icon thùng rác) */}
+                {/* Nút Xóa lịch (nền phủ #B02525, chữ trắng, biểu tượng thùng rác) */}
                 <button
                   type="button"
                   onClick={handleConfirmDeleteSchedule}

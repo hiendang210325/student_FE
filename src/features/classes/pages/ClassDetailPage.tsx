@@ -190,9 +190,9 @@ export const ClassDetailPage: React.FC = () => {
   return (
     <TooltipProvider delayDuration={150}>
       <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[100dvh] lg:min-h-[976px]">
-        {/* Khung nội dung chuẩn 1200px trên desktop, co giãn theo viewport trên mobile/tablet */}
+        {/* Khung nội dung chuẩn 1200px trên máy tính bàn, co giãn theo khung nhìn trên di động/máy tính bảng */}
         <div className="w-full lg:w-[1200px] lg:h-[976px] p-0 lg:p-8 flex flex-col gap-4 lg:gap-0 lg:justify-between box-border select-none relative">
-        {/* Thông báo dạng Toast hiển thị phản hồi tức thì */}
+        {/* Thông báo nổi hiển thị phản hồi tức thì */}
         {toastMessage && (
           <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 bg-[#3B2A35] text-white px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -200,10 +200,10 @@ export const ClassDetailPage: React.FC = () => {
           </div>
         )}
 
-        {/* ==================== HÀNG 1: HEADER ==================== */}
+        {/* ==================== HÀNG 1: TIÊU ĐỀ ĐẦU TRANG ==================== */}
         <header className="min-h-[72px] lg:h-[88px] flex flex-col md:flex-row md:items-center justify-between gap-3 flex-shrink-0">
           <div className="flex flex-col justify-center min-w-0">
-            {/* Dòng Breadcrumb trên tiêu đề: nút mũi tên quay lại và đường dẫn */}
+            {/* Thanh điều hướng phân cấp trên tiêu đề: nút mũi tên quay lại và đường dẫn */}
             <div className="flex items-center gap-1.5 mb-1 text-[14px] text-[#6B5560]">
               <button
                 onClick={() => navigate(ROUTES.CLASSES)}
@@ -240,7 +240,7 @@ export const ClassDetailPage: React.FC = () => {
                 </span>
               </div>
 
-              {/* 2 hình dán vector phẳng pastel (ẩn trên mobile) */}
+              {/* 2 hình dán vector phẳng pastel (ẩn trên di động) */}
               <div className="hidden md:flex items-center gap-2 ml-6">
                 {/* Hình dán 1: Ngôi sao pastel #F8A5C2 */}
                 <svg
@@ -296,7 +296,7 @@ export const ClassDetailPage: React.FC = () => {
             </span>
           </div>
 
-          {/* Tiêu đề bảng (ẩn trên mobile, ẩn Giới tính & SĐT trên tablet) */}
+          {/* Tiêu đề bảng (ẩn trên di động, ẩn Giới tính & SĐT trên máy tính bảng) */}
           <div className="hidden md:grid md:grid-cols-[110px_1.5fr_140px_120px] lg:flex h-[48px] bg-[#DCEBFA] text-[#1F4E79] text-[13px] font-semibold items-center border-b border-[#F3D9E3] flex-shrink-0">
             <div className="lg:w-[130px] pl-4 lg:pl-6 flex-shrink-0">Mã học sinh</div>
             <div className="lg:w-[330px] flex-shrink-0">Họ và tên</div>
@@ -306,7 +306,7 @@ export const ClassDetailPage: React.FC = () => {
             <div className="lg:w-[164px] pr-4 lg:pr-6 text-center flex-shrink-0">Thao tác</div>
           </div>
 
-          {/* Bảng Tablet/Desktop */}
+          {/* Bảng hiển thị cho Máy tính bảng / Máy tính bàn */}
           <div className="hidden md:flex flex-1 flex-col">
             {students.map((student, index) => {
               const isPinkAvatar = index % 2 === 0;
@@ -323,7 +323,7 @@ export const ClassDetailPage: React.FC = () => {
                     {student.studentCode}
                   </div>
 
-                  {/* Cột 2: Họ và tên kèm Avatar và Email */}
+                  {/* Cột 2: Họ và tên kèm Ảnh đại diện và Email */}
                   <div className="lg:w-[330px] flex items-center gap-3 flex-shrink-0 pr-4 min-w-0">
                     <div
                       className={`w-9 h-9 rounded-[10px] flex items-center justify-center font-bold text-[13px] flex-shrink-0 ${
@@ -344,12 +344,12 @@ export const ClassDetailPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Cột 3: Giới tính (ẩn trên tablet) */}
+                  {/* Cột 3: Giới tính (ẩn trên máy tính bảng) */}
                   <div className="hidden lg:block lg:w-[120px] text-center font-medium text-[#3B2A35] flex-shrink-0">
                     {student.gender}
                   </div>
 
-                  {/* Cột 4: Số điện thoại phụ huynh (ẩn trên tablet) */}
+                  {/* Cột 4: Số điện thoại phụ huynh (ẩn trên máy tính bảng) */}
                   <div className="hidden lg:block lg:w-[220px] font-medium text-[#3B2A35] tracking-tight flex-shrink-0">
                     {student.parentPhone}
                   </div>
@@ -412,7 +412,7 @@ export const ClassDetailPage: React.FC = () => {
             })}
           </div>
 
-          {/* MOBILE CARDS */}
+          {/* DANH SÁCH THẺ TRÊN DI ĐỘNG */}
           <div className="md:hidden divide-y divide-[#F3D9E3]">
             {students.map((student, index) => {
               const isPinkAvatar = index % 2 === 0;
@@ -495,7 +495,7 @@ export const ClassDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Hộp thoại Modal: Thêm học sinh vào Lớp 10 hiển thị trên lớp phủ mờ rgba(59,42,53,0.35) */}
+        {/* Hộp thoại: Thêm học sinh vào Lớp 10 hiển thị trên lớp phủ mờ rgba(59,42,53,0.35) */}
         <AddStudentModal
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}

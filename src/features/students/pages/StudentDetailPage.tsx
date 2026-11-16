@@ -37,7 +37,7 @@ export const StudentDetailPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top back button */}
+      {/* Nút quay lại phía trên */}
       <div>
         <Button
           variant="ghost"
@@ -49,7 +49,7 @@ export const StudentDetailPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* Profile Card Header */}
+      {/* Phần đầu thẻ thông tin học sinh */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="flex items-center gap-5">
@@ -76,9 +76,9 @@ export const StudentDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Two columns layout */}
+      {/* Bố cục 2 cột */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Info detail */}
+        {/* Chi tiết thông tin học sinh */}
         <div className="space-y-6">
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
@@ -135,7 +135,7 @@ export const StudentDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Grades Table */}
+        {/* Bảng điểm */}
         <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-brand-600" /> Bảng điểm chi tiết

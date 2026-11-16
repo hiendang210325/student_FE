@@ -128,16 +128,16 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
       className="fixed inset-0 z-50 bg-[rgba(59,42,53,0.35)] flex items-end md:items-center justify-center p-0 md:p-4 backdrop-blur-[0.5px] select-none"
       onClick={onClose}
     >
-      {/* Bottom sheet trên mobile, hộp thoại căn giữa trên tablet/desktop */}
+      {/* Bảng trượt đáy trên di động, hộp thoại căn giữa trên máy tính bảng/máy tính bàn */}
       <div
         className="w-full md:w-[min(720px,92vw)] lg:w-[720px] max-h-[90dvh] lg:h-[640px] bg-white rounded-t-[20px] md:rounded-[20px] shadow-2xl flex flex-col justify-between overflow-hidden border border-[#F3D9E3] relative z-50"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Thanh kéo nhỏ trên mobile */}
+        {/* Thanh kéo nhỏ trên di động */}
         <div className="md:hidden pt-2.5 pb-1 flex justify-center flex-shrink-0">
           <span className="w-10 h-1 rounded-full bg-[#E5D3DC]" />
         </div>
-        {/* ==================== PHẦN 1: ĐẦU TRANG MODAL ==================== */}
+        {/* ==================== PHẦN 1: ĐẦU HỘP THOẠI ==================== */}
         <div className="min-h-[72px] lg:h-[88px] px-5 md:px-8 py-3 lg:py-0 flex items-center justify-between border-b border-[#F3D9E3] flex-shrink-0">
           <div className="flex flex-col">
             <h2 className="font-playfair text-[22px] font-bold text-[#3B2A35] leading-tight">
@@ -166,7 +166,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
               className="w-4 h-4 text-[#6B5560] absolute left-3.5 pointer-events-none"
               strokeWidth={1.75}
             />
-            {/* Ô nhập liệu tìm kiếm cao 48px, bo góc 12px, viền #9C6B84, viền ngoài focus 2px #2F6FA8 */}
+            {/* Ô nhập liệu tìm kiếm cao 48px, bo góc 12px, viền #9C6B84, viền nét 2px #2F6FA8 khi nhấp chọn */}
             <input
               type="text"
               value={searchQuery}
@@ -207,9 +207,9 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                     : 'cursor-pointer hover:bg-[#FFF6F9]'
                 }`}
               >
-                {/* Khu vực bên trái: Hộp kiểm 24px, Avatar 36px và Tên/Email */}
+                {/* Khu vực bên trái: Hộp kiểm 24px, Ảnh đại diện 36px và Tên/Email */}
                 <div className="flex items-center gap-3">
-                  {/* Hộp kiểm Checkbox 24px */}
+                  {/* Hộp kiểm đánh dấu 24px */}
                   {candidate.isDisabled ? (
                     // Hàng bị vô hiệu hóa: Hộp kiểm xám và có dấu tích
                     <div className="w-6 h-6 rounded-[6px] bg-[#CBD5E1] border border-[#CBD5E1] flex items-center justify-center text-white flex-shrink-0 cursor-not-allowed">
@@ -225,7 +225,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                     <div className="w-6 h-6 rounded-[6px] border-[1.5px] border-[#9C6B84] bg-white flex-shrink-0" />
                   )}
 
-                  {/* Avatar chữ cái đầu 36px xen kẽ màu hồng và xanh */}
+                  {/* Ảnh đại diện chữ cái đầu 36px xen kẽ màu hồng và xanh */}
                   <div
                     className={`w-9 h-9 rounded-[10px] flex items-center justify-center font-bold text-[13px] flex-shrink-0 ${
                       candidate.isDisabled
@@ -253,7 +253,7 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
                   </div>
                 </div>
 
-                {/* Khu vực bên phải: Mã học sinh và Chip lớp học hiện tại */}
+                {/* Khu vực bên phải: Mã học sinh và Thẻ lớp học hiện tại */}
                 <div className="flex flex-col items-end">
                   <span
                     className={`text-[13px] font-semibold leading-tight ${
@@ -287,9 +287,9 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({
           })}
         </div>
 
-        {/* ==================== PHẦN 4: CHÂN MODAL CỐ ĐỊNH ==================== */}
+        {/* ==================== PHẦN 4: CHÂN HỘP THOẠI CỐ ĐỊNH ==================== */}
         <div className="min-h-[72px] lg:h-[80px] px-5 md:px-8 py-3 lg:py-0 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 border-t border-[#F3D9E3] bg-[#FCF8FA] flex-shrink-0">
-          {/* Bên trái: Chip đếm số lượng học sinh được chọn */}
+          {/* Bên trái: Thẻ đếm số lượng học sinh được chọn */}
           <span className="px-3.5 py-1.5 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] font-nunito text-[13px] font-bold text-center sm:text-left">
             Đã chọn {selectedIds.length} học sinh
           </span>

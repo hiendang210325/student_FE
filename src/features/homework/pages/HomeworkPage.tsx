@@ -972,7 +972,7 @@ export const HomeworkPage: React.FC = () => {
 
       return (
         <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[100dvh] lg:min-h-[976px]">
-          {/* Khung chuẩn 1200px trên desktop, co giãn theo viewport trên mobile/tablet */}
+          {/* Khung chuẩn 1200px trên máy tính bàn, co giãn theo khung nhìn trên di động/máy tính bảng */}
           <div className="w-full lg:w-[1200px] lg:h-[976px] p-0 lg:p-8 flex flex-col gap-4 lg:gap-0 lg:justify-between box-border select-none relative font-nunito">
             {toastMessage && (
               <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 bg-[#3B2A35] text-white px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
@@ -981,7 +981,7 @@ export const HomeworkPage: React.FC = () => {
               </div>
             )}
 
-            {/* ==================== HÀNG 1: HEADER "CHẤM BÀI" ==================== */}
+            {/* ==================== HÀNG 1: TIÊU ĐỀ "CHẤM BÀI" ==================== */}
             <header className="min-h-[72px] lg:h-[88px] flex flex-col justify-between gap-2 lg:gap-0 flex-shrink-0">
               {/* Dòng Breadcrumb: nút mũi tên quay lại + "Bài tập › Phân tích "Kiều ở lầu Ngưng Bích"" */}
               <div className="flex flex-wrap items-center gap-2 text-[14px] font-semibold text-[#6B5560] leading-none">
@@ -1006,7 +1006,7 @@ export const HomeworkPage: React.FC = () => {
                 </span>
               </div>
 
-              {/* Dòng Tiêu đề "Chấm bài" + chip */}
+              {/* Dòng Tiêu đề "Chấm bài" + thẻ trạng thái */}
               <div className="flex flex-wrap items-center gap-2 lg:gap-3">
                 <h1 className="font-playfair text-[24px] lg:text-[28px] font-bold text-[#3B2A35] leading-none">
                   Chấm bài
@@ -1016,7 +1016,7 @@ export const HomeworkPage: React.FC = () => {
                 </span>
               </div>
 
-              {/* Điểm nhấn đặc trưng: Ghi chú viết tay của giáo viên dưới tiêu đề + 2 sticker (ẩn trên mobile) */}
+              {/* Điểm nhấn đặc trưng: Ghi chú viết tay của giáo viên dưới tiêu đề + 2 hình dán (ẩn trên di động) */}
               <div className="flex items-center gap-6">
                 <div className="inline-block transform -rotate-1 origin-left">
                   <span className="font-playfair italic text-[14px] font-semibold text-[#A61E4D] squiggle-underline-note">
@@ -1024,7 +1024,7 @@ export const HomeworkPage: React.FC = () => {
                   </span>
                 </div>
 
-                {/* 2 hình dán vector phẳng pastel (ẩn trên mobile) */}
+                {/* 2 hình dán vector phẳng pastel (ẩn trên di động) */}
                 <div className="hidden md:flex items-center gap-2 pl-2">
                   <svg
                     className="w-6 h-6 text-[#F8A5C2] flex-shrink-0"
@@ -1052,7 +1052,7 @@ export const HomeworkPage: React.FC = () => {
               </div>
             </header>
 
-            {/* ==================== HÀNG 2: LƯỚI 12 CỘT (40/60 tablet, 3/9 desktop, master-detail mobile) ==================== */}
+            {/* ==================== HÀNG 2: LƯỚI 12 CỘT (40/60 máy tính bảng, 3/9 máy tính bàn, danh sách - chi tiết trên di động) ==================== */}
             <div className="w-full lg:w-[1136px] lg:h-[800px] grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-[24px] flex-shrink-0">
               {/* ========== CỘT TRÁI: THẺ "HỌC SINH LỚP 9" ========== */}
               <div
@@ -1081,7 +1081,7 @@ export const HomeworkPage: React.FC = () => {
                             : 'bg-white hover:bg-[#FFF6F9] border-l-4 border-l-transparent'
                         }`}
                       >
-                        {/* Avatar chữ viết tắt 36px + Họ và tên */}
+                        {/* Ảnh đại diện chữ viết tắt 36px + Họ và tên */}
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div
                             className={`w-[36px] h-[36px] rounded-[10px] font-bold text-[12px] flex items-center justify-center flex-shrink-0 ${
@@ -1097,7 +1097,7 @@ export const HomeworkPage: React.FC = () => {
                           </span>
                         </div>
 
-                        {/* Huy hiệu trạng thái có cả icon VÀ chữ */}
+                        {/* Huy hiệu trạng thái có cả biểu tượng VÀ chữ */}
                         {renderStatusBadge(student.status, student.badgeText)}
                       </div>
                     );
@@ -1111,7 +1111,7 @@ export const HomeworkPage: React.FC = () => {
                   mobileShowDetail ? 'flex' : 'hidden md:flex'
                 } md:col-span-7 lg:col-span-9 lg:h-[800px] flex-col gap-4 lg:gap-[24px] lg:justify-between overflow-hidden`}
               >
-                {/* Nút quay lại danh sách trên mobile */}
+                {/* Nút quay lại danh sách trên di động */}
                 <button
                   type="button"
                   onClick={() => setMobileShowDetail(false)}
@@ -1140,7 +1140,7 @@ export const HomeworkPage: React.FC = () => {
 
                 {/* 2. THẺ TRÌNH XEM BÀI NỘP Ở GIỮA */}
                 <div className="min-h-[340px] max-h-[70dvh] lg:max-h-none lg:h-[430px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col overflow-hidden flex-shrink-0">
-                  {/* Thanh công cụ: cho phép xuống dòng trên mobile */}
+                  {/* Thanh công cụ: cho phép xuống dòng trên di động */}
                   <div className="min-h-[48px] px-3 lg:px-5 py-2 lg:py-0 bg-[#E9F3FF] border-b border-[#F3D9E3] flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
                     <div className="flex items-center gap-2 lg:gap-3">
                       {/* Điều khiển thu phóng: − 100% + */}
@@ -1185,7 +1185,7 @@ export const HomeworkPage: React.FC = () => {
                       </button>
                     </div>
 
-                    {/* Nút outline "Tải về" (#2F6FA8) */}
+                    {/* Nút viền "Tải về" (#2F6FA8) */}
                     <button
                       type="button"
                       onClick={() =>
@@ -1344,7 +1344,7 @@ export const HomeworkPage: React.FC = () => {
             </div>
           )}
 
-          {/* HÀNG 1: HEADER ADMIN */}
+          {/* HÀNG 1: TIÊU ĐỀ QUẢN TRỊ VIÊN */}
           <header className="min-h-[72px] lg:h-[88px] flex flex-col md:flex-row md:items-center justify-between gap-3 flex-shrink-0">
             <div className="flex flex-col justify-center min-w-0">
               <div className="flex flex-wrap items-center gap-2 lg:gap-3">
@@ -1400,7 +1400,7 @@ export const HomeworkPage: React.FC = () => {
             </button>
           </header>
 
-          {/* HÀNG 2: BỘ LỌC LỚP HỌC – Cuộn ngang trên mobile/tablet */}
+          {/* HÀNG 2: BỘ LỌC LỚP HỌC – Cuộn ngang trên di động/máy tính bảng */}
           <div className="min-h-[44px] lg:h-[44px] flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 flex-shrink-0">
             {ADMIN_CLASS_FILTERS.map((chip) => {
               const isSelected = selectedAdminClass === chip;
@@ -1432,7 +1432,7 @@ export const HomeworkPage: React.FC = () => {
               <div className="col-span-2 text-right">Thao tác</div>
             </div>
 
-            {/* Bảng Tablet/Desktop */}
+            {/* Bảng cho Máy tính bảng / Máy tính bàn */}
             <div className="hidden md:block divide-y divide-[#F3D9E3] flex-1">
               {ADMIN_ASSIGNMENTS.map((row) => {
                 const submitPercent =
@@ -1534,7 +1534,7 @@ export const HomeworkPage: React.FC = () => {
               })}
             </div>
 
-            {/* MOBILE CARDS */}
+            {/* DANH SÁCH THẺ TRÊN DI ĐỘNG */}
             <div className="md:hidden divide-y divide-[#F3D9E3]">
               {ADMIN_ASSIGNMENTS.map((row) => {
                 const submitPercent =
@@ -1677,7 +1677,7 @@ export const HomeworkPage: React.FC = () => {
             </div>
           </div>
 
-          {/* NGĂN KÉO BÊN PHẢI (SIDE DRAWER): "GIAO BÀI TẬP" */}
+          {/* NGĂN KÉO BÊN PHẢI: "GIAO BÀI TẬP" */}
           {isAssignDrawerOpen && (
             <div
               className="fixed inset-0 z-50 flex items-end md:items-stretch justify-center md:justify-end"
@@ -1688,7 +1688,7 @@ export const HomeworkPage: React.FC = () => {
                 className="w-full md:w-[min(520px,90vw)] lg:w-[520px] max-h-[90dvh] md:max-h-none md:h-full bg-white rounded-t-[20px] md:rounded-t-none md:rounded-l-[16px] shadow-[-12px_0_36px_rgba(59,42,53,0.16)] flex flex-col justify-between overflow-hidden select-none"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Thanh kéo nhỏ trên mobile */}
+                {/* Thanh kéo nhỏ trên di động */}
                 <div className="md:hidden pt-2.5 pb-1 flex justify-center flex-shrink-0">
                   <span className="w-10 h-1 rounded-full bg-[#E5D3DC]" />
                 </div>
@@ -2051,7 +2051,7 @@ export const HomeworkPage: React.FC = () => {
               mobileShowDetail ? 'flex' : 'hidden md:flex'
             } md:col-span-7 lg:col-span-9 lg:h-[800px] flex-col gap-4 lg:gap-[24px] lg:justify-between overflow-hidden`}
           >
-            {/* Nút quay lại danh sách bài tập trên mobile */}
+            {/* Nút quay lại danh sách bài tập trên di động */}
             <button
               type="button"
               onClick={() => setMobileShowDetail(false)}

@@ -638,7 +638,7 @@ export const Sidebar: React.FC = () => {
 
   return (
     <TooltipProvider delayDuration={120}>
-      {/* 1. MOBILE STICKY TOP BAR (< 768px, cao 56px) */}
+      {/* 1. THANH ĐẦU TRANG CỐ ĐỊNH TRÊN DI ĐỘNG (< 768px, cao 56px) */}
       <header className="md:hidden sticky top-0 z-30 h-14 w-full bg-brand-sidebar border-b border-brand-border px-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-9 h-9 rounded-[10px] bg-brand-cream border border-brand-border/60 flex items-center justify-center p-1 flex-shrink-0">
@@ -664,7 +664,7 @@ export const Sidebar: React.FC = () => {
         </button>
       </header>
 
-      {/* 2. TABLET ICON-ONLY RAIL (768px–1023px, rộng 72px) */}
+      {/* 2. THANH RAY BIỂU TƯỢNG TRÊN MÁY TÍNH BẢNG (768px–1023px, rộng 72px) */}
       <aside className="hidden md:flex lg:hidden fixed inset-y-0 left-0 w-[72px] h-[100dvh] bg-brand-sidebar border-r border-brand-border flex-col items-center justify-between py-3 px-2 z-20 overflow-y-auto">
         <div className="flex flex-col items-center gap-3 w-full">
           {/* Huy hiệu logo nhỏ */}
@@ -713,7 +713,7 @@ export const Sidebar: React.FC = () => {
           </nav>
         </div>
 
-        {/* Ảnh đại diện người dùng cố định ở đáy rail */}
+        {/* Ảnh đại diện người dùng cố định ở đáy thanh ray */}
         <div className="flex flex-col items-center gap-2 pt-2 border-t border-brand-border/80 w-full">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -742,12 +742,12 @@ export const Sidebar: React.FC = () => {
         </div>
       </aside>
 
-      {/* 3. DESKTOP SIDEBAR (1024px+, rộng 240px — giữ nguyên hoàn toàn) */}
+      {/* 3. THANH ĐIỀU HƯỚNG BÊN TRÁI MÁY TÍNH BÀN (1024px+, rộng 240px — giữ nguyên hoàn toàn) */}
       <aside className="hidden lg:flex fixed inset-y-0 left-0 w-[240px] h-[100dvh] bg-brand-sidebar border-r border-brand-border flex-col justify-between flex-shrink-0 z-20 overflow-y-auto">
         {navContent}
       </aside>
 
-      {/* 4. MOBILE LEFT DRAWER (< 768px, rộng min(300px, 85vw)) */}
+      {/* 4. NGĂN KÉO BÊN TRÁI TRÊN DI ĐỘNG (< 768px, rộng min(300px, 85vw)) */}
       {isMobileOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
           <div
@@ -768,7 +768,7 @@ export const Sidebar: React.FC = () => {
         </div>
       )}
 
-      {/* 5. MOBILE FIXED BOTTOM TAB BAR (< 768px, cao 64px + safe-area) */}
+      {/* 5. THANH ĐIỀU HƯỚNG DƯỚI ĐÁY CỐ ĐỊNH TRÊN DI ĐỘNG (< 768px, cao 64px + vùng an toàn) */}
       <nav
         aria-label="Điều hướng nhanh"
         className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-brand-border px-1 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] shadow-[0_-2px_10px_rgba(59,42,53,0.06)]"

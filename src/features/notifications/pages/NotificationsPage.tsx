@@ -620,24 +620,24 @@ export const NotificationsPage: React.FC = () => {
 
     return (
       <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[100dvh] lg:min-h-[976px] font-nunito text-[#3B2A35]">
-        {/* Khung chính 1200px trên desktop, co giãn theo viewport trên mobile/tablet */}
+        {/* Khung chính 1200px trên máy tính bàn, co giãn theo khung nhìn trên di động/máy tính bảng */}
         <div className="w-full lg:w-[1200px] lg:h-[976px] p-0 lg:p-8 flex flex-col gap-4 lg:gap-[24px] lg:justify-between box-border select-none">
-          {/* ==================== HÀNG 1: HEADER ==================== */}
+          {/* ==================== HÀNG 1: TIÊU ĐỀ ĐẦU TRANG ==================== */}
           <header className="min-h-[72px] lg:h-[88px] w-full lg:w-[1136px] flex flex-col md:flex-row md:items-center justify-between gap-3 flex-shrink-0">
-            {/* Bên trái: Tiêu đề "Thông báo" + Chip + Dòng ghi chú viết tay */}
+            {/* Bên trái: Tiêu đề "Thông báo" + Thẻ đếm + Dòng ghi chú viết tay */}
             <div className="flex flex-col justify-center min-w-0">
               <div className="flex flex-wrap items-center gap-2 lg:gap-3">
                 <h1 className="font-playfair text-[24px] lg:text-[28px] font-bold text-[#3B2A35] leading-tight">
                   Thông báo
                 </h1>
-                {/* Chip "3 chưa đọc" */}
+                {/* Thẻ "3 chưa đọc" */}
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[10px] bg-[#FFE0EB] text-[#A61E4D] text-[13px] font-bold tracking-wide">
                   <Bell className="w-3.5 h-3.5 text-[#A61E4D] flex-shrink-0" strokeWidth={1.75} />
                   <span>{unreadCount} chưa đọc</span>
                 </span>
               </div>
 
-              {/* Dòng ghi chú viết tay đặc trưng kèm gạch chân lượn sóng và 2 sticker */}
+              {/* Dòng ghi chú viết tay đặc trưng kèm gạch chân lượn sóng và 2 hình dán */}
               <div className="flex items-center mt-1.5">
                 <div className="inline-block transform -rotate-1 origin-left">
                   <span className="font-playfair italic text-[14px] lg:text-[15px] font-semibold text-[#A61E4D] squiggle-underline-note">
@@ -645,7 +645,7 @@ export const NotificationsPage: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Đúng 2 sticker vector phẳng pastel (ẩn trên mobile) */}
+                {/* Đúng 2 hình dán vector phẳng pastel (ẩn trên di động) */}
                 <div className="hidden md:flex items-center gap-2 ml-[24px] mr-[24px]">
                   <svg
                     className="w-6 h-6 text-[#F8A5C2] flex-shrink-0"
@@ -684,7 +684,7 @@ export const NotificationsPage: React.FC = () => {
             </button>
           </header>
 
-          {/* ==================== HÀNG 2: LƯỚI 12 CỘT (40/60 tablet & desktop, master-detail mobile) ==================== */}
+          {/* ==================== HÀNG 2: LƯỚI 12 CỘT (40/60 máy tính bảng & máy tính bàn, danh sách - chi tiết trên di động) ==================== */}
           <div className="w-full lg:w-[1136px] lg:h-[800px] grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-[24px] flex-shrink-0">
             {/* ==================== CỘT TRÁI (5 CỘT): THẺ DANH SÁCH THÔNG BÁO ==================== */}
             <section
@@ -692,7 +692,7 @@ export const NotificationsPage: React.FC = () => {
                 mobileShowStudentDetail ? 'hidden md:flex' : 'flex'
               } md:col-span-5 lg:h-[800px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-[0_1px_2px_rgba(59,42,53,0.06)] flex-col justify-between overflow-hidden box-border`}
             >
-              {/* Thanh chip lọc trên cùng */}
+              {/* Thanh thẻ lọc trên cùng */}
               <div className="min-h-[56px] px-3 lg:px-4 py-2 lg:py-0 border-b border-[#F3D9E3] flex items-center lg:justify-between gap-1.5 overflow-x-auto flex-shrink-0 box-border">
                 {(
                   [
@@ -743,7 +743,7 @@ export const NotificationsPage: React.FC = () => {
                       }}
                       className={`flex-1 min-h-[76px] py-3 lg:py-0 px-4 flex items-center justify-between gap-3 transition-colors cursor-pointer box-border ${leftBorderClass}`}
                     >
-                      {/* Bên trái: Chip icon 40px + Tiêu đề 14px (đậm nếu chưa đọc, thường nếu đã đọc) + Dòng xem trước 13px #6B5560 */}
+                      {/* Bên trái: Ô biểu tượng 40px + Tiêu đề 14px (đậm nếu chưa đọc, thường nếu đã đọc) + Dòng xem trước 13px #6B5560 */}
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         {renderCategoryIconChip(item.category, 'w-[40px] h-[40px]')}
                         <div className="flex flex-col justify-center min-w-0 flex-1">
@@ -786,7 +786,7 @@ export const NotificationsPage: React.FC = () => {
                 mobileShowStudentDetail ? 'flex' : 'hidden md:flex'
               } md:col-span-7 lg:h-[800px] bg-white border border-[#F3D9E3] rounded-[16px] p-4 lg:p-[32px] shadow-[0_1px_2px_rgba(59,42,53,0.06)] flex-col justify-between box-border`}
             >
-              {/* Nút quay lại danh sách trên mobile */}
+              {/* Nút quay lại danh sách trên di động */}
               <button
                 type="button"
                 onClick={() => setMobileShowStudentDetail(false)}
@@ -797,10 +797,10 @@ export const NotificationsPage: React.FC = () => {
               </button>
               {/* Khối nội dung phía trên */}
               <div className="flex-1 flex flex-col min-h-0">
-                {/* Hàng trên cùng: Chip loại thông báo + Tag "Tự động" / "Thủ công" bên trái; nút "Đánh dấu chưa đọc" bên phải */}
+                {/* Hàng trên cùng: Thẻ loại thông báo + Nhãn "Tự động" / "Thủ công" bên trái; nút "Đánh dấu chưa đọc" bên phải */}
                 <div className="flex items-center justify-between gap-3 flex-shrink-0">
                   <div className="flex items-center gap-2">
-                    {/* Chip loại thông báo: Học phí (#FFE0EB / #A61E4D, icon ví), Lịch học / Bài tập (#DCEBFA / #1F4E79), Thông báo chung (#EFE9ED / #6B5560) */}
+                    {/* Thẻ loại thông báo: Học phí (#FFE0EB / #A61E4D, biểu tượng ví), Lịch học / Bài tập (#DCEBFA / #1F4E79), Thông báo chung (#EFE9ED / #6B5560) */}
                     {selectedNotif.category === 'TUITION' && (
                       <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] bg-[#FFE0EB] text-[#A61E4D] font-nunito text-[13px] font-bold leading-none">
                         <Wallet
@@ -838,7 +838,7 @@ export const NotificationsPage: React.FC = () => {
                       </span>
                     )}
 
-                    {/* Tag "Tự động" (icon refresh, #E9F3FF / #1F4E79) hoặc "Thủ công" */}
+                    {/* Thẻ "Tự động" (biểu tượng làm mới, #E9F3FF / #1F4E79) hoặc "Thủ công" */}
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] bg-[#E9F3FF] text-[#1F4E79] font-nunito text-[13px] font-bold leading-none">
                       {selectedNotif.source === 'AUTO' ? (
                         <>
@@ -959,11 +959,11 @@ export const NotificationsPage: React.FC = () => {
 
   return (
     <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[100dvh] lg:min-h-[976px] font-nunito text-[#3B2A35] relative">
-      {/* Khung chính 1200px trên desktop, co giãn theo viewport trên mobile/tablet */}
+      {/* Khung chính 1200px trên máy tính bàn, co giãn theo khung nhìn trên di động/máy tính bảng */}
       <div className="w-full lg:w-[1200px] lg:h-[976px] p-0 lg:p-8 flex flex-col gap-4 lg:gap-[24px] lg:justify-between box-border select-none">
-        {/* ==================== HÀNG 1: HEADER ==================== */}
+        {/* ==================== HÀNG 1: TIÊU ĐỀ ĐẦU TRANG ==================== */}
         <header className="min-h-[72px] lg:h-[88px] w-full lg:w-[1136px] flex flex-col md:flex-row md:items-center justify-between gap-3 flex-shrink-0">
-          {/* Bên trái: Tiêu đề "Thông báo" + Chip + Ghi chú viết tay */}
+          {/* Bên trái: Tiêu đề "Thông báo" + Thẻ đếm + Ghi chú viết tay */}
           <div className="flex flex-col justify-center min-w-0">
             <div className="flex flex-wrap items-center gap-2 lg:gap-3">
               <h1 className="font-playfair text-[24px] lg:text-[28px] font-bold text-[#3B2A35] leading-tight">
@@ -974,7 +974,7 @@ export const NotificationsPage: React.FC = () => {
               </span>
             </div>
 
-            {/* Dòng ghi chú viết tay đặc trưng kèm gạch chân lượn sóng và 2 sticker */}
+            {/* Dòng ghi chú viết tay đặc trưng kèm gạch chân lượn sóng và 2 hình dán */}
             <div className="flex items-center mt-1.5">
               <div className="inline-block transform -rotate-1 origin-left">
                 <span className="font-playfair italic text-[14px] lg:text-[15px] font-semibold text-[#A61E4D] squiggle-underline-note">
@@ -982,7 +982,7 @@ export const NotificationsPage: React.FC = () => {
                 </span>
               </div>
 
-              {/* Đúng 2 sticker vector phẳng pastel (ẩn trên mobile) */}
+              {/* Đúng 2 hình dán vector phẳng pastel (ẩn trên di động) */}
               <div className="hidden md:flex items-center gap-2 ml-[24px] mr-[24px]">
                 <svg
                   className="w-6 h-6 text-[#F8A5C2] flex-shrink-0"
@@ -1021,7 +1021,7 @@ export const NotificationsPage: React.FC = () => {
           </button>
         </header>
 
-        {/* ==================== HÀNG 2: LƯỚI 12 CỘT (8/4 trên desktop, xếp chồng dưới lg) ==================== */}
+        {/* ==================== HÀNG 2: LƯỚI 12 CỘT (8/4 trên máy tính bàn, xếp chồng dưới lg) ==================== */}
         <div className="w-full lg:w-[1136px] lg:h-[800px] grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-[24px] flex-shrink-0">
           {/* ==================== CỘT TRÁI (8 CỘT): THẺ "LỊCH SỬ THÔNG BÁO" ==================== */}
           <section className="lg:col-span-8 lg:h-[800px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-[0_1px_2px_rgba(59,42,53,0.06)] flex flex-col justify-between overflow-hidden box-border">
@@ -1076,7 +1076,7 @@ export const NotificationsPage: React.FC = () => {
                     key={row.id}
                     className="min-h-[84px] lg:h-[84px] px-4 lg:px-5 py-3 lg:py-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 lg:gap-3 bg-white hover:bg-[#FFF6F9] transition-colors box-border flex-shrink-0"
                   >
-                    {/* Bên trái: Chip biểu tượng 44px + Tiêu đề + Dòng người nhận */}
+                    {/* Bên trái: Thẻ biểu tượng 44px + Tiêu đề + Dòng người nhận */}
                     <div className="flex items-center gap-3.5 min-w-0 flex-1">
                       {renderCategoryIconChip(row.category, 'w-[44px] h-[44px]')}
                       <div className="flex flex-col justify-center min-w-0">
@@ -1184,7 +1184,7 @@ export const NotificationsPage: React.FC = () => {
             </div>
           </section>
 
-          {/* ==================== CỘT PHẢI (4 CỘT trên desktop): 2 THẺ XẾP CHỒNG ==================== */}
+          {/* ==================== CỘT PHẢI (4 CỘT trên máy tính bàn): 2 THẺ XẾP CHỒNG ==================== */}
           <div className="lg:col-span-4 lg:h-[800px] flex flex-col justify-between gap-4 lg:gap-[24px] flex-shrink-0">
             {/* ==================== THẺ TRÊN: "NHẮC TỰ ĐỘNG" ==================== */}
             <section className="lg:h-[440px] bg-white border border-[#F3D9E3] rounded-[16px] p-4 lg:p-5 shadow-[0_1px_2px_rgba(59,42,53,0.06)] flex flex-col justify-between box-border flex-shrink-0">
@@ -1371,7 +1371,7 @@ export const NotificationsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* ==================== NGĂN KÉO BÊN PHẢI (SIDE DRAWER): "SOẠN THÔNG BÁO" ==================== */}
+      {/* ==================== NGĂN KÉO BÊN PHẢI: "SOẠN THÔNG BÁO" ==================== */}
       {isComposeDrawerOpen && (
         <div
           className="fixed inset-0 z-50 flex items-end md:items-stretch justify-center md:justify-end bg-[#3B2A35]/35"
@@ -1384,7 +1384,7 @@ export const NotificationsPage: React.FC = () => {
             aria-modal="true"
             aria-labelledby="compose-drawer-title"
           >
-            {/* Thanh kéo nhỏ trên mobile */}
+            {/* Thanh kéo nhỏ trên di động */}
             <div className="md:hidden pt-2.5 pb-1 flex justify-center flex-shrink-0">
               <span className="w-10 h-1 rounded-full bg-[#E5D3DC]" />
             </div>

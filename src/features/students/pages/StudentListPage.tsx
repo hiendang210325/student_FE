@@ -556,7 +556,7 @@ export const StudentListPage: React.FC = () => {
   return (
     <TooltipProvider delayDuration={150}>
       <div className="w-full lg:max-w-[1136px] lg:min-h-[976px] p-0 lg:p-8 mx-auto flex flex-col lg:justify-between gap-4 lg:gap-6 box-border select-none bg-brand-page text-brand-text font-nunito relative">
-        {/* Toast Notification */}
+        {/* Thông báo nổi */}
         {toastMessage && (
           <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 bg-[#3B2A35] text-white px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -564,7 +564,7 @@ export const StudentListPage: React.FC = () => {
           </div>
         )}
 
-        {/* ==================== ROW 1: HEADER ==================== */}
+        {/* ==================== HÀNG 1: TIÊU ĐỀ ĐẦU TRANG ==================== */}
         <header className="min-h-[72px] lg:h-[88px] flex flex-col md:flex-row md:items-center justify-between gap-3 relative flex-shrink-0">
           <div className="flex flex-col justify-center min-w-0">
             <div className="flex flex-wrap items-center gap-2 lg:gap-3">
@@ -582,7 +582,7 @@ export const StudentListPage: React.FC = () => {
               )}
             </div>
 
-            {/* Signature margin note with hand-drawn squiggle underline */}
+            {/* Ghi chú lề viết tay đặc trưng kèm gạch chân lượn sóng */}
             <div className="flex items-center gap-4 mt-1.5">
               <div className="inline-block transform -rotate-1 origin-left">
                 <span className="font-serif-title italic text-[14px] lg:text-[15px] font-semibold text-brand-pinkText squiggle-underline-note">
@@ -592,7 +592,7 @@ export const StudentListPage: React.FC = () => {
                 </span>
               </div>
 
-              {/* STICKERS (ẩn trên mobile) */}
+              {/* HÌNH DÁN (ẩn trên di động) */}
               <div className="hidden md:flex items-center gap-2 pl-6">
                 <svg
                   className="w-6 h-6 text-brand-pinkAccent animate-pulse"
@@ -620,7 +620,7 @@ export const StudentListPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Right: Primary Button "Thêm học sinh" */}
+          {/* Bên phải: Nút hành động chính "Thêm học sinh" */}
           <div className="flex items-center gap-3 w-full md:w-auto">
             <Button
               variant="raspberry"
@@ -633,7 +633,7 @@ export const StudentListPage: React.FC = () => {
           </div>
         </header>
 
-        {/* ==================== ROW 2: TAB BAR ==================== */}
+        {/* ==================== HÀNG 2: THANH CHUYỂN TAB ==================== */}
         <div className="min-h-[44px] flex flex-wrap items-center gap-2 lg:gap-3 flex-shrink-0">
           <Button
             variant={activeTab === 'LIST' ? 'blueAction' : 'secondary'}
@@ -673,12 +673,12 @@ export const StudentListPage: React.FC = () => {
           </Button>
         </div>
 
-        {/* ==================== ROW 3: ONE TABLE CARD ==================== */}
+        {/* ==================== HÀNG 3: MỘT THẺ BẢNG DỮ LIỆU DUY NHẤT ==================== */}
         <section className="lg:h-[732px] bg-white border border-[#F3D9E3] rounded-[12px] shadow-card flex flex-col justify-between overflow-hidden flex-shrink-0">
           {activeTab === 'TRASH' ? (
             /* ========================= TRASH STATE VIEW ========================= */
             <>
-              {/* TOP ROW */}
+              {/* HÀNG TRÊN CÙNG */}
               <div className="lg:h-[80px] p-4 lg:px-6 flex flex-col md:flex-row md:items-center justify-between gap-3 lg:gap-6 border-b border-[#F3D9E3] flex-shrink-0 bg-white">
                 <div className="flex-1 lg:h-[52px] px-3.5 py-2.5 lg:py-0 lg:px-4 rounded-[12px] bg-[#E9F3FF] border border-[#CFE8FF] flex items-center gap-3">
                   <Info className="w-5 h-5 text-[#1F4E79] flex-shrink-0" strokeWidth={1.75} />
@@ -712,7 +712,7 @@ export const StudentListPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* TABLE CONTAINER */}
+              {/* KHUNG BẢNG */}
               <div className="hidden md:flex flex-1 flex-col justify-start overflow-hidden">
                 <div className="h-[48px] bg-[#DCEBFA] text-[#1F4E79] px-4 lg:px-6 grid md:grid-cols-[95px_1.2fr_115px_100px_210px] lg:grid-cols-[110px_1.2fr_130px_90px_160px_110px_230px] items-center text-[13px] font-semibold select-none flex-shrink-0">
                   <div>Mã học sinh</div>
@@ -804,7 +804,7 @@ export const StudentListPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* MOBILE TRASH CARDS */}
+              {/* DANH SÁCH THẺ THÙNG RÁC TRÊN DI ĐỘNG */}
               <div className="md:hidden divide-y divide-[#F3D9E3]">
                 {displayedTrashRows.map((student) => (
                   <div key={student.id} className="p-4 flex flex-col gap-3 bg-white">
@@ -863,7 +863,7 @@ export const StudentListPage: React.FC = () => {
                 ))}
               </div>
 
-              {/* FOOTER */}
+              {/* CHÂN BẢNG */}
               <div className="min-h-[52px] px-4 lg:px-6 py-3 lg:py-0 border-t border-[#F3D9E3] flex flex-col sm:flex-row items-center justify-between gap-2 flex-shrink-0 bg-white">
                 <span className="text-[13px] font-semibold text-brand-subtext">
                   {trashTotal > 0
@@ -920,7 +920,7 @@ export const StudentListPage: React.FC = () => {
           ) : (
             /* ========================= LIST STATE VIEW ========================= */
             <>
-              {/* TOOLBAR */}
+              {/* THANH CÔNG CỤ */}
               <div className="lg:h-[72px] p-4 lg:px-6 flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4 border-b border-[#F3D9E3] flex-shrink-0">
                 <div className="relative w-full lg:flex-1">
                   <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9C6B84] pointer-events-none" />
@@ -967,7 +967,7 @@ export const StudentListPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* TABLE CONTAINER (Tablet & Desktop) */}
+              {/* KHUNG BẢNG (Máy tính bảng & Máy tính bàn) */}
               <div className="hidden md:flex flex-1 flex-col justify-start overflow-hidden">
                 <div className="h-[48px] bg-[#DCEBFA] text-[#1F4E79] px-4 lg:px-6 grid md:grid-cols-[95px_1.3fr_120px_125px_115px] lg:grid-cols-[105px_1.2fr_135px_80px_155px_130px_120px] items-center text-[13px] font-semibold select-none flex-shrink-0">
                   <div>Mã học sinh</div>
@@ -1027,7 +1027,7 @@ export const StudentListPage: React.FC = () => {
                           {student.parentPhone}
                         </div>
 
-                        {/* Status badge with strictly 10-12px radius, NEVER WRAPS */}
+                        {/* Huy hiệu trạng thái bo góc 10-12px, không xuống dòng */}
                         <div className="flex items-center min-w-0">
                           {student.status === 'Đang học' && (
                             <Badge variant="studying" className="px-3 py-1 font-bold text-[12px] rounded-[10px] whitespace-nowrap">
@@ -1049,7 +1049,7 @@ export const StudentListPage: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Các nút thao tác kèm chú thích (Tooltip) chỉ hiện khi di chuột vào */}
+                        {/* Các nút thao tác kèm chú thích chỉ hiện khi di chuột vào */}
                         <div className="flex items-center justify-end gap-1">
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1105,7 +1105,7 @@ export const StudentListPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* MOBILE LIST CARDS */}
+              {/* DANH SÁCH THẺ HỌC SINH TRÊN DI ĐỘNG */}
               <div className="md:hidden divide-y divide-[#F3D9E3]">
                 {displayStudents.slice(0, 10).map((student, idx) => {
                   const isEven = idx % 2 === 1;
@@ -1200,7 +1200,7 @@ export const StudentListPage: React.FC = () => {
                 })}
               </div>
 
-              {/* FOOTER */}
+              {/* CHÂN BẢNG */}
               <div className="min-h-[52px] px-4 lg:px-6 py-3 lg:py-0 border-t border-[#F3D9E3] flex flex-col sm:flex-row items-center justify-between gap-2 flex-shrink-0 bg-white">
                 <span className="text-[13px] font-semibold text-brand-subtext">
                   Hiển thị 1–10 trên 42 học sinh
@@ -1235,31 +1235,31 @@ export const StudentListPage: React.FC = () => {
         </section>
 
         {/* ========================================================================= */}
-        {/* ======= SHADCN UI CONFIRMATION DIALOG: CHUYỂN VÀO THÙNG RÁC (EXACT) ======= */}
+        {/* ======= HỘP THOẠI XÁC NHẬN: CHUYỂN VÀO THÙNG RÁC ======= */}
         {/* ========================================================================= */}
         <Dialog
           open={!!softDeleteTarget}
           onOpenChange={(open) => !open && setSoftDeleteTarget(null)}
         >
           <DialogContent className="sm:max-w-[440px] w-full p-6 bg-white border border-[#F3D9E3] rounded-[12px] shadow-[0_16px_40px_rgba(59,42,53,0.16)] text-left space-y-0">
-            {/* Top: 48px round icon chip with 12px radius (#DCEBFA background, trash icon #1F4E79) */}
+            {/* Phía trên: Ô biểu tượng tròn 48px bo góc 12px (nền #DCEBFA, biểu tượng thùng rác #1F4E79) */}
             <div className="w-12 h-12 rounded-[12px] bg-[#DCEBFA] flex items-center justify-center text-[#1F4E79] mb-4">
               <Trash2 className="w-6 h-6 text-[#1F4E79]" strokeWidth={1.75} />
             </div>
 
             <DialogHeader className="text-left space-y-2 p-0">
-              {/* Title in Playfair Display 22px */}
+              {/* Tiêu đề phông Playfair Display 22px */}
               <DialogTitle className="font-serif-title text-[22px] font-bold text-brand-text leading-snug">
                 Chuyển {softDeleteTarget?.fullName || 'Nguyễn Minh Anh'} vào thùng rác?
               </DialogTitle>
 
-              {/* Body in Nunito 14px #3B2A35 */}
+              {/* Nội dung phông Nunito 14px #3B2A35 */}
               <DialogDescription className="font-nunito text-[14px] text-[#3B2A35] leading-relaxed">
                 Học sinh sẽ bị ẩn khỏi danh sách, lịch học và điểm danh. Bạn có thể khôi phục trong mục Thùng rác bất cứ lúc nào.
               </DialogDescription>
             </DialogHeader>
 
-            {/* Buttons, right-aligned, 48px high: "Hủy" (#6B5560) and "Chuyển vào thùng rác" (filled #2F6FA8, white text) */}
+            {/* Các nút bấm căn phải, cao 48px: "Hủy" (#6B5560) và "Chuyển vào thùng rác" (màu #2F6FA8, chữ trắng) */}
             <DialogFooter className="mt-6 pt-2 flex sm:justify-end items-center gap-3">
               <Button
                 type="button"
@@ -1282,7 +1282,7 @@ export const StudentListPage: React.FC = () => {
         </Dialog>
 
         {/* ========================================================================= */}
-        {/* ============ SHADCN UI POP-UP (MODAL): SỬA HỌC SINH (GỌN GÀNG) ============ */}
+        {/* ============ HỘP THOẠI: SỬA THÔNG TIN HỌC SINH ============ */}
         {/* ========================================================================= */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="sm:max-w-[540px] max-h-[88vh] p-5 sm:p-6 bg-white border border-[#F3D9E3] rounded-[12px] shadow-2xl flex flex-col justify-between overflow-hidden">
@@ -1300,7 +1300,7 @@ export const StudentListPage: React.FC = () => {
               className="flex-1 overflow-y-auto pr-1 py-1 space-y-3.5 my-1"
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
-                {/* Field 1: Mã học sinh (read-only) */}
+                {/* Trường 1: Mã học sinh (chỉ đọc) */}
                 <div className="space-y-1">
                   <Label className="text-[12px] font-bold text-brand-text">Mã học sinh</Label>
                   <Input
@@ -1310,7 +1310,7 @@ export const StudentListPage: React.FC = () => {
                   />
                 </div>
 
-                {/* Field 2: Giới tính (segmented control) */}
+                {/* Trường 2: Giới tính (nút chọn phân đoạn) */}
                 <div className="space-y-1">
                   <Label className="text-[12px] font-bold text-brand-text">Giới tính</Label>
                   <div className="w-full h-10 p-1 rounded-[10px] border border-[#9C6B84] bg-white flex items-center gap-1">
@@ -1339,7 +1339,7 @@ export const StudentListPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Field 3: Họ và tên (focused outline 2px #2F6FA8) */}
+                {/* Trường 3: Họ và tên (viền nét 2px #2F6FA8 khi chọn) */}
                 <div className="space-y-1">
                   <Label className="text-[12px] font-bold text-brand-text">Họ và tên</Label>
                   <Input
@@ -1351,7 +1351,7 @@ export const StudentListPage: React.FC = () => {
                   />
                 </div>
 
-                {/* Field 4: Email */}
+                {/* Trường 4: Email */}
                 <div className="space-y-1">
                   <Label className="text-[12px] font-bold text-brand-text">Email</Label>
                   <Input
@@ -1363,7 +1363,7 @@ export const StudentListPage: React.FC = () => {
                   />
                 </div>
 
-                {/* Field 5: Số điện thoại phụ huynh */}
+                {/* Trường 5: Số điện thoại phụ huynh */}
                 <div className="space-y-1">
                   <Label className="text-[12px] font-bold text-brand-text">Số điện thoại phụ huynh</Label>
                   <Input
@@ -1374,7 +1374,7 @@ export const StudentListPage: React.FC = () => {
                   />
                 </div>
 
-                {/* Field 6: Trạng thái */}
+                {/* Trường 6: Trạng thái */}
                 <div className="space-y-1">
                   <Label className="text-[12px] font-bold text-brand-text">Trạng thái</Label>
                   <select
@@ -1390,7 +1390,7 @@ export const StudentListPage: React.FC = () => {
                   </select>
                 </div>
 
-                {/* Field 7: Lớp (full width col-span-2) với input tự nhập rồi nhấn Enter */}
+                {/* Trường 7: Lớp (chiều rộng 100% 2 cột) với ô nhập tự gõ rồi nhấn Enter */}
                 <div className="col-span-2 space-y-1">
                   <div className="flex items-center justify-between">
                     <Label className="text-[12px] font-bold text-brand-text">Lớp học</Label>
@@ -1442,7 +1442,7 @@ export const StudentListPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Footer inside form to submit easily */}
+              {/* Chân hộp thoại bên trong biểu mẫu để xác nhận dễ dàng */}
               <DialogFooter className="pt-3 border-t border-[#F3D9E3] flex sm:justify-between items-center w-full gap-3 flex-shrink-0 mt-3">
                 <Button
                   type="button"
@@ -1464,7 +1464,7 @@ export const StudentListPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* ==================== SHADCN UI POP-UP: THÊM HỌC SINH ==================== */}
+        {/* ==================== HỘP THOẠI: THÊM HỌC SINH ==================== */}
         <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
           <DialogContent className="sm:max-w-[480px] p-6 sm:p-7 bg-white border border-[#F3D9E3] rounded-[12px] shadow-lg">
             <DialogHeader className="text-left space-y-1">
@@ -1583,7 +1583,7 @@ export const StudentListPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* ==================== SHADCN UI POP-UP: XÁC NHẬN XÓA VĨNH VIỄN ==================== */}
+        {/* ==================== HỘP THOẠI: XÁC NHẬN XÓA VĨNH VIỄN ==================== */}
         <Dialog
           open={!!permanentDeleteTarget}
           onOpenChange={(open) => !open && setPermanentDeleteTarget(null)}
@@ -1623,7 +1623,7 @@ export const StudentListPage: React.FC = () => {
           </DialogContent>
         </Dialog>
 
-        {/* ==================== SHADCN UI POP-UP: XEM THÔNG TIN ==================== */}
+        {/* ==================== HỘP THOẠI: XEM THÔNG TIN HỌC SINH ==================== */}
         <Dialog open={!!viewingStudent} onOpenChange={(open) => !open && setViewingStudent(null)}>
           <DialogContent className="sm:max-w-[460px] p-6 sm:p-7 bg-white border border-[#F3D9E3] rounded-[12px] shadow-lg">
             <DialogHeader className="text-left space-y-1">

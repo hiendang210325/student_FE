@@ -216,7 +216,7 @@ export const ClassListPage: React.FC = () => {
       <div className="w-full flex justify-center bg-[#FFF6F9] lg:min-h-[1024px]">
         {/* Khung chứa chuẩn 1200px trên lg, co giãn đầy đủ trên di động và máy tính bảng */}
         <div className="w-full lg:w-[1200px] lg:min-h-[1024px] p-0 lg:p-8 flex flex-col justify-start lg:justify-between gap-4 md:gap-6 box-border select-none relative">
-          {/* Thông báo dạng Toast hiển thị phản hồi tức thì */}
+          {/* Thông báo nổi hiển thị phản hồi tức thì */}
           {toastMessage && (
             <div className="fixed bottom-6 right-6 z-50 bg-[#3B2A35] text-white px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -367,7 +367,7 @@ export const ClassListPage: React.FC = () => {
 
                   {/* Khu vực chân ô: Tên lớp học bên trái và vòng tròn mũi tên bên phải */}
                   <div className="flex items-end justify-between w-full">
-                    {/* Neo góc dưới bên trái: Tên lớp 28px trên mobile, 40px trên lg */}
+                    {/* Neo góc dưới bên trái: Tên lớp 28px trên di động, 40px trên màn hình lớn */}
                     <div className="flex flex-col min-w-0">
                       <span
                         className="font-playfair text-[28px] md:text-[34px] lg:text-[40px] font-bold leading-none tracking-tight truncate"
@@ -381,7 +381,7 @@ export const ClassListPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Góc dưới bên phải: Vòng tròn trắng 36px với biểu tượng chevron-right */}
+                    {/* Góc dưới bên phải: Vòng tròn trắng 36px với biểu tượng mũi tên phải */}
                     <div className="w-8 h-8 lg:w-[36px] lg:h-[36px] rounded-full bg-white flex items-center justify-center shadow-xs text-[#3B2A35] flex-shrink-0">
                       <ChevronRight className="w-4 h-4 text-[#3B2A35]" strokeWidth={1.75} />
                     </div>
@@ -391,7 +391,7 @@ export const ClassListPage: React.FC = () => {
             })}
           </TileGrid>
 
-          {/* Hộp thoại Modal Thêm/Sửa Lớp học & Đổi màu sắc */}
+          {/* Hộp thoại Thêm/Sửa Lớp học & Đổi màu sắc */}
           <ClassFormModal
             isOpen={isFormModalOpen}
             onClose={() => setIsFormModalOpen(false)}
