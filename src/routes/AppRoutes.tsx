@@ -4,6 +4,7 @@ import { ROUTES } from './paths';
 import { MainLayout } from '@/layouts/MainLayout/MainLayout';
 import { AuthLayout } from '@/layouts/AuthLayout/AuthLayout';
 import { ProtectedRoute } from './ProtectedRoute';
+import { GuestRoute } from './GuestRoute';
 import { Spinner } from '@/components/common/Spinner/Spinner';
 
 // Nhập trực tiếp các trang để tải tức thì và đảm bảo an toàn kiểu dữ liệu (Type Safety)
@@ -19,6 +20,7 @@ import { LeaveRequestsPage } from '@/features/leave-requests/pages/LeaveRequests
 import { TuitionPage } from '@/features/tuition/pages/TuitionPage';
 import { TuitionClassDetailPage } from '@/features/tuition/pages/TuitionClassDetailPage';
 import { NotificationsPage } from '@/features/notifications/pages/NotificationsPage';
+import { AccountListPage } from '@/features/accounts/pages/AccountListPage';
 
 const PageLoader = () => (
   <div className="flex h-[50vh] items-center justify-center">
@@ -30,9 +32,16 @@ export const AppRoutes: React.FC = () => {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        {/* Các tuyến đường công khai với AuthLayout */}
+        {/* Các tuyến đường công khai chỉ dành cho khách (chưa đăng nhập) với AuthLayout */}
         <Route element={<AuthLayout />}>
-          <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+          <Route
+            path={ROUTES.LOGIN}
+            element={
+              <GuestRoute>
+                <LoginPage />
+              </GuestRoute>
+            }
+          />
         </Route>
 
         {/* Các tuyến đường được bảo vệ với MainLayout */}
@@ -44,6 +53,7 @@ export const AppRoutes: React.FC = () => {
           }
         >
           <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
+          <Route path={ROUTES.ACCOUNTS} element={<AccountListPage />} />
           <Route path={ROUTES.STUDENTS} element={<StudentListPage />} />
           <Route path={ROUTES.STUDENT_DETAIL} element={<StudentDetailPage />} />
           <Route path={ROUTES.CLASSES} element={<ClassListPage />} />

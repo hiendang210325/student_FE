@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { User } from '@/types/user.types';
 import { tokenService } from '@/services/storage/tokenService';
+import { authApi } from '@/features/auth/api/authApi';
+import { LoginPayload } from '@/features/auth/types/auth.types';
 
 export type AppViewRole = 'admin' | 'student';
 
@@ -18,16 +20,25 @@ const getInitialViewRole = (): AppViewRole => {
   return 'admin';
 };
 
+const mapUserRoleToViewRole = (role?: string): AppViewRole => {
+  if (!role) return 'admin';
+  const clean = role.toLowerCase();
+  return clean === 'admin' ? 'admin' : 'student';
+};
+
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   activeRole: AppViewRole;
   setActiveRole: (role: AppViewRole) => void;
+  loginWithCredentials: (
+    credentials: LoginPayload
+  ) => Promise<{ user: User; redirectTo?: string }>;
   login: (user: User, token: string, refreshToken?: string) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateUser: (updatedUser: Partial<User>) => void;
-  checkAuth: () => void;
+  checkAuth: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -45,16 +56,77 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ activeRole: role });
   },
 
+  /**
+   * Đăng nhập thực tế qua Backend API
+   */
+  loginWithCredentials: async (credentials: LoginPayload) => {
+    set({ isLoading: true });
+    try {
+      const response = await authApi.login(credentials);
+      const { user, tokens, redirectTo } = response.data;
+
+      // Lưu Token vào Storage
+      if (tokens?.accessToken) {
+        tokenService.setAccessToken(tokens.accessToken);
+      }
+      if (tokens?.refreshToken) {
+        tokenService.setRefreshToken(tokens.refreshToken);
+      }
+      tokenService.setUser(user);
+
+      // Đồng bộ vai trò người dùng vào giao diện
+      const targetRole = mapUserRoleToViewRole(user.role);
+      try {
+        localStorage.setItem(ROLE_STORAGE_KEY, targetRole);
+      } catch {
+        // Bỏ qua
+      }
+
+      set({
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+        activeRole: targetRole,
+      });
+
+      return { user, redirectTo };
+    } catch (error) {
+      set({ isLoading: false });
+      throw error;
+    }
+  },
+
+  /**
+   * Phương thức đăng nhập thủ công / tương thích ngược
+   */
   login: (user: User, token: string, refreshToken?: string) => {
     tokenService.setAccessToken(token);
     if (refreshToken) tokenService.setRefreshToken(refreshToken);
     tokenService.setUser(user);
-    set({ user, isAuthenticated: true });
+
+    const targetRole = mapUserRoleToViewRole(user.role);
+    try {
+      localStorage.setItem(ROLE_STORAGE_KEY, targetRole);
+    } catch {
+      // Bỏ qua
+    }
+
+    set({ user, isAuthenticated: true, activeRole: targetRole });
   },
 
-  logout: () => {
-    tokenService.clearAll();
-    set({ user: null, isAuthenticated: false });
+  /**
+   * Đăng xuất an toàn: Gọi API xóa phiên trên server và thu hồi cookie/storage
+   */
+  logout: async () => {
+    try {
+      const refreshToken = tokenService.getRefreshToken() || undefined;
+      await authApi.logout(refreshToken).catch(() => {
+        // Bỏ qua nếu token đã hết hạn trên server
+      });
+    } finally {
+      tokenService.clearAll();
+      set({ user: null, isAuthenticated: false });
+    }
   },
 
   updateUser: (updatedFields: Partial<User>) => {
@@ -65,13 +137,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ user: updated });
   },
 
-  checkAuth: () => {
+  /**
+   * Khôi phục và đối chiếu phiên đăng nhập khi tải lại trang (F5)
+   */
+  checkAuth: async () => {
     const token = tokenService.getAccessToken();
-    const user = tokenService.getUser();
-    if (token && user) {
-      set({ user, isAuthenticated: true });
-    } else {
-      set({ user: null, isAuthenticated: false });
+    const storedUser = tokenService.getUser();
+
+    // Nếu không có token trong localStorage (và không có cookie), xóa trạng thái
+    if (!token && !storedUser) {
+      set({ user: null, isAuthenticated: false, isLoading: false });
+      return;
+    }
+
+    // Tạm giữ user từ cache để tránh nhấp nháy giao diện
+    if (storedUser) {
+      set({ user: storedUser, isAuthenticated: true });
+    }
+
+    try {
+      set({ isLoading: true });
+      const response = await authApi.getCurrentUser();
+      const freshUser = response.data;
+
+      tokenService.setUser(freshUser);
+      const targetRole = mapUserRoleToViewRole(freshUser.role);
+
+      set({
+        user: freshUser,
+        isAuthenticated: true,
+        isLoading: false,
+        activeRole: targetRole,
+      });
+    } catch {
+      // Nếu token không còn hợp lệ và làm mới thất bại
+      tokenService.clearAll();
+      set({ user: null, isAuthenticated: false, isLoading: false });
     }
   },
 }));

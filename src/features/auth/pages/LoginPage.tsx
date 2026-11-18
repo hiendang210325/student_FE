@@ -1,31 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore, AppViewRole } from '@/store/useAuthStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import { ROUTES } from '@/routes/paths';
-import { APP_ROLES } from '@/config/constants';
+import { ApiError } from '@/services/api/apiError';
 import logoImage from '@/assets/logo/logo.png';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ForgotPasswordModal } from '../components/ForgotPasswordModal';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, AlertCircle } from 'lucide-react';
 
 const REMOTE_LOGO_URL =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuAm5XV2DZhNznkwE3mOSYkuOE891bMae4iGN-rXsw38OrmD8yYr8yTbYHFjWqKQr9pcZ3J3bSWdLzRAJJFBmkmEqfzKm3dWce_XeesHzsRIE-PpUyv2dXqTY-lJ9n6MHu8aNyYo7bL65XhmaA5s4rpVe5mV9920DKVBDq_Lo9Mug5cW0yU3EyNzZr8ViOjcc8-HcD5uCyjf1SwQWP9CqKoaWzj8RWz-iRpsBiiuhJQ1hVaKsei8REwj';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login, activeRole, setActiveRole } = useAuthStore();
+  const { loginWithCredentials, isAuthenticated } = useAuthStore();
 
-  const [username, setUsername] = useState('nguyenvana@email.com');
+  // Ngăn chặn người dùng đã đăng nhập truy cập lại trang /login
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(ROUTES.DASHBOARD, { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [logoSrc, setLogoSrc] = useState(logoImage || REMOTE_LOGO_URL);
   const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
-  // Vai trò chọn tạm thời khi chưa nối backend
-  const [selectedRole, setSelectedRole] = useState<AppViewRole>(activeRole);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,28 +39,25 @@ export const LoginPage: React.FC = () => {
     setError(null);
 
     try {
-      // Mô phỏng yêu cầu gửi dữ liệu xác thực đăng nhập
-      setTimeout(() => {
-        setActiveRole(selectedRole);
-        login(
-          {
-            id: 1,
-            username: username,
-            fullName: selectedRole === 'student' ? 'Nguyễn Minh Anh' : 'Nguyễn Văn A',
-            email: username,
-            role: selectedRole === 'student' ? APP_ROLES.STUDENT : APP_ROLES.ADMIN,
-            isActive: true,
-          },
-          'demo_access_token_token'
-        );
-        setIsLoading(false);
-        navigate(ROUTES.DASHBOARD, { replace: true });
-      }, 500);
+      const result = await loginWithCredentials({
+        identifier: username.trim(),
+        password,
+        rememberMe,
+      });
+
+      // Điều hướng người dùng tới Dashboard theo cấu hình
+      const targetPath = result.redirectTo || ROUTES.DASHBOARD;
+      navigate(targetPath, { replace: true });
     } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.');
+      }
+    } finally {
       setIsLoading(false);
-      setError(
-        err instanceof Error ? err.message : 'Tài khoản hoặc mật khẩu không chính xác'
-      );
     }
   };
 
@@ -152,6 +155,7 @@ export const LoginPage: React.FC = () => {
               Lớp Văn chị Vân
             </span>
           </div>
+
           {/* Hình dán Vector 3: Cuốn sách mở / Ngòi bút xanh pastel nhỏ bên ngoài mép thẻ */}
           <div
             className="absolute top-8 right-8 pointer-events-none select-none hidden sm:block"
@@ -173,10 +177,10 @@ export const LoginPage: React.FC = () => {
             </svg>
           </div>
 
-          {/* Thẻ đăng nhập màu trắng: Bo góc 24px, bóng phẳng nhẹ, không hiệu ứng kính */}
+          {/* Thẻ đăng nhập màu trắng: Bo góc 24px, bóng phẳng nhẹ */}
           <div className="w-full max-w-[440px] bg-white rounded-[24px] p-8 sm:p-10 shadow-[0_8px_30px_rgb(214,51,108,0.08)] border border-[#F8A5C2]/30 relative z-10">
             {/* Phần đầu thẻ đăng nhập */}
-            <div className="mb-8">
+            <div className="mb-6">
               <h2 className="font-playfair font-bold text-3xl sm:text-[34px] text-brand-textDark leading-tight mb-2">
                 Chào mừng trở lại
               </h2>
@@ -187,20 +191,21 @@ export const LoginPage: React.FC = () => {
 
             {/* Thông báo lỗi nếu có */}
             {error && (
-              <div className="mb-5 rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-700 font-medium">
-                {error}
+              <div className="mb-5 rounded-xl bg-rose-50 border border-rose-200 p-3.5 text-xs text-rose-700 font-medium flex items-start gap-2 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-rose-600" />
+                <span className="leading-relaxed">{error}</span>
               </div>
             )}
 
             {/* Biểu mẫu đăng nhập */}
-            <form className="space-y-5" onSubmit={handleSubmit}>
-              {/* Trường 1: Tên đăng nhập hoặc email */}
-              <div className="space-y-2">
+            <form className="space-y-4" onSubmit={handleSubmit}>
+              {/* Trường 1: Email hoặc mã học sinh */}
+              <div className="space-y-1.5">
                 <Label
                   htmlFor="username"
                   className="font-nunito font-bold text-sm text-brand-textDark"
                 >
-                  Tên đăng nhập hoặc email
+                  Email hoặc mã học sinh
                 </Label>
                 <div className="relative">
                   <Input
@@ -209,15 +214,15 @@ export const LoginPage: React.FC = () => {
                     name="username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="nguyenvana@email.com"
+                    placeholder="Email hoặc mã HS (VD: HS0001)"
                     className="h-[48px] px-4 rounded-xl font-nunito font-medium text-brand-textDark bg-white text-base transition-all duration-150 border-2 border-brand-focusBlue focus-visible:ring-2 focus-visible:ring-brand-focusBlue/20"
                     required
                   />
                 </div>
               </div>
 
-              {/* Trường 2: Mật khẩu (kèm biểu tượng mắt ẩn/hiện ở bên phải) */}
-              <div className="space-y-2">
+              {/* Trường 2: Mật khẩu */}
+              <div className="space-y-1.5">
                 <Label
                   htmlFor="password"
                   className="font-nunito font-bold text-sm text-brand-textDark"
@@ -244,10 +249,8 @@ export const LoginPage: React.FC = () => {
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-textMuted hover:text-brand-textDark p-1.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-focusBlue transition-colors cursor-pointer"
                   >
                     {!showPassword ? (
-                      /* Eye Open Icon */
                       <Eye className="w-5 h-5" strokeWidth={1.8} />
                     ) : (
-                      /* Eye Closed Icon */
                       <EyeOff className="w-5 h-5" strokeWidth={1.8} />
                     )}
                   </button>
@@ -259,9 +262,11 @@ export const LoginPage: React.FC = () => {
                 <label className="flex items-center gap-2 cursor-pointer text-slate-600 font-nunito font-medium select-none">
                   <input
                     type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
                     className="rounded border-slate-300 text-brand-btnPink focus:ring-brand-focusBlue h-4 w-4"
                   />
-                  <span>Ghi nhớ đăng nhập</span>
+                  <span>Ghi nhớ đăng nhập (30 ngày)</span>
                 </label>
                 <button
                   type="button"
@@ -272,38 +277,7 @@ export const LoginPage: React.FC = () => {
                 </button>
               </div>
 
-              {/* Chọn vai trò tạm thời để xem giao diện Admin / Học sinh (ẩn khi nối backend) */}
-              <div className="space-y-1.5 pt-0.5">
-                <Label className="text-xs font-nunito font-bold text-[#6B5560]">
-                  Chọn vai trò xem (tạm thời)
-                </Label>
-                <div className="p-1 rounded-xl bg-[#FFF6F9] border border-[#F3D9E3] grid grid-cols-2 gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedRole('admin')}
-                    className={`h-9 rounded-lg text-[13px] font-nunito font-bold transition-all cursor-pointer ${
-                      selectedRole === 'admin'
-                        ? 'bg-[#D6336C] text-white shadow-2xs'
-                        : 'text-[#6B5560] hover:text-[#3B2A35]'
-                    }`}
-                  >
-                    Admin / Giáo viên
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedRole('student')}
-                    className={`h-9 rounded-lg text-[13px] font-nunito font-bold transition-all cursor-pointer ${
-                      selectedRole === 'student'
-                        ? 'bg-[#2F6FA8] text-white shadow-2xs'
-                        : 'text-[#6B5560] hover:text-[#3B2A35]'
-                    }`}
-                  >
-                    Học sinh
-                  </button>
-                </div>
-              </div>
-
-              {/* Nút hành động chính: Chiều rộng 100%, cao 48px, màu #D6336C, chữ trắng */}
+              {/* Nút đăng nhập */}
               <div className="pt-2">
                 <Button
                   type="submit"
@@ -313,7 +287,7 @@ export const LoginPage: React.FC = () => {
                   {isLoading ? (
                     <div className="flex items-center gap-2">
                       <Loader2 className="animate-spin h-5 w-5 text-white" />
-                      <span>Đang xử lý...</span>
+                      <span>Đang đăng nhập...</span>
                     </div>
                   ) : (
                     'Đăng nhập'
@@ -321,7 +295,7 @@ export const LoginPage: React.FC = () => {
                 </Button>
               </div>
 
-              {/* Ghi chú dưới nút: Phụ huynh không cần đăng nhập */}
+              {/* Ghi chú */}
               <div className="pt-1 text-center">
                 <p className="font-nunito font-semibold text-xs sm:text-[13px] text-brand-textMuted leading-relaxed">
                   Phụ huynh không cần đăng nhập — mở link hoá đơn do lớp gửi.
@@ -332,7 +306,7 @@ export const LoginPage: React.FC = () => {
         </section>
       </main>
 
-      {/* Hộp thoại Quên mật khẩu (Email -> OTP -> Mật khẩu mới với kiểm tra độ mạnh) */}
+      {/* Hộp thoại Quên mật khẩu */}
       <ForgotPasswordModal
         isOpen={isForgotModalOpen}
         onClose={() => setIsForgotModalOpen(false)}
@@ -341,3 +315,5 @@ export const LoginPage: React.FC = () => {
     </div>
   );
 };
+
+export default LoginPage;

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { ROUTES } from '@/routes/paths';
-import { useAuthStore, AppViewRole } from '@/store/useAuthStore';
+import { useAuthStore } from '@/store/useAuthStore';
 import logoImage from '@/assets/logo/logo.png';
 import {
   LayoutDashboard,
@@ -17,6 +17,7 @@ import {
   UserCheck,
   CalendarOff,
   MoreHorizontal,
+  KeyRound,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -32,6 +33,7 @@ const REMOTE_LOGO_URL =
 // Ánh xạ đường dẫn sang tiêu đề trang hiển thị trên thanh đầu trang di động
 const getMobilePageTitle = (pathname: string): string => {
   if (pathname === ROUTES.DASHBOARD) return 'Tổng quan';
+  if (pathname.startsWith(ROUTES.ACCOUNTS)) return 'Tài khoản';
   if (pathname.startsWith(ROUTES.STUDENTS)) return 'Học sinh';
   if (pathname.startsWith(ROUTES.CLASSES)) return 'Lớp học';
   if (pathname.startsWith(ROUTES.SCHEDULE)) return 'Lịch học';
@@ -43,20 +45,11 @@ const getMobilePageTitle = (pathname: string): string => {
 };
 
 export const Sidebar: React.FC = () => {
-  const { logout, activeRole, setActiveRole } = useAuthStore();
+  const { user, logout, activeRole } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [logoSrc, setLogoSrc] = useState(logoImage || REMOTE_LOGO_URL);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-
-  // Đồng bộ tham số ?role= trên URL với trạng thái activeRole toàn cục nếu có
-  useEffect(() => {
-    if (location.search.includes('role=student') && activeRole !== 'student') {
-      setActiveRole('student');
-    } else if (location.search.includes('role=admin') && activeRole !== 'admin') {
-      setActiveRole('admin');
-    }
-  }, [location.search, activeRole, setActiveRole]);
 
   // Tự động đóng ngăn kéo điều hướng trên di động khi chuyển trang
   useEffect(() => {
@@ -70,14 +63,6 @@ export const Sidebar: React.FC = () => {
   const handleLogout = () => {
     logout();
     navigate(ROUTES.LOGIN);
-  };
-
-  // Chuyển đổi trực tiếp giữa 2 vai trò Admin và Học sinh
-  const handleSelectRole = (role: AppViewRole) => {
-    setActiveRole(role);
-    if (location.search.includes('role=')) {
-      navigate(location.pathname, { replace: true });
-    }
   };
 
   // Nội dung thanh bên đầy đủ (dùng cho Desktop 240px và Mobile Drawer)
@@ -312,6 +297,32 @@ export const Sidebar: React.FC = () => {
               </div>
               <div className="space-y-0.5">
                 <NavLink
+                  to={ROUTES.ACCOUNTS}
+                  onClick={() => setIsMobileOpen(false)}
+                  className={({ isActive }) =>
+                    cn(
+                      'h-[44px] px-3.5 flex items-center gap-3 text-[14px] transition-all',
+                      isActive
+                        ? 'rounded-[10px] bg-white shadow-sm text-[#A61E4D] font-bold'
+                        : 'rounded-[10px] text-brand-text hover:bg-white/40 font-semibold'
+                    )
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <KeyRound
+                        className={cn(
+                          'w-5 h-5 flex-shrink-0',
+                          isActive ? 'text-[#A61E4D]' : 'text-brand-subtext'
+                        )}
+                        strokeWidth={1.75}
+                      />
+                      <span>Tài khoản</span>
+                    </>
+                  )}
+                </NavLink>
+
+                <NavLink
                   to={ROUTES.STUDENTS}
                   onClick={() => setIsMobileOpen(false)}
                   className={({ isActive }) =>
@@ -514,68 +525,61 @@ export const Sidebar: React.FC = () => {
                     </>
                   )}
                 </NavLink>
+
+                <NavLink
+                  to="/reports"
+                  onClick={() => setIsMobileOpen(false)}
+                  className={({ isActive }) =>
+                    cn(
+                      'h-[44px] px-3.5 rounded-[10px] flex items-center gap-3 text-[14px] transition-all',
+                      isActive
+                        ? 'bg-white shadow-sm text-[#A61E4D] font-bold'
+                        : 'text-brand-text hover:bg-white/40 font-semibold'
+                    )
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <FileText
+                        className={cn(
+                          'w-5 h-5 flex-shrink-0',
+                          isActive ? 'text-[#A61E4D]' : 'text-brand-subtext'
+                        )}
+                        strokeWidth={1.75}
+                      />
+                      <span>Báo cáo</span>
+                    </>
+                  )}
+                </NavLink>
               </div>
             </div>
           </nav>
         )}
       </div>
 
-      {/* Khu vực chân trang: Thanh chuyển vai trò tạm thời + Thẻ người dùng cố định ở đáy */}
-      <div className="pt-2 border-t border-brand-border/80 space-y-2">
-        {/* Thanh chuyển vai trò tạm thời để xem giao diện Admin / Học sinh (ẩn khi nối backend) */}
-        <div
-          className="p-1 rounded-[10px] bg-white/90 border border-brand-border/80 grid grid-cols-2 gap-1"
-          role="group"
-          aria-label="Chuyển vai trò xem tạm thời"
-        >
-          <button
-            type="button"
-            onClick={() => handleSelectRole('admin')}
-            className={`h-8 rounded-[8px] text-[12px] font-bold transition-all cursor-pointer ${
-              !isStudentView
-                ? 'bg-[#D6336C] text-white shadow-2xs'
-                : 'text-[#6B5560] hover:text-[#3B2A35] hover:bg-[#FFF6F9]'
-            }`}
-          >
-            Admin
-          </button>
-          <button
-            type="button"
-            onClick={() => handleSelectRole('student')}
-            className={`h-8 rounded-[8px] text-[12px] font-bold transition-all cursor-pointer ${
-              isStudentView
-                ? 'bg-[#2F6FA8] text-white shadow-2xs'
-                : 'text-[#6B5560] hover:text-[#3B2A35] hover:bg-[#E9F3FF]'
-            }`}
-          >
-            Học sinh
-          </button>
-        </div>
-
+      {/* Khu vực chân trang: Thẻ thông tin người dùng đăng nhập cố định ở đáy */}
+      <div className="pt-2 border-t border-brand-border/80">
         {isStudentView ? (
           <div className="bg-white/95 border border-brand-border/80 shadow-sm rounded-[12px] p-2.5 flex items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
               <div
-                onClick={() => handleSelectRole('admin')}
-                title="Bấm để chuyển sang góc nhìn Admin"
-                className="w-9 h-9 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] flex items-center justify-center font-bold text-[12px] flex-shrink-0 cursor-pointer"
+                className="w-9 h-9 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] flex items-center justify-center font-bold text-[12px] flex-shrink-0 select-none"
               >
-                {isNotificationsPage ? 'GH' : 'MA'}
+                {user?.fullName?.charAt(0).toUpperCase() || (isNotificationsPage ? 'GH' : 'MA')}
               </div>
               <div className="flex flex-col min-w-0">
                 <span
-                  onClick={() => handleSelectRole('admin')}
-                  title="Bấm để chuyển sang góc nhìn Admin"
-                  className="text-[13px] font-bold text-[#3B2A35] leading-tight truncate cursor-pointer"
+                  className="text-[13px] font-bold text-[#3B2A35] leading-tight truncate"
                 >
-                  {isNotificationsPage
-                    ? 'Đỗ Gia Hân · Học sinh'
-                    : 'Nguyễn Minh Anh · Học sinh'}
+                  {user?.fullName || (isNotificationsPage ? 'Đỗ Gia Hân' : 'Nguyễn Minh Anh')} · Học sinh
+                </span>
+                <span className="text-[11px] font-medium text-brand-subtext leading-none mt-0.5">
+                  {user?.studentCode ? `Mã HS: ${user.studentCode}` : 'Lớp 12A1'}
                 </span>
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="text-[12px] font-bold text-[#A61E4D] hover:underline text-left mt-0.5 cursor-pointer"
+                  className="text-[12px] font-bold text-[#A61E4D] hover:underline text-left mt-1 cursor-pointer"
                 >
                   Đăng xuất
                 </button>
@@ -584,20 +588,14 @@ export const Sidebar: React.FC = () => {
           </div>
         ) : (
           <div className="bg-white/90 border border-brand-border/80 shadow-sm rounded-[12px] p-2.5 flex items-center justify-between transition-all hover:border-brand-pinkAccent/60">
-            <div
-              onClick={() => handleSelectRole('student')}
-              title="Bấm để chuyển sang góc nhìn Học sinh"
-              className="flex items-center gap-2.5 cursor-pointer"
-            >
-              <div className="w-9 h-9 rounded-[10px] bg-[#FFE4EE] border border-brand-pinkAccent/60 flex items-center justify-center font-bold text-brand-pinkText text-[13px] shadow-sm flex-shrink-0">
-                V
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-[10px] bg-[#FFE4EE] border border-brand-pinkAccent/60 flex items-center justify-center font-bold text-brand-pinkText text-[13px] shadow-sm flex-shrink-0 select-none">
+                {user?.fullName?.charAt(0).toUpperCase() || 'V'}
               </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[13px] font-bold text-brand-text leading-tight">
-                    Chị Vân · Admin
-                  </span>
-                </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[13px] font-bold text-brand-text leading-tight truncate">
+                  {user?.fullName || 'Chị Vân'} · Admin
+                </span>
                 <span className="text-[12px] font-medium text-brand-subtext leading-none mt-0.5">
                   Giáo viên chính
                 </span>
@@ -627,6 +625,7 @@ export const Sidebar: React.FC = () => {
       ]
     : [
         { to: ROUTES.DASHBOARD, end: true, label: 'Tổng quan', icon: LayoutDashboard },
+        { to: ROUTES.ACCOUNTS, label: 'Tài khoản', icon: KeyRound },
         { to: ROUTES.STUDENTS, label: 'Học sinh', icon: Users },
         { to: ROUTES.CLASSES, label: 'Lớp học', icon: BookOpen },
         { to: ROUTES.SCHEDULE, label: 'Lịch học', icon: Calendar },
@@ -717,25 +716,20 @@ export const Sidebar: React.FC = () => {
         <div className="flex flex-col items-center gap-2 pt-2 border-t border-brand-border/80 w-full">
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={() => handleSelectRole(isStudentView ? 'admin' : 'student')}
-                aria-label={isStudentView ? 'Chuyển sang Admin' : 'Chuyển sang Học sinh'}
+              <div
                 className={cn(
-                  'w-11 h-11 rounded-[10px] flex items-center justify-center font-bold text-[13px] shadow-sm cursor-pointer transition-colors',
+                  'w-11 h-11 rounded-[10px] flex items-center justify-center font-bold text-[13px] shadow-sm select-none',
                   isStudentView
                     ? 'bg-[#DCEBFA] text-[#1F4E79]'
                     : 'bg-[#FFE4EE] border border-brand-pinkAccent/60 text-brand-pinkText'
                 )}
               >
-                {isStudentView ? (isNotificationsPage ? 'GH' : 'MA') : 'V'}
-              </button>
+                {user?.fullName?.charAt(0).toUpperCase() || (isStudentView ? (isNotificationsPage ? 'GH' : 'MA') : 'V')}
+              </div>
             </TooltipTrigger>
             <TooltipContent side="right">
               <span>
-                {isStudentView
-                  ? 'Học sinh (Bấm để đổi sang Admin)'
-                  : 'Chị Vân · Admin (Bấm để đổi sang Học sinh)'}
+                {user?.fullName || (isStudentView ? 'Học sinh' : 'Chị Vân · Admin')}
               </span>
             </TooltipContent>
           </Tooltip>

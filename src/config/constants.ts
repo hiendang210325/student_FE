@@ -5,7 +5,11 @@ export const APP_ROLES = {
   STAFF: 'STAFF',
 } as const;
 
-export type AppRole = (typeof APP_ROLES)[keyof typeof APP_ROLES];
+export type AppRole =
+  | (typeof APP_ROLES)[keyof typeof APP_ROLES]
+  | 'admin'
+  | 'user'
+  | 'student';
 
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: 'qlhs_access_token',

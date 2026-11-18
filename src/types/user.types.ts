@@ -9,11 +9,15 @@ export interface User extends BaseEntity {
   avatarUrl?: string;
   phoneNumber?: string;
   isActive: boolean;
+  studentCode?: string | null;
+  status?: string;
+  isEmailVerified?: boolean;
+  lastLoginAt?: string | null;
 }
 
 export interface AuthTokens {
   accessToken: string;
   refreshToken?: string;
-  expiresIn?: number;
+  expiresIn?: string | number;
 }
 

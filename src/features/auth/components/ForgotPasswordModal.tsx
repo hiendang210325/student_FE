@@ -9,6 +9,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { authApi } from '../api/authApi';
+import { ApiError } from '@/services/api/apiError';
 import {
   Mail,
   Lock,
@@ -19,6 +21,7 @@ import {
   Eye,
   EyeOff,
   RotateCw,
+  Sparkles,
 } from 'lucide-react';
 
 interface ForgotPasswordModalProps {
@@ -43,6 +46,8 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
   const [otpError, setOtpError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(60);
   const [isCounting, setIsCounting] = useState(false);
+  const [resetToken, setResetToken] = useState<string>('');
+  const [devOtpHint, setDevOtpHint] = useState<string | null>(null);
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Trạng thái mật khẩu mới
@@ -51,6 +56,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Tự động đồng bộ email ban đầu khi hộp thoại mở ra
   useEffect(() => {
@@ -62,6 +68,9 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
       setConfirmPassword('');
       setEmailError(null);
       setOtpError(null);
+      setSubmitError(null);
+      setResetToken('');
+      setDevOtpHint(null);
     }
   }, [isOpen, initialEmail]);
 
@@ -119,7 +128,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
         return {
           score: 1,
           label: 'Rất yếu',
-          colorClass: 'bg-red-800', // Đỏ đậm
+          colorClass: 'bg-red-800',
           barColor: 'bg-red-800',
           textColor: 'text-red-800 font-bold',
         };
@@ -127,7 +136,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
         return {
           score: 2,
           label: 'Yếu',
-          colorClass: 'bg-red-500', // Đỏ
+          colorClass: 'bg-red-500',
           barColor: 'bg-red-500',
           textColor: 'text-red-500 font-bold',
         };
@@ -135,7 +144,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
         return {
           score: 3,
           label: 'Trung bình',
-          colorClass: 'bg-amber-400', // Vàng
+          colorClass: 'bg-amber-400',
           barColor: 'bg-amber-400',
           textColor: 'text-amber-600 font-bold',
         };
@@ -144,7 +153,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
         return {
           score: 4,
           label: 'Mạnh',
-          colorClass: 'bg-emerald-500', // Xanh
+          colorClass: 'bg-emerald-500',
           barColor: 'bg-emerald-500',
           textColor: 'text-emerald-600 font-bold',
         };
@@ -161,10 +170,11 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     newPassword.length > 0 &&
     confirmPassword === newPassword;
 
-  // Bước 1: Gửi yêu cầu xác nhận địa chỉ Email
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  // Bước 1: Gửi yêu cầu xác nhận địa chỉ Email qua Backend API
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setEmailError(null);
+    setSubmitError(null);
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email || !emailRegex.test(email.trim())) {
@@ -173,13 +183,25 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     }
 
     setIsSubmitting(true);
-    // Giả lập cuộc gọi API gửi mã OTP về hòm thư
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const response = await authApi.forgotPassword(email.trim());
+      if (response.data?.devReset?.otp) {
+        setDevOtpHint(response.data.devReset.otp);
+      }
       setStep('OTP');
       setCountdown(60);
       setIsCounting(true);
-    }, 600);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setEmailError(err.message);
+      } else if (err instanceof Error) {
+        setEmailError(err.message);
+      } else {
+        setEmailError('Không thể gửi yêu cầu đặt lại mật khẩu. Vui lòng thử lại sau.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Bước 2: Xử lý sự kiện khi người dùng nhập từng ký tự mã OTP
@@ -187,12 +209,10 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     if (!/^\d*$/.test(value)) return;
 
     const newOtp = [...otp];
-    // Lấy ký tự số cuối cùng vừa được nhập vào ô
     newOtp[index] = value.slice(-1);
     setOtp(newOtp);
     setOtpError(null);
 
-    // Tự động chuyển con trỏ sang ô nhập tiếp theo
     if (value && index < 5) {
       otpInputRefs.current[index + 1]?.focus();
     }
@@ -218,16 +238,34 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     otpInputRefs.current[nextIdx]?.focus();
   };
 
-  const handleResendOtp = () => {
+  const handleResendOtp = async () => {
     if (isCounting) return;
     setOtp(['', '', '', '', '', '']);
     setCountdown(60);
     setIsCounting(true);
     setOtpError(null);
     otpInputRefs.current[0]?.focus();
+
+    try {
+      const response = await authApi.forgotPassword(email.trim());
+      if (response.data?.devReset?.otp) {
+        setDevOtpHint(response.data.devReset.otp);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Không thể gửi lại mã OTP';
+      setOtpError(msg);
+    }
   };
 
-  const handleOtpSubmit = (e: React.FormEvent) => {
+  // Tự động điền mã OTP thử nghiệm (tiện ích cho môi trường Dev)
+  const handleAutoFillDevOtp = () => {
+    if (!devOtpHint || devOtpHint.length !== 6) return;
+    const digits = devOtpHint.split('');
+    setOtp(digits);
+    setOtpError(null);
+  };
+
+  const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const fullOtp = otp.join('');
     if (fullOtp.length < 6) {
@@ -236,31 +274,63 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     }
 
     setIsSubmitting(true);
-    // Giả lập kiểm tra và xác thực mã OTP qua API
-    setTimeout(() => {
-      setIsSubmitting(false);
+    setOtpError(null);
+    try {
+      const response = await authApi.verifyResetOtp(email.trim(), fullOtp);
+      if (response.data?.resetToken) {
+        setResetToken(response.data.resetToken);
+      }
       setStep('NEW_PASSWORD');
-    }, 600);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setOtpError(err.message);
+      } else if (err instanceof Error) {
+        setOtpError(err.message);
+      } else {
+        setOtpError('Mã OTP không chính xác hoặc đã hết hạn.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // Bước 3: Gửi và lưu mật khẩu mới
-  const handleResetPasswordSubmit = (e: React.FormEvent) => {
+  // Bước 3: Gửi và lưu mật khẩu mới qua Backend API
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError(null);
 
     if (newPassword.length < 6) {
+      setSubmitError('Mật khẩu mới phải có ít nhất 6 ký tự');
       return;
     }
 
     if (newPassword !== confirmPassword) {
+      setSubmitError('Mật khẩu xác nhận không trùng khớp');
       return;
     }
 
     setIsSubmitting(true);
-    // Giả lập cuộc gọi API cập nhật mật khẩu mới vào cơ sở dữ liệu
-    setTimeout(() => {
-      setIsSubmitting(false);
+    try {
+      const fullOtp = otp.join('');
+      await authApi.resetPassword({
+        token: resetToken || undefined,
+        email: email.trim(),
+        otp: fullOtp || undefined,
+        newPassword,
+        confirmPassword,
+      });
       setStep('SUCCESS');
-    }, 700);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setSubmitError(err.message);
+      } else if (err instanceof Error) {
+        setSubmitError(err.message);
+      } else {
+        setSubmitError('Không thể đặt lại mật khẩu. Vui lòng kiểm tra lại thông tin.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -368,7 +438,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full h-11 text-base font-nunito font-bold"
+                className="w-full h-11 text-base font-nunito font-bold bg-brand-btnPink hover:bg-brand-btnPinkHover text-white"
               >
                 {isSubmitting ? 'Đang gửi mã...' : 'Gửi mã xác thực OTP'}
               </Button>
@@ -391,6 +461,23 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 <strong className="text-brand-textDark font-semibold">{email}</strong>. Vui lòng kiểm tra và nhập mã bên dưới.
               </DialogDescription>
             </DialogHeader>
+
+            {/* Thông báo gợi ý OTP khi ở môi trường thử nghiệm (chưa có SMTP) */}
+            {devOtpHint && (
+              <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-center justify-between">
+                <div className="flex items-center gap-1.5 font-medium">
+                  <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <span>Mã OTP thử nghiệm (Console): <strong>{devOtpHint}</strong></span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAutoFillDevOtp}
+                  className="font-bold text-amber-900 underline hover:text-amber-700 cursor-pointer"
+                >
+                  Điền nhanh
+                </button>
+              </div>
+            )}
 
             {/* 6 ô nhập chữ số OTP */}
             <div className="space-y-2">
@@ -447,7 +534,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full h-11 text-base font-nunito font-bold"
+                className="w-full h-11 text-base font-nunito font-bold bg-brand-focusBlue hover:bg-brand-focusBlue/90 text-white"
               >
                 {isSubmitting ? 'Đang xác thực...' : 'Xác nhận mã OTP'}
               </Button>
@@ -469,6 +556,14 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 Vui lòng đặt mật khẩu mới an toàn có ít nhất 8 ký tự, kết hợp chữ hoa, chữ số và ký tự đặc biệt.
               </DialogDescription>
             </DialogHeader>
+
+            {/* Thông báo lỗi nếu có */}
+            {submitError && (
+              <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-700 font-medium flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
+                <span>{submitError}</span>
+              </div>
+            )}
 
             {/* Ô nhập 1: Mật khẩu mới */}
             <div className="space-y-1.5">
@@ -506,25 +601,21 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
               {/* Thước đo độ mạnh mật khẩu: Đỏ đậm -> Đỏ -> Vàng -> Xanh */}
               <div className="pt-1.5">
                 <div className="grid grid-cols-4 gap-1.5 h-2 w-full">
-                  {/* Phân đoạn 1: Rất yếu (Đỏ đậm) */}
                   <div
                     className={`h-full rounded-full transition-all duration-300 ${
                       strength.score >= 1 ? strength.barColor : 'bg-slate-200'
                     }`}
                   />
-                  {/* Phân đoạn 2: Yếu (Đỏ) */}
                   <div
                     className={`h-full rounded-full transition-all duration-300 ${
                       strength.score >= 2 ? strength.barColor : 'bg-slate-200'
                     }`}
                   />
-                  {/* Phân đoạn 3: Trung bình (Vàng) */}
                   <div
                     className={`h-full rounded-full transition-all duration-300 ${
                       strength.score >= 3 ? strength.barColor : 'bg-slate-200'
                     }`}
                   />
-                  {/* Phân đoạn 4: Mạnh (Xanh) */}
                   <div
                     className={`h-full rounded-full transition-all duration-300 ${
                       strength.score >= 4 ? strength.barColor : 'bg-slate-200'
@@ -592,7 +683,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
               <Button
                 type="submit"
                 disabled={isSubmitting || isPasswordMismatch || !newPassword || !confirmPassword}
-                className="w-full h-11 text-base font-nunito font-bold"
+                className="w-full h-11 text-base font-nunito font-bold bg-brand-btnPink hover:bg-brand-btnPinkHover text-white"
               >
                 {isSubmitting ? 'Đang lưu mật khẩu...' : 'Xác nhận đặt lại mật khẩu'}
               </Button>
@@ -620,7 +711,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
               <Button
                 type="button"
                 onClick={onClose}
-                className="w-full h-11 text-base font-nunito font-bold"
+                className="w-full h-11 text-base font-nunito font-bold bg-brand-btnPink hover:bg-brand-btnPinkHover text-white"
               >
                 Đăng nhập ngay
               </Button>
@@ -631,4 +722,3 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     </Dialog>
   );
 };
-

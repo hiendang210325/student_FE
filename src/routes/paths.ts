@@ -5,6 +5,7 @@ export const ROUTES = {
 
   // Các tuyến đường nội bộ ứng dụng (yêu cầu đăng nhập)
   DASHBOARD: '/',
+  ACCOUNTS: '/accounts',
   STUDENTS: '/students',
   STUDENT_DETAIL: '/students/:id',
   CLASSES: '/classes',
