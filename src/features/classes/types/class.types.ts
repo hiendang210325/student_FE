@@ -1,4 +1,4 @@
-import { BaseEntity } from '@/types/common.types';
+import { Student } from '@/features/students/types/student.types';
 
 // Cấu hình chủ đề màu sắc của ô vuông lớp học
 export interface ClassColorTheme {
@@ -9,21 +9,40 @@ export interface ClassColorTheme {
 }
 
 // Thực thể lớp học lưu trữ trong cơ sở dữ liệu
-export interface ClassRoom extends BaseEntity {
+export interface ClassRoom {
+  id: string;
   name: string;
   grade: number; // 1 đến 12
   academicYear: string;
   homeroomTeacher: string;
-  totalStudents: number;
   roomNumber: string;
+  schedule?: string;
+  maxCapacity?: number;
+  description?: string;
+  totalStudents: number;
+  colorTheme?: ClassColorTheme;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ClassDetailData extends ClassRoom {
+  students: Student[];
+}
+
+export interface ClassPayload {
+  name: string;
+  grade: number;
+  academicYear?: string;
+  homeroomTeacher?: string;
+  roomNumber?: string;
+  schedule?: string;
+  maxCapacity?: number;
+  description?: string;
   colorTheme?: ClassColorTheme;
 }
 
-// Kiểu dữ liệu hiển thị cho từng ô vuông lớp học trên lưới
-export interface ClassTileItem {
-  id: number | string;
-  name: string;
-  grade?: number;
-  studentCount: number;
-  colorTheme: ClassColorTheme;
+export interface AttendanceRecord {
+  classId: string;
+  date: string; // YYYY-MM-DD
+  presentStudentIds: string[];
 }

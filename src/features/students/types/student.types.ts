@@ -1,41 +1,68 @@
-import { BaseEntity, PaginationParams } from '@/types/common.types';
+export type StudentStatus = 'Đang học' | 'Bảo lưu' | 'Nghỉ học';
+export type StudentGender = 'Nữ' | 'Nam';
 
-export type StudentStatus = 'STUDYING' | 'RESERVED' | 'GRADUATED' | 'DROPOUT';
-export type StudentGender = 'MALE' | 'FEMALE' | 'OTHER';
-
-export interface Student extends BaseEntity {
+export interface Student {
+  id: string;
   studentCode: string;
   fullName: string;
-  gender: StudentGender;
-  dateOfBirth: string;
   email: string;
-  phoneNumber?: string;
-  address?: string;
+  gender: StudentGender;
+  classes: string[];
   className: string;
+  parentPhone: string;
+  dateOfBirth?: string;
+  address?: string;
   academicYear: string;
   status: StudentStatus;
+  isDeleted: boolean;
+  deletedDate?: string;
   gpa?: number;
+  note?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-export interface StudentFilterParams extends PaginationParams {
+export interface StudentStats {
+  activeCount: number;
+  trashCount: number;
+  studyingCount: number;
+  reservedCount: number;
+  leaveCount: number;
+  classes: string[];
+}
+
+export interface StudentListResponseData {
+  items: Student[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface StudentFilterParams {
+  page?: number;
+  limit?: number;
+  search?: string;
   className?: string;
-  status?: StudentStatus;
-  academicYear?: string;
-  gender?: StudentGender;
+  status?: string;
+  isDeleted?: 'true' | 'false' | boolean;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface CreateStudentPayload {
-  studentCode: string;
+  studentCode?: string;
   fullName: string;
+  email?: string;
   gender: StudentGender;
-  dateOfBirth: string;
-  email: string;
-  phoneNumber?: string;
+  classes: string[];
+  parentPhone: string;
+  dateOfBirth?: string;
   address?: string;
-  className: string;
-  academicYear: string;
+  academicYear?: string;
   status: StudentStatus;
+  gpa?: number;
+  note?: string;
 }
 
 export type UpdateStudentPayload = Partial<CreateStudentPayload>;
-

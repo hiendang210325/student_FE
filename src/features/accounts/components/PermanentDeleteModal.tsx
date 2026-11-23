@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Trash2 } from 'lucide-react';
+import { AlertTriangle, Trash2, Loader2 } from 'lucide-react';
 
 export interface PermanentDeleteStudent {
   id: string;
@@ -14,6 +14,7 @@ interface PermanentDeleteModalProps {
   onClose: () => void;
   onConfirm: () => void;
   student: PermanentDeleteStudent | null;
+  isLoading?: boolean;
 }
 
 export const PermanentDeleteModal: React.FC<PermanentDeleteModalProps> = ({
@@ -21,6 +22,7 @@ export const PermanentDeleteModal: React.FC<PermanentDeleteModalProps> = ({
   onClose,
   onConfirm,
   student,
+  isLoading = false,
 }) => {
   // Giá trị ô nhập xác nhận mã học sinh (mặc định điền sẵn mã của học sinh theo thiết kế)
   const [confirmInput, setConfirmInput] = useState('');
@@ -119,16 +121,25 @@ export const PermanentDeleteModal: React.FC<PermanentDeleteModalProps> = ({
           {/* Nút Xóa vĩnh viễn: Điền nền #B02525, chữ trắng, kèm biểu tượng thùng rác, chỉ bật khi mã khớp */}
           <button
             type="button"
-            disabled={!isCodeMatched}
+            disabled={!isCodeMatched || isLoading}
             onClick={onConfirm}
             className={`h-12 px-6 rounded-[12px] font-nunito font-semibold text-[14px] flex items-center justify-center gap-2 transition-all shadow-2xs ${
-              isCodeMatched
+              isCodeMatched && !isLoading
                 ? 'bg-[#B02525] text-white hover:bg-[#8F1D1D] cursor-pointer'
                 : 'bg-[#B02525]/40 text-white/80 cursor-not-allowed'
             }`}
           >
-            <Trash2 className="w-4 h-4 text-white" strokeWidth={2} />
-            <span>Xóa vĩnh viễn</span>
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                <span>Đang xóa...</span>
+              </>
+            ) : (
+              <>
+                <Trash2 className="w-4 h-4 text-white" strokeWidth={2} />
+                <span>Xóa vĩnh viễn</span>
+              </>
+            )}
           </button>
         </div>
       </div>

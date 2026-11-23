@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Loader2 } from 'lucide-react';
 
 export interface TrashConfirmStudent {
   id: string;
@@ -14,6 +14,7 @@ interface TrashConfirmModalProps {
   onClose: () => void;
   onConfirm: () => void;
   student: TrashConfirmStudent | null;
+  isLoading?: boolean;
 }
 
 export const TrashConfirmModal: React.FC<TrashConfirmModalProps> = ({
@@ -21,6 +22,7 @@ export const TrashConfirmModal: React.FC<TrashConfirmModalProps> = ({
   onClose,
   onConfirm,
   student,
+  isLoading = false,
 }) => {
   // Đóng modal khi bấm ESC
   useEffect(() => {
@@ -89,10 +91,18 @@ export const TrashConfirmModal: React.FC<TrashConfirmModalProps> = ({
           {/* Nút Chuyển vào thùng rác: Điền nền #2F6FA8, chữ trắng */}
           <button
             type="button"
+            disabled={isLoading}
             onClick={onConfirm}
-            className="h-12 px-6 rounded-[12px] font-nunito font-semibold text-[14px] text-white bg-[#2F6FA8] hover:bg-[#255885] transition-colors shadow-2xs cursor-pointer flex items-center justify-center"
+            className="h-12 px-6 rounded-[12px] font-nunito font-semibold text-[14px] text-white bg-[#2F6FA8] hover:bg-[#255885] disabled:opacity-60 transition-colors shadow-2xs cursor-pointer disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            Chuyển vào thùng rác
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Đang xử lý...</span>
+              </>
+            ) : (
+              <span>Chuyển vào thùng rác</span>
+            )}
           </button>
         </div>
       </div>

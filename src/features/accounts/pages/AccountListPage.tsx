@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CreateAccountModal } from '../components/CreateAccountModal';
 import { CredentialCardModal } from '../components/CredentialCardModal';
 import { ResetPasswordModal } from '../components/ResetPasswordModal';
@@ -7,6 +7,9 @@ import {
   PermanentDeleteModal,
   PermanentDeleteStudent,
 } from '../components/PermanentDeleteModal';
+import { AccountDetailModal, AccountDetailInfo } from '../components/AccountDetailModal';
+import { accountApi } from '../api/accountApi';
+import { AccountStats } from '../types/account.types';
 import {
   Search,
   Plus,
@@ -15,6 +18,7 @@ import {
   Lock,
   Unlock,
   KeyRound,
+  Eye,
   Mail,
   Trash2,
   Clock,
@@ -23,6 +27,9 @@ import {
   Phone,
   Info,
   Calendar,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 
 interface StudentAccountRow {
@@ -48,238 +55,81 @@ interface TrashStudentRow {
   deletedDate: string;
 }
 
-const INITIAL_ACCOUNTS: StudentAccountRow[] = [
-  {
-    id: '1',
-    name: 'Phan Đình Khôi',
-    code: 'HS0034',
-    email: 'dinhkhoi.phan@gmail.com',
-    phone: '0900 111 234',
-    className: 'Văn 6D',
-    status: 'Hoạt động',
-    lastLogin: 'Chưa đăng nhập',
-    avatarBg: '#FFE0EB',
-    avatarText: '#A61E4D',
-  },
-  {
-    id: '2',
-    name: 'Vũ Như Quỳnh',
-    code: 'HS0035',
-    email: 'nhuquynh.vu@gmail.com',
-    phone: '0900 111 235',
-    className: 'Văn 9A',
-    status: 'Hoạt động',
-    lastLogin: 'Hôm nay 08:12',
-    avatarBg: '#DCEBFA',
-    avatarText: '#1F4E79',
-  },
-  {
-    id: '3',
-    name: 'Hoàng Minh Châu',
-    code: 'HS0036',
-    email: 'minhchau.hoang@gmail.com',
-    phone: '0900 111 236',
-    className: 'Văn 8B',
-    status: 'Hoạt động',
-    lastLogin: 'Hôm qua 19:40',
-    avatarBg: '#FFE0EB',
-    avatarText: '#A61E4D',
-  },
-  {
-    id: '4',
-    name: 'Đặng Tuấn Vũ',
-    code: 'HS0037',
-    email: 'tuanvu.dang@gmail.com',
-    phone: '0900 111 237',
-    className: 'Văn 7C',
-    status: 'Hoạt động',
-    lastLogin: 'Chưa đăng nhập',
-    avatarBg: '#DCEBFA',
-    avatarText: '#1F4E79',
-  },
-  {
-    id: '5',
-    name: 'Lâm Thu Trang',
-    code: 'HS0038',
-    email: 'thutrang.lam@gmail.com',
-    phone: '0900 111 238',
-    className: 'Văn 9A',
-    status: 'Hoạt động',
-    lastLogin: 'Hôm nay 07:55',
-    avatarBg: '#FFE0EB',
-    avatarText: '#A61E4D',
-  },
-  {
-    id: '6',
-    name: 'Dương Việt Hoàng',
-    code: 'HS0039',
-    email: 'viethoang.duong@gmail.com',
-    phone: '0900 111 239',
-    className: 'Văn 6D',
-    status: 'Hoạt động',
-    lastLogin: '2 ngày trước',
-    avatarBg: '#DCEBFA',
-    avatarText: '#1F4E79',
-  },
-  {
-    id: '7',
-    name: 'Mai Ánh Tuyết',
-    code: 'HS0040',
-    email: 'anhtuyet.mai@gmail.com',
-    phone: '0900 111 240',
-    className: 'Văn 8B',
-    status: 'Hoạt động',
-    lastLogin: 'Hôm qua 21:03',
-    avatarBg: '#FFE0EB',
-    avatarText: '#A61E4D',
-  },
-  {
-    id: '8',
-    name: 'Nguyễn Hải Yến',
-    code: 'HS0041',
-    email: 'haiyen.nguyen@gmail.com',
-    phone: '0900 111 241',
-    className: 'Văn 9A',
-    status: 'Hoạt động',
-    lastLogin: 'Hôm nay 08:30',
-    avatarBg: '#DCEBFA',
-    avatarText: '#1F4E79',
-  },
-  {
-    id: '9',
-    name: 'Trần Quốc Bảo',
-    code: 'HS0031',
-    email: 'quocbao.tran@gmail.com',
-    phone: '0900 111 231',
-    className: 'Văn 7C',
-    status: 'Tạm khóa',
-    lastLogin: '3 ngày trước',
-    avatarBg: '#FFE0EB',
-    avatarText: '#A61E4D',
-  },
-  {
-    id: '10',
-    name: 'Lê Bảo Ngọc',
-    code: 'HS0042',
-    email: 'baongoc.le@gmail.com',
-    phone: '0900 111 242',
-    className: 'Chưa xếp lớp',
-    status: 'Chưa kích hoạt',
-    lastLogin: 'Chưa đăng nhập',
-    avatarBg: '#DCEBFA',
-    avatarText: '#1F4E79',
-  },
-];
+/**
+ * Định dạng thời gian đăng nhập cuối thân thiện, tự nhiên
+ */
+const formatLastLogin = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return 'Chưa đăng nhập';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 'Chưa đăng nhập';
 
-const INITIAL_TRASH_ROWS: TrashStudentRow[] = [
-  {
-    id: 't1',
-    name: 'Trịnh Anh Thư',
-    code: 'HS0020',
-    email: 'anhthu.trinh@gmail.com',
-    phone: '0900 111 231',
-    className: 'Văn 7C',
-    deletedDate: '12/11/2026',
-  },
-  {
-    id: 't2',
-    name: 'Lý Bảo Ngọc',
-    code: 'HS0019',
-    email: 'baongoc.ly@gmail.com',
-    phone: '0900 111 232',
-    className: 'Văn 8B',
-    deletedDate: '11/11/2026',
-  },
-  {
-    id: 't3',
-    name: 'Mai Đức Anh',
-    code: 'HS0018',
-    email: 'ducanh.mai@gmail.com',
-    phone: '0900 111 233',
-    className: 'Văn 9A',
-    deletedDate: '09/11/2026',
-  },
-  {
-    id: 't4',
-    name: 'Cao Thanh Hà',
-    code: 'HS0017',
-    email: 'thanhha.cao@gmail.com',
-    phone: '0900 111 234',
-    className: 'Văn 9A',
-    deletedDate: '07/11/2026',
-  },
-  {
-    id: 't5',
-    name: 'Đinh Quốc Khánh',
-    code: 'HS0016',
-    email: 'quockhanh.dinh@gmail.com',
-    phone: '0900 111 235',
-    className: 'Văn 10',
-    deletedDate: '05/11/2026',
-  },
-  {
-    id: 't6',
-    name: 'Tạ Phương Anh',
-    code: 'HS0015',
-    email: 'phuonganh.ta@gmail.com',
-    phone: '0900 111 236',
-    className: 'Văn 7C',
-    deletedDate: '03/11/2026',
-  },
-  {
-    id: 't7',
-    name: 'Hồ Gia Huy',
-    code: 'HS0014',
-    email: 'giahuy.ho@gmail.com',
-    phone: '0900 111 237',
-    className: 'Văn 8B',
-    deletedDate: '01/11/2026',
-  },
-  {
-    id: 't8',
-    name: 'Lâm Thu Trang',
-    code: 'HS0013',
-    email: 'thutrang.lam2@gmail.com',
-    phone: '0900 111 238',
-    className: 'Văn 9A',
-    deletedDate: '28/10/2026',
-  },
-  {
-    id: 't9',
-    name: 'Phan Nhật Minh',
-    code: 'HS0012',
-    email: 'nhatminh.phan@gmail.com',
-    phone: '0900 111 239',
-    className: 'Văn 9A',
-    deletedDate: '25/10/2026',
-  },
-  {
-    id: 't10',
-    name: 'Quách Mỹ Linh',
-    code: 'HS0011',
-    email: 'mylinh.quach@gmail.com',
-    phone: '0900 111 240',
-    className: 'Văn 7C',
-    deletedDate: '22/10/2026',
-  },
-];
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+
+  // Hôm nay
+  if (d.toDateString() === now.toDateString()) {
+    return `Hôm nay ${hours}:${minutes}`;
+  }
+
+  // Hôm qua
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) {
+    return `Hôm qua ${hours}:${minutes}`;
+  }
+
+  // Trong 7 ngày
+  if (diffDays > 0 && diffDays <= 7) {
+    return `${diffDays} ngày trước`;
+  }
+
+  // Khác: DD/MM/YYYY
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
 
 export const AccountListPage: React.FC = () => {
-  // Trạng thái tab: Mặc định hiển thị tab "Tài khoản"
+  // Trạng thái tab: 'accounts' (Tài khoản) | 'trash' (Thùng rác)
   const [activeTab, setActiveTab] = useState<'accounts' | 'trash'>('accounts');
 
-  // Trạng thái tìm kiếm & lọc của tab Tài khoản
+  // 1. DỮ LIỆU & BỘ LỌC TAB TÀI KHOẢN
   const [search, setSearch] = useState('');
   const [selectedClass, setSelectedClass] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const [accounts, setAccounts] = useState<StudentAccountRow[]>(INITIAL_ACCOUNTS);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalAccounts, setTotalAccounts] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [accounts, setAccounts] = useState<StudentAccountRow[]>([]);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
+  const [accountsError, setAccountsError] = useState<string | null>(null);
 
-  // Trạng thái tìm kiếm của tab Thùng rác
+  // Thống kê KPI
+  const [stats, setStats] = useState<AccountStats>({
+    total: 0,
+    active: 0,
+    locked: 0,
+    unverified: 0,
+    trash: 0,
+  });
+
+  // 2. DỮ LIỆU & BỘ LỌC TAB THÙNG RÁC
   const [trashSearch, setTrashSearch] = useState('');
-  const [trashRows, setTrashRows] = useState<TrashStudentRow[]>(INITIAL_TRASH_ROWS);
-  const [trashCount, setTrashCount] = useState(12);
+  const [trashPage, setTrashPage] = useState(1);
+  const [trashPageSize, setTrashPageSize] = useState(10);
+  const [totalTrash, setTotalTrash] = useState(0);
+  const [totalTrashPages, setTotalTrashPages] = useState(1);
+  const [trashRows, setTrashRows] = useState<TrashStudentRow[]>([]);
+  const [isLoadingTrash, setIsLoadingTrash] = useState(false);
+  const [trashError, setTrashError] = useState<string | null>(null);
 
-  // Modal states
+  // 3. TRẠNG THÁI MODALS
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [activeCredentialCard, setActiveCredentialCard] = useState<{
     id: string;
@@ -289,18 +139,189 @@ export const AccountListPage: React.FC = () => {
     className?: string;
     temporaryPassword?: string;
   } | null>(null);
+  const [viewingAccountDetail, setViewingAccountDetail] = useState<AccountDetailInfo | null>(null);
   const [activeResetModal, setActiveResetModal] = useState<{
     id: string;
     fullName: string;
     studentCode: string;
     email: string;
   } | null>(null);
-
-  // Modal xác nhận chuyển vào thùng rác (xóa mềm): Mặc định đóng (null)
   const [trashConfirmStudent, setTrashConfirmStudent] = useState<TrashConfirmStudent | null>(null);
-
-  // Modal xác nhận xóa vĩnh viễn: Mặc định đóng (null)
   const [permanentDeleteStudent, setPermanentDeleteStudent] = useState<PermanentDeleteStudent | null>(null);
+
+  // 4. TRẠNG THÁI HÀNH ĐỘNG & THÔNG BÁO
+  const [isSubmittingTrash, setIsSubmittingTrash] = useState(false);
+  const [isSubmittingPermDelete, setIsSubmittingPermDelete] = useState(false);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleViewAccountDetail = (row: StudentAccountRow) => {
+    setViewingAccountDetail({
+      id: row.id,
+      name: row.name,
+      code: row.code,
+      email: row.email,
+      phone: row.phone,
+      className: row.className,
+      status: row.status,
+      lastLogin: row.lastLogin,
+      avatarBg: row.avatarBg,
+      avatarText: row.avatarText,
+    });
+  };
+
+  /**
+   * Gọi API lấy danh sách tài khoản học sinh + Thống kê KPI
+   */
+  const fetchAccounts = useCallback(async () => {
+    setIsLoadingAccounts(true);
+    setAccountsError(null);
+    try {
+      const res = await accountApi.getAccounts({
+        page: currentPage,
+        limit: pageSize,
+        search: search.trim() || undefined,
+        className: selectedClass !== 'all' ? selectedClass : undefined,
+        status: selectedStatus !== 'all' ? selectedStatus : undefined,
+      });
+
+      const data = res.data;
+      const rawItems = data?.items || [];
+      const mapped: StudentAccountRow[] = rawItems.map((item, index) => {
+        const isLocked = item.status === 'locked';
+        const isUnverified = !item.isEmailVerified;
+        const status: 'Hoạt động' | 'Tạm khóa' | 'Chưa kích hoạt' = isLocked
+          ? 'Tạm khóa'
+          : isUnverified
+          ? 'Chưa kích hoạt'
+          : 'Hoạt động';
+
+        return {
+          id: item.id,
+          name: item.fullName,
+          code: item.studentCode || item.username.toUpperCase(),
+          email: item.email || 'Chưa cập nhật email',
+          phone: item.phoneNumber || '—',
+          className:
+            item.className ||
+            (item.classes && item.classes.length > 0 ? item.classes[0] : 'Chưa xếp lớp'),
+          status,
+          lastLogin: formatLastLogin(item.lastLoginAt),
+          avatarBg: index % 2 === 0 ? '#FFE0EB' : '#DCEBFA',
+          avatarText: index % 2 === 0 ? '#A61E4D' : '#1F4E79',
+        };
+      });
+
+      const resolvedTotalPages = Math.max(
+        1,
+        data?.totalPages ?? Math.ceil((data?.total || mapped.length) / pageSize)
+      );
+      const resolvedPage = data?.page ?? Math.min(currentPage, resolvedTotalPages);
+      setAccounts(mapped);
+      setTotalAccounts(data?.total ?? mapped.length);
+      setTotalPages(resolvedTotalPages);
+      if (resolvedPage !== currentPage) {
+        setCurrentPage(resolvedPage);
+      }
+      if (data?.stats) {
+        setStats({
+          total: data.stats.total ?? mapped.length,
+          active: data.stats.active ?? 0,
+          locked: data.stats.locked ?? 0,
+          unverified: data.stats.unverified ?? 0,
+          trash: data.stats.trash ?? 0,
+          classes: data.stats.classes ?? [],
+        });
+      }
+    } catch (err: unknown) {
+      console.error('Lỗi khi tải danh sách tài khoản:', err);
+      setAccountsError('Không thể kết nối đến máy chủ API.');
+    } finally {
+      setIsLoadingAccounts(false);
+    }
+  }, [currentPage, pageSize, search, selectedClass, selectedStatus]);
+
+  /**
+   * Gọi API lấy danh sách tài khoản trong thùng rác
+   */
+  const fetchTrash = useCallback(async () => {
+    setIsLoadingTrash(true);
+    setTrashError(null);
+    try {
+      const res = await accountApi.getTrashAccounts({
+        page: trashPage,
+        limit: trashPageSize,
+        search: trashSearch.trim() || undefined,
+      });
+
+      const data = res.data;
+      const rawItems = data?.items || [];
+      const mapped: TrashStudentRow[] = rawItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        code: item.code,
+        email: item.email || 'Chưa cập nhật email',
+        phone: item.phone || '—',
+        className: item.className || 'Chưa xếp lớp',
+        deletedDate: item.deletedDate || '—',
+      }));
+
+      const resolvedTrashPages = Math.max(
+        1,
+        data?.totalPages ?? Math.ceil((data?.total || mapped.length) / trashPageSize)
+      );
+      const resolvedTrashPage = data?.page ?? Math.min(trashPage, resolvedTrashPages);
+      setTrashRows(mapped);
+      setTotalTrash(data?.total ?? mapped.length);
+      setTotalTrashPages(resolvedTrashPages);
+      if (resolvedTrashPage !== trashPage) {
+        setTrashPage(resolvedTrashPage);
+      }
+    } catch (err: unknown) {
+      console.error('Lỗi khi tải danh sách thùng rác:', err);
+      setTrashError('Không thể kết nối máy chủ để lấy danh sách thùng rác.');
+    } finally {
+      setIsLoadingTrash(false);
+    }
+  }, [trashPage, trashPageSize, trashSearch]);
+
+  // Tải dữ liệu khi mở trang hoặc thay đổi bộ lọc
+  useEffect(() => {
+    fetchAccounts();
+  }, [fetchAccounts]);
+
+  useEffect(() => {
+    if (activeTab === 'trash') {
+      fetchTrash();
+    }
+  }, [activeTab, fetchTrash]);
+
+  // Đổi trang hoặc bộ lọc -> reset về trang 1
+  const handleSearchChange = (val: string) => {
+    setSearch(val);
+    setCurrentPage(1);
+  };
+
+  const handleClassChange = (val: string) => {
+    setSelectedClass(val);
+    setCurrentPage(1);
+  };
+
+  const handleStatusChange = (val: string) => {
+    setSelectedStatus(val);
+    setCurrentPage(1);
+  };
+
+  const handleTrashSearchChange = (val: string) => {
+    setTrashSearch(val);
+    setTrashPage(1);
+  };
 
   // Mở hộp thoại xác nhận chuyển vào thùng rác
   const handleOpenTrashConfirm = (row: StudentAccountRow) => {
@@ -324,97 +345,110 @@ export const AccountListPage: React.FC = () => {
     });
   };
 
-  // Xác nhận xóa vĩnh viễn khỏi hệ thống
-  const handleConfirmPermanentDelete = () => {
-    if (!permanentDeleteStudent) return;
-    const { id } = permanentDeleteStudent;
-
-    setTrashRows((prev) => prev.filter((r) => r.id !== id));
-    setTrashCount((prev) => Math.max(0, prev - 1));
-    setPermanentDeleteStudent(null);
+  // Thao tác 1: Khóa / Mở khóa tài khoản học sinh
+  const handleToggleLock = async (row: StudentAccountRow) => {
+    const isCurrentlyLocked = row.status === 'Tạm khóa';
+    const targetStatus = isCurrentlyLocked ? 'active' : 'locked';
+    setActionLoadingId(row.id);
+    try {
+      await accountApi.toggleStatus(row.id, targetStatus);
+      showToast(`Đã ${isCurrentlyLocked ? 'mở khóa' : 'tạm khóa'} tài khoản học sinh "${row.name}"`);
+      await fetchAccounts();
+    } catch (err: unknown) {
+      console.error('Lỗi khi đổi trạng thái khóa:', err);
+      showToast('Không thể cập nhật trạng thái khóa tài khoản lúc này.');
+    } finally {
+      setActionLoadingId(null);
+    }
   };
 
-  // Xác nhận chuyển tài khoản vào thùng rác
-  const handleConfirmMoveToTrash = () => {
+  // Thao tác 2: Chuyển tài khoản vào thùng rác (Xóa mềm)
+  const handleConfirmMoveToTrash = async () => {
     if (!trashConfirmStudent) return;
-    const { id } = trashConfirmStudent;
-    const target = accounts.find((a) => a.id === id);
-
-    setAccounts((prev) => prev.filter((r) => r.id !== id));
-    setTrashCount((prev) => prev + 1);
-
-    if (target) {
-      setTrashRows((prev) => [
-        {
-          id: `t_${Date.now()}`,
-          name: target.name,
-          code: target.code,
-          email: target.email,
-          phone: target.phone,
-          className: target.className,
-          deletedDate: '17/11/2026',
-        },
-        ...prev,
-      ]);
+    setIsSubmittingTrash(true);
+    try {
+      await accountApi.softDeleteAccount(trashConfirmStudent.id);
+      const shouldStepBack = accounts.length === 1 && currentPage > 1;
+      showToast(`Đã chuyển tài khoản "${trashConfirmStudent.name}" vào thùng rác`);
+      setTrashConfirmStudent(null);
+      if (shouldStepBack) {
+        setCurrentPage((p) => Math.max(1, p - 1));
+      } else {
+        await fetchAccounts();
+      }
+      if (activeTab === 'trash') {
+        await fetchTrash();
+      }
+    } catch (err: unknown) {
+      console.error('Lỗi khi chuyển tài khoản vào thùng rác:', err);
+      showToast('Lỗi khi chuyển tài khoản vào thùng rác. Vui lòng thử lại.');
+    } finally {
+      setIsSubmittingTrash(false);
     }
-
-    setTrashConfirmStudent(null);
   };
 
-  // Thao tác Khôi phục tài khoản từ thùng rác
-  const handleRestore = (id: string, name: string) => {
-    const confirmed = window.confirm(
-      `Khôi phục tài khoản học sinh "${name}" để học sinh có thể tiếp tục đăng nhập?`
-    );
-    if (!confirmed) return;
-
-    setTrashRows((prev) => prev.filter((r) => r.id !== id));
-    setTrashCount((prev) => Math.max(0, prev - 1));
+  // Thao tác 3: Khôi phục tài khoản từ thùng rác
+  const handleRestore = async (row: TrashStudentRow) => {
+    setActionLoadingId(row.id);
+    try {
+      await accountApi.restoreAccount(row.id);
+      const shouldStepBackTrash = trashRows.length === 1 && trashPage > 1;
+      showToast(`Đã khôi phục tài khoản "${row.name}" thành công!`);
+      if (shouldStepBackTrash) {
+        setTrashPage((p) => Math.max(1, p - 1));
+      } else {
+        await fetchTrash();
+      }
+      await fetchAccounts();
+    } catch (err: unknown) {
+      console.error('Lỗi khi khôi phục tài khoản:', err);
+      showToast('Không thể khôi phục tài khoản lúc này.');
+    } finally {
+      setActionLoadingId(null);
+    }
   };
 
-  // Thao tác Khóa / Mở khóa
-  const handleToggleLock = (id: string) => {
-    setAccounts((prev) =>
-      prev.map((r) => {
-        if (r.id === id) {
-          return {
-            ...r,
-            status: r.status === 'Tạm khóa' ? 'Hoạt động' : 'Tạm khóa',
-          };
-        }
-        return r;
-      })
-    );
+  // Thao tác 4: Xóa vĩnh viễn khỏi hệ thống
+  const handleConfirmPermanentDelete = async () => {
+    if (!permanentDeleteStudent) return;
+    setIsSubmittingPermDelete(true);
+    try {
+      await accountApi.permanentDeleteAccount(permanentDeleteStudent.id);
+      const shouldStepBackTrash = trashRows.length === 1 && trashPage > 1;
+      showToast(`Đã xóa vĩnh viễn tài khoản "${permanentDeleteStudent.name}" khỏi cơ sở dữ liệu`);
+      setPermanentDeleteStudent(null);
+      if (shouldStepBackTrash) {
+        setTrashPage((p) => Math.max(1, p - 1));
+      } else {
+        await fetchTrash();
+      }
+      await fetchAccounts();
+    } catch (err: unknown) {
+      console.error('Lỗi khi xóa vĩnh viễn tài khoản:', err);
+      showToast('Không thể xóa vĩnh viễn tài khoản lúc này.');
+    } finally {
+      setIsSubmittingPermDelete(false);
+    }
   };
 
-  // Lọc dữ liệu tài khoản
-  const filteredAccounts = accounts.filter((r) => {
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      const match =
-        r.name.toLowerCase().includes(q) ||
-        r.code.toLowerCase().includes(q) ||
-        r.email.toLowerCase().includes(q);
-      if (!match) return false;
+  // Thao tác 5: Làm mới toàn bộ dữ liệu
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    setSearch('');
+    setTrashSearch('');
+    setSelectedClass('all');
+    setSelectedStatus('all');
+    setCurrentPage(1);
+    setTrashPage(1);
+    try {
+      await Promise.all([fetchAccounts(), fetchTrash()]);
+      showToast('Đã đồng bộ và làm mới dữ liệu từ cơ sở dữ liệu');
+    } catch {
+      showToast('Đã làm mới dữ liệu.');
+    } finally {
+      setIsRefreshing(false);
     }
-    if (selectedClass !== 'all' && r.className !== selectedClass) return false;
-    if (selectedStatus !== 'all' && r.status !== selectedStatus) return false;
-    return true;
-  });
-
-  // Lọc dữ liệu thùng rác
-  const filteredTrashRows = trashRows.filter((r) => {
-    if (trashSearch.trim()) {
-      const q = trashSearch.trim().toLowerCase();
-      return (
-        r.name.toLowerCase().includes(q) ||
-        r.code.toLowerCase().includes(q) ||
-        r.email.toLowerCase().includes(q) ||
-        r.className.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
+  };
 
   return (
     <div className="w-full min-h-[1072px] bg-[#FFF6F9] font-nunito text-[#3B2A35] antialiased p-8 box-border selection:bg-[#FFE0EB] selection:text-[#A61E4D]">
@@ -486,17 +520,11 @@ export const AccountListPage: React.FC = () => {
             {/* Nút outline "Làm mới" */}
             <button
               type="button"
-              onClick={() => {
-                setAccounts(INITIAL_ACCOUNTS);
-                setTrashRows(INITIAL_TRASH_ROWS);
-                setSearch('');
-                setTrashSearch('');
-                setSelectedClass('all');
-                setSelectedStatus('all');
-              }}
-              className="h-10 px-4 rounded-xl border border-[#9C6B84] text-[#3B2A35] font-nunito font-bold text-[14px] flex items-center gap-2 hover:bg-[#FFE0EB]/40 active:scale-[0.99] transition-all cursor-pointer"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="h-10 px-4 rounded-xl border border-[#9C6B84] text-[#3B2A35] font-nunito font-bold text-[14px] flex items-center gap-2 hover:bg-[#FFE0EB]/40 active:scale-[0.99] transition-all cursor-pointer disabled:opacity-60"
             >
-              <RotateCw className="w-4 h-4 text-[#3B2A35]" strokeWidth={1.75} />
+              <RotateCw className={`w-4 h-4 text-[#3B2A35] ${isRefreshing ? 'animate-spin' : ''}`} strokeWidth={1.75} />
               <span>Làm mới</span>
             </button>
 
@@ -527,7 +555,7 @@ export const AccountListPage: React.FC = () => {
             <div className="flex flex-col justify-center min-w-0">
               <div className="flex items-baseline gap-2">
                 <span className="font-playfair text-[32px] font-bold text-[#3B2A35] leading-none">
-                  44
+                  {isLoadingAccounts && accounts.length === 0 ? '—' : stats.total}
                 </span>
                 <span className="font-nunito font-bold text-[14px] text-[#6B5560] leading-tight truncate">
                   Tổng tài khoản
@@ -547,7 +575,7 @@ export const AccountListPage: React.FC = () => {
             <div className="flex flex-col justify-center min-w-0">
               <div className="flex items-baseline gap-2">
                 <span className="font-playfair text-[32px] font-bold text-[#3B2A35] leading-none">
-                  41
+                  {isLoadingAccounts && accounts.length === 0 ? '—' : stats.active}
                 </span>
                 <span className="font-nunito font-bold text-[14px] text-[#6B5560] leading-tight truncate">
                   Đang hoạt động
@@ -567,7 +595,7 @@ export const AccountListPage: React.FC = () => {
             <div className="flex flex-col justify-center min-w-0">
               <div className="flex items-baseline gap-2">
                 <span className="font-playfair text-[32px] font-bold text-[#3B2A35] leading-none">
-                  2
+                  {isLoadingAccounts && accounts.length === 0 ? '—' : stats.locked}
                 </span>
                 <span className="font-nunito font-bold text-[14px] text-[#6B5560] leading-tight truncate">
                   Đang tạm khóa
@@ -587,7 +615,7 @@ export const AccountListPage: React.FC = () => {
             <div className="flex flex-col justify-center min-w-0">
               <div className="flex items-baseline gap-2">
                 <span className="font-playfair text-[32px] font-bold text-[#3B2A35] leading-none">
-                  1
+                  {isLoadingAccounts && accounts.length === 0 ? '—' : stats.unverified}
                 </span>
                 <span className="font-nunito font-bold text-[14px] text-[#6B5560] leading-tight truncate">
                   Chưa kích hoạt
@@ -610,7 +638,7 @@ export const AccountListPage: React.FC = () => {
           {/* 1. THANH TAB ĐẦU CARD (56px) */}
           <div className="h-[56px] px-6 border-b border-[#F3D9E3] rounded-t-[16px] flex items-center justify-between box-border">
             <div className="flex items-center gap-2">
-              {/* Tab 1: Tài khoản (44) */}
+              {/* Tab 1: Tài khoản */}
               <button
                 type="button"
                 onClick={() => setActiveTab('accounts')}
@@ -620,10 +648,10 @@ export const AccountListPage: React.FC = () => {
                     : 'bg-[#E9F3FF] text-[#1F4E79] hover:bg-[#DCEBFA]'
                 }`}
               >
-                Tài khoản (44)
+                Tài khoản ({stats.total})
               </button>
 
-              {/* Tab 2: Thùng rác (12) - ĐANG CHỌN (ACTIVE) */}
+              {/* Tab 2: Thùng rác */}
               <button
                 type="button"
                 onClick={() => setActiveTab('trash')}
@@ -637,7 +665,7 @@ export const AccountListPage: React.FC = () => {
                   className={`w-4 h-4 ${activeTab === 'trash' ? 'text-white' : 'text-[#1F4E79]'}`}
                   strokeWidth={1.75}
                 />
-                <span>Thùng rác ({trashCount})</span>
+                <span>Thùng rác ({stats.trash ?? totalTrash})</span>
               </button>
             </div>
 
@@ -661,14 +689,26 @@ export const AccountListPage: React.FC = () => {
                 </div>
               </div>
 
+              {trashError && (
+                <div className="mx-6 my-2 p-3 rounded-[12px] bg-amber-50 border border-amber-200 text-amber-800 text-[13px] flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                    <span>{trashError}</span>
+                  </div>
+                  <button type="button" onClick={() => fetchTrash()} className="underline font-bold hover:text-amber-900 cursor-pointer">
+                    Thử lại
+                  </button>
+                </div>
+              )}
+
               {/* TOOLBAR THÙNG RÁC: Chỉ duy nhất ô tìm kiếm (48px, border #9C6B84) */}
               <div className="h-[72px] px-6 border-b border-[#F3D9E3] flex items-center box-border">
                 <div className="relative w-full">
                   <input
                     type="text"
-                    placeholder="Tìm trong thùng rác…"
+                    placeholder="Tìm trong thùng rác theo tên, mã học sinh hoặc email…"
                     value={trashSearch}
-                    onChange={(e) => setTrashSearch(e.target.value)}
+                    onChange={(e) => handleTrashSearchChange(e.target.value)}
                     className="w-full h-12 pl-11 pr-4 rounded-[12px] border border-[#9C6B84] bg-white font-nunito text-[14px] text-[#3B2A35] placeholder:text-[#6B5560]/70 focus:outline-none focus:ring-2 focus:ring-[#2F6FA8]/20 focus:border-[#2F6FA8] transition-all"
                   />
                   <Search
@@ -687,105 +727,132 @@ export const AccountListPage: React.FC = () => {
                 <div className="col-span-2 text-right">Thao tác</div>
               </div>
 
-              {/* 10 HÀNG DỮ LIỆU THÙNG RÁC (60px mỗi hàng, avatar trung tính #EFE9ED text #6B5560, tên #3B2A35) */}
+              {/* HÀNG DỮ LIỆU THÙNG RÁC */}
               <div className="divide-y divide-[#F3D9E3] bg-white">
-                {filteredTrashRows.slice(0, 10).map((row) => {
-                  const initials = row.name
-                    .split(' ')
-                    .map((n) => n[0])
-                    .slice(-2)
-                    .join('')
-                    .toUpperCase();
+                {isLoadingTrash ? (
+                  <div className="h-[240px] flex flex-col items-center justify-center gap-2 text-[#6B5560]">
+                    <Loader2 className="w-7 h-7 animate-spin text-[#2F6FA8]" />
+                    <span className="font-nunito text-[14px]">Đang tải danh sách thùng rác...</span>
+                  </div>
+                ) : trashRows.length === 0 ? (
+                  <div className="h-[200px] flex flex-col items-center justify-center gap-2 text-[#6B5560]">
+                    <Trash2 className="w-8 h-8 text-[#9C6B84]/50" />
+                    <span className="font-nunito font-semibold text-[14px] text-[#3B2A35]">
+                      Thùng rác hiện đang trống
+                    </span>
+                    <span className="font-nunito text-[12px] text-[#6B5560]">
+                      Không có tài khoản nào bị xóa hoặc khớp với từ khóa tìm kiếm.
+                    </span>
+                  </div>
+                ) : (
+                  trashRows.map((row) => {
+                    const initials = row.name
+                      .split(' ')
+                      .map((n) => n[0])
+                      .slice(-2)
+                      .join('')
+                      .toUpperCase();
 
-                  return (
-                    <div
-                      key={row.id}
-                      className="h-[60px] px-6 grid grid-cols-12 items-center text-[14px] font-nunito text-[#3B2A35] hover:bg-[#FFF6F9] transition-colors box-border"
-                    >
-                      {/* Cột 1: Học sinh (Avatar neutral #EFE9ED text #6B5560 + Tên #3B2A35 + Mã HS #E9F3FF chip 12px) */}
-                      <div className="col-span-3 flex items-center gap-3 min-w-0 pr-2">
-                        <div className="w-9 h-9 rounded-xl bg-[#EFE9ED] text-[#6B5560] flex items-center justify-center font-bold text-[13px] flex-shrink-0 select-none shadow-2xs">
-                          {initials}
+                    return (
+                      <div
+                        key={row.id}
+                        className="h-[60px] px-6 grid grid-cols-12 items-center text-[14px] font-nunito text-[#3B2A35] hover:bg-[#FFF6F9] transition-colors box-border"
+                      >
+                        {/* Cột 1: Học sinh */}
+                        <div className="col-span-3 flex items-center gap-3 min-w-0 pr-2">
+                          <div className="w-9 h-9 rounded-xl bg-[#EFE9ED] text-[#6B5560] flex items-center justify-center font-bold text-[13px] flex-shrink-0 select-none shadow-2xs">
+                            {initials}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-bold text-[15px] text-[#3B2A35] leading-tight truncate">
+                              {row.name}
+                            </span>
+                            <div className="mt-0.5">
+                              <span className="inline-block bg-[#E9F3FF] text-[#1F4E79] font-mono font-bold text-[12px] px-1.5 py-0.2 rounded-md leading-none">
+                                {row.code}
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-bold text-[15px] text-[#3B2A35] leading-tight truncate">
-                            {row.name}
-                          </span>
-                          <div className="mt-0.5">
-                            <span className="inline-block bg-[#E9F3FF] text-[#1F4E79] font-mono font-bold text-[12px] px-1.5 py-0.2 rounded-md leading-none">
-                              {row.code}
+
+                        {/* Cột 2: Liên hệ */}
+                        <div className="col-span-3 flex flex-col justify-center gap-0.5 min-w-0 pr-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Mail className="w-3.5 h-3.5 text-[#6B5560] flex-shrink-0" strokeWidth={1.75} />
+                            <span className="text-[13px] text-[#3B2A35] font-medium truncate">
+                              {row.email}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Phone className="w-3.5 h-3.5 text-[#6B5560] flex-shrink-0" strokeWidth={1.75} />
+                            <span className="text-[13px] text-[#3B2A35] font-medium">
+                              {row.phone}
                             </span>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Cột 2: Liên hệ (Email và số điện thoại, 13px #3B2A35) */}
-                      <div className="col-span-3 flex flex-col justify-center gap-0.5 min-w-0 pr-2">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <Mail className="w-3.5 h-3.5 text-[#6B5560] flex-shrink-0" strokeWidth={1.75} />
-                          <span className="text-[13px] text-[#3B2A35] font-medium truncate">
-                            {row.email}
+                        {/* Cột 3: Lớp lúc xóa */}
+                        <div className="col-span-2 flex items-center pr-2">
+                          <span className="inline-block bg-[#FFE0EB] text-[#A61E4D] font-bold text-[12px] px-2.5 py-1 rounded-md">
+                            {row.className}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <Phone className="w-3.5 h-3.5 text-[#6B5560] flex-shrink-0" strokeWidth={1.75} />
-                          <span className="text-[13px] text-[#3B2A35] font-medium">
-                            {row.phone}
-                          </span>
+
+                        {/* Cột 4: Ngày xóa */}
+                        <div className="col-span-2 flex items-center gap-1.5 text-[13px] text-[#6B5560]">
+                          <Calendar className="w-3.5 h-3.5 text-[#6B5560] flex-shrink-0" strokeWidth={1.75} />
+                          <span>{row.deletedDate}</span>
+                        </div>
+
+                        {/* Cột 5: Thao tác */}
+                        <div className="col-span-2 flex items-center justify-end gap-2">
+                          {/* Nút 1: Khôi phục */}
+                          <button
+                            type="button"
+                            disabled={actionLoadingId === row.id}
+                            onClick={() => handleRestore(row)}
+                            className="h-9 px-3 rounded-lg border border-[#2F6FA8] text-[#2F6FA8] hover:bg-[#E9F3FF] disabled:opacity-50 font-nunito font-bold text-[13px] flex items-center gap-1.5 transition-colors cursor-pointer"
+                          >
+                            {actionLoadingId === row.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <RotateCcw className="w-3.5 h-3.5 text-[#2F6FA8]" strokeWidth={2} />
+                            )}
+                            <span>Khôi phục</span>
+                          </button>
+
+                          {/* Nút 2: Xóa vĩnh viễn */}
+                          <button
+                            type="button"
+                            disabled={actionLoadingId === row.id}
+                            onClick={() => handleOpenPermanentDelete(row)}
+                            className="h-9 px-3 rounded-lg text-[#B02525] hover:bg-[#FFE3E3] font-nunito font-bold text-[13px] flex items-center gap-1.5 transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-[#B02525]" strokeWidth={2} />
+                            <span>Xóa vĩnh viễn</span>
+                          </button>
                         </div>
                       </div>
-
-                      {/* Cột 3: Lớp lúc xóa (Chip #FFE0EB text #A61E4D) */}
-                      <div className="col-span-2 flex items-center pr-2">
-                        <span className="inline-block bg-[#FFE0EB] text-[#A61E4D] font-bold text-[12px] px-2.5 py-1 rounded-md">
-                          {row.className}
-                        </span>
-                      </div>
-
-                      {/* Cột 4: Ngày xóa (Clock icon và text 13px #6B5560) */}
-                      <div className="col-span-2 flex items-center gap-1.5 text-[13px] text-[#6B5560]">
-                        <Calendar className="w-3.5 h-3.5 text-[#6B5560] flex-shrink-0" strokeWidth={1.75} />
-                        <span>{row.deletedDate}</span>
-                      </div>
-
-                      {/* Cột 5: Thao tác (Khôi phục & Xóa vĩnh viễn kèm icon VÀ chữ) */}
-                      <div className="col-span-2 flex items-center justify-end gap-2">
-                        {/* Nút 1: Khôi phục (outline 36px, border and text #2F6FA8) */}
-                        <button
-                          type="button"
-                          onClick={() => handleRestore(row.id, row.name)}
-                          className="h-9 px-3 rounded-lg border border-[#2F6FA8] text-[#2F6FA8] hover:bg-[#E9F3FF] font-nunito font-bold text-[13px] flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5 text-[#2F6FA8]" strokeWidth={2} />
-                          <span>Khôi phục</span>
-                        </button>
-
-                        {/* Nút 2: Xóa vĩnh viễn (trash icon, plain text button, #B02525, hover #FFE3E3) */}
-                        <button
-                          type="button"
-                          onClick={() => handleOpenPermanentDelete(row)}
-                          className="h-9 px-3 rounded-lg text-[#B02525] hover:bg-[#FFE3E3] font-nunito font-bold text-[13px] flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-[#B02525]" strokeWidth={2} />
-                          <span>Xóa vĩnh viễn</span>
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
 
-              {/* FOOTER THÙNG RÁC (56px, PINNED: "Hiển thị 1–10 trên 12 tài khoản" and pagination "‹ 1 2 ›") */}
+              {/* FOOTER THÙNG RÁC */}
               <footer className="h-[56px] px-6 border-t border-[#F3D9E3] bg-white rounded-b-[16px] flex items-center justify-between box-border">
                 {/* Góc trái: Bộ đếm số lượng */}
                 <div className="text-[13px] font-nunito font-semibold text-[#6B5560]">
-                  Hiển thị 1–10 trên 12 tài khoản
+                  Hiển thị {totalTrash === 0 ? 0 : (trashPage - 1) * trashPageSize + 1}–{Math.min(trashPage * trashPageSize, totalTrash)} trên {totalTrash} tài khoản
                 </div>
 
-                {/* Góc phải: Bộ chọn số dòng + Phân trang ‹ 1 2 › */}
+                {/* Góc phải: Bộ chọn số dòng + Phân trang */}
                 <div className="flex items-center gap-3">
                   <select
-                    defaultValue="10"
+                    value={trashPageSize}
+                    onChange={(e) => {
+                      setTrashPageSize(Number(e.target.value));
+                      setTrashPage(1);
+                    }}
                     aria-label="Số bản ghi trên trang"
                     className="h-9 px-2.5 rounded-lg border border-[#9C6B84] bg-white font-nunito font-semibold text-[13px] text-[#3B2A35] focus:outline-none focus:ring-1 focus:ring-[#2F6FA8] cursor-pointer"
                   >
@@ -794,38 +861,38 @@ export const AccountListPage: React.FC = () => {
                   </select>
 
                   <nav aria-label="Phân trang thùng rác" className="flex items-center gap-1.5">
-                    {/* Nút Trước (‹) bị vô hiệu hóa */}
                     <button
                       type="button"
-                      disabled
+                      disabled={trashPage <= 1}
+                      onClick={() => setTrashPage((p) => Math.max(1, p - 1))}
                       aria-label="Trang trước"
-                      className="w-10 h-10 rounded-lg border border-[#F3D9E3] text-slate-300 font-bold text-[15px] flex items-center justify-center cursor-not-allowed select-none"
+                      className="w-10 h-10 rounded-lg border border-[#F3D9E3] text-[#3B2A35] disabled:text-slate-300 font-bold text-[15px] flex items-center justify-center hover:bg-[#E9F3FF] disabled:hover:bg-transparent disabled:cursor-not-allowed select-none transition-colors"
                     >
                       ‹
                     </button>
 
-                    {/* Trang 1 đang chọn: Nút hình tròn #2F6FA8 chữ trắng */}
-                    <button
-                      type="button"
-                      aria-current="page"
-                      className="w-10 h-10 rounded-full bg-[#2F6FA8] text-white font-bold text-[14px] flex items-center justify-center shadow-xs select-none"
-                    >
-                      1
-                    </button>
+                    {Array.from({ length: totalTrashPages }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setTrashPage(pageNum)}
+                        aria-current={trashPage === pageNum ? 'page' : undefined}
+                        className={`w-10 h-10 rounded-full font-bold text-[14px] flex items-center justify-center transition-colors select-none ${
+                          trashPage === pageNum
+                            ? 'bg-[#2F6FA8] text-white shadow-xs'
+                            : 'border border-[#F3D9E3] text-[#3B2A35] hover:bg-[#E9F3FF] cursor-pointer'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
 
-                    {/* Trang 2 */}
                     <button
                       type="button"
-                      className="w-10 h-10 rounded-lg border border-[#F3D9E3] text-[#3B2A35] font-semibold text-[14px] flex items-center justify-center hover:bg-[#E9F3FF] transition-colors cursor-pointer select-none"
-                    >
-                      2
-                    </button>
-
-                    {/* Nút Sau (›) */}
-                    <button
-                      type="button"
+                      disabled={trashPage >= totalTrashPages}
+                      onClick={() => setTrashPage((p) => Math.min(totalTrashPages, p + 1))}
                       aria-label="Trang tiếp theo"
-                      className="w-10 h-10 rounded-lg border border-[#F3D9E3] text-[#3B2A35] font-bold text-[15px] flex items-center justify-center hover:bg-[#E9F3FF] transition-colors cursor-pointer select-none"
+                      className="w-10 h-10 rounded-lg border border-[#F3D9E3] text-[#3B2A35] disabled:text-slate-300 font-bold text-[15px] flex items-center justify-center hover:bg-[#E9F3FF] disabled:hover:bg-transparent disabled:cursor-not-allowed select-none transition-colors"
                     >
                       ›
                     </button>
@@ -845,7 +912,7 @@ export const AccountListPage: React.FC = () => {
                     type="text"
                     placeholder="Tìm theo tên, mã học sinh (VD: HS0001) hoặc email…"
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="w-full h-12 pl-11 pr-4 rounded-[12px] border border-[#9C6B84] bg-white font-nunito text-[14px] text-[#3B2A35] placeholder:text-[#6B5560]/70 focus:outline-none focus:ring-2 focus:ring-[#2F6FA8]/20 focus:border-[#2F6FA8] transition-all"
                   />
                   <Search
@@ -857,21 +924,25 @@ export const AccountListPage: React.FC = () => {
                 <div className="w-[200px] flex-shrink-0">
                   <select
                     value={selectedClass}
-                    onChange={(e) => setSelectedClass(e.target.value)}
+                    onChange={(e) => handleClassChange(e.target.value)}
                     className="w-full h-12 px-3.5 rounded-[12px] border border-[#9C6B84] bg-white font-nunito font-semibold text-[14px] text-[#3B2A35] focus:outline-none focus:ring-2 focus:ring-[#2F6FA8]/20 focus:border-[#2F6FA8] cursor-pointer"
                   >
                     <option value="all">Tất cả các lớp</option>
-                    <option value="Văn 9A">Lớp Văn 9A</option>
-                    <option value="Văn 8B">Lớp Văn 8B</option>
-                    <option value="Văn 7C">Lớp Văn 7C</option>
-                    <option value="Văn 6D">Lớp Văn 6D</option>
+                    {(stats.classes && stats.classes.length > 0
+                      ? stats.classes
+                      : ['Văn 7C', 'Văn 8B', 'Văn 9A', 'Ôn thi vào 10', 'Văn 10']
+                    ).map((cls) => (
+                      <option key={cls} value={cls}>
+                        {cls}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div className="w-[180px] flex-shrink-0">
                   <select
                     value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    onChange={(e) => handleStatusChange(e.target.value)}
                     className="w-full h-12 px-3.5 rounded-[12px] border border-[#9C6B84] bg-white font-nunito font-semibold text-[14px] text-[#3B2A35] focus:outline-none focus:ring-2 focus:ring-[#2F6FA8]/20 focus:border-[#2F6FA8] cursor-pointer"
                   >
                     <option value="all">Tất cả trạng thái</option>
@@ -882,8 +953,20 @@ export const AccountListPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* TIÊU ĐỀ BẢNG TÀI KHOẢN (48px) - Phân bổ cột sát vừa khít, không để khoảng trống thừa giữa Đăng nhập cuối & Thao tác */}
-              <div className="h-[48px] bg-[#DCEBFA] px-6 grid grid-cols-[300px_270px_110px_130px_140px_138px] items-center text-[13px] font-semibold text-[#1F4E79] select-none box-border">
+              {accountsError && (
+                <div className="mx-6 my-2 p-3 rounded-[12px] bg-amber-50 border border-amber-200 text-amber-800 text-[13px] flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                    <span>{accountsError}</span>
+                  </div>
+                  <button type="button" onClick={() => fetchAccounts()} className="underline font-bold hover:text-amber-900 cursor-pointer">
+                    Thử lại
+                  </button>
+                </div>
+              )}
+
+              {/* TIÊU ĐỀ BẢNG TÀI KHOẢN (48px) */}
+              <div className="h-[48px] bg-[#DCEBFA] px-6 grid grid-cols-[280px_260px_110px_130px_140px_168px] items-center text-[13px] font-semibold text-[#1F4E79] select-none box-border">
                 <div>Học sinh</div>
                 <div>Liên hệ</div>
                 <div>Lớp</div>
@@ -892,165 +975,212 @@ export const AccountListPage: React.FC = () => {
                 <div className="text-right">Thao tác</div>
               </div>
 
-              {/* 10 HÀNG DỮ LIỆU TÀI KHOẢN (60px) */}
+              {/* HÀNG DỮ LIỆU TÀI KHOẢN */}
               <div className="divide-y divide-[#F3D9E3] bg-white">
-                {filteredAccounts.slice(0, 10).map((row) => {
-                  const isLocked = row.status === 'Tạm khóa';
-                  const initials = row.name
-                    .split(' ')
-                    .map((n) => n[0])
-                    .slice(-2)
-                    .join('')
-                    .toUpperCase();
+                {isLoadingAccounts ? (
+                  <div className="h-[240px] flex flex-col items-center justify-center gap-2 text-[#6B5560]">
+                    <Loader2 className="w-7 h-7 animate-spin text-[#2F6FA8]" />
+                    <span className="font-nunito text-[14px]">Đang tải dữ liệu tài khoản từ máy chủ...</span>
+                  </div>
+                ) : accounts.length === 0 ? (
+                  <div className="h-[200px] flex flex-col items-center justify-center gap-2 text-[#6B5560]">
+                    <Users className="w-8 h-8 text-[#9C6B84]/50" />
+                    <span className="font-nunito font-semibold text-[14px] text-[#3B2A35]">
+                      Không tìm thấy tài khoản học sinh nào
+                    </span>
+                    <span className="font-nunito text-[12px] text-[#6B5560]">
+                      Thử điều chỉnh lại bộ lọc hoặc từ khóa tìm kiếm.
+                    </span>
+                  </div>
+                ) : (
+                  accounts.map((row) => {
+                    const isLocked = row.status === 'Tạm khóa';
+                    const initials = row.name
+                      .split(' ')
+                      .map((n) => n[0])
+                      .slice(-2)
+                      .join('')
+                      .toUpperCase();
 
-                  return (
-                    <div
-                      key={row.id}
-                      className="h-[60px] px-6 grid grid-cols-[300px_270px_110px_130px_140px_138px] items-center text-[14px] font-nunito text-[#3B2A35] hover:bg-[#FFF6F9] transition-colors box-border"
-                    >
-                      {/* Cột 1: Học sinh */}
-                      <div className="flex items-center gap-3 min-w-0 pr-2">
-                        <div
-                          style={{ backgroundColor: row.avatarBg, color: row.avatarText }}
-                          className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-[13px] flex-shrink-0 select-none shadow-2xs"
-                        >
-                          {initials}
+                    return (
+                      <div
+                        key={row.id}
+                        className="h-[60px] px-6 grid grid-cols-[280px_260px_110px_130px_140px_168px] items-center text-[14px] font-nunito text-[#3B2A35] hover:bg-[#FFF6F9] transition-colors box-border"
+                      >
+                        {/* Cột 1: Học sinh */}
+                        <div className="flex items-center gap-3 min-w-0 pr-2">
+                          <button
+                            type="button"
+                            onClick={() => handleViewAccountDetail(row)}
+                            style={{ backgroundColor: row.avatarBg, color: row.avatarText }}
+                            className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-[13px] flex-shrink-0 select-none shadow-2xs hover:opacity-90 transition-opacity cursor-pointer"
+                            title={`Xem chi tiết hồ sơ ${row.name}`}
+                          >
+                            {initials}
+                          </button>
+                          <div className="flex flex-col min-w-0">
+                            <button
+                              type="button"
+                              onClick={() => handleViewAccountDetail(row)}
+                              className="text-left font-bold text-[15px] text-[#3B2A35] hover:text-[#2F6FA8] hover:underline leading-tight truncate transition-colors cursor-pointer"
+                              title={`Xem chi tiết hồ sơ ${row.name}`}
+                            >
+                              {row.name}
+                            </button>
+                            <div className="mt-0.5">
+                              <button
+                                type="button"
+                                onClick={() => handleViewAccountDetail(row)}
+                                className="inline-block bg-[#E9F3FF] hover:bg-[#DCEBFA] text-[#1F4E79] font-mono font-bold text-[12px] px-1.5 py-0.2 rounded-md leading-none transition-colors cursor-pointer"
+                                title={`Mã học sinh: ${row.code}`}
+                              >
+                                {row.code}
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-bold text-[15px] text-[#3B2A35] leading-tight truncate">
-                            {row.name}
-                          </span>
-                          <div className="mt-0.5">
-                            <span className="inline-block bg-[#E9F3FF] text-[#1F4E79] font-mono font-bold text-[12px] px-1.5 py-0.2 rounded-md leading-none">
-                              {row.code}
+
+                        {/* Cột 2: Liên hệ */}
+                        <div className="flex flex-col justify-center gap-0.5 min-w-0 pr-2">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Mail className="w-3.5 h-3.5 text-[#6B5560] flex-shrink-0" strokeWidth={1.75} />
+                            <span className="text-[13px] text-[#3B2A35] font-medium truncate">
+                              {row.email}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Phone className="w-3.5 h-3.5 text-[#6B5560] flex-shrink-0" strokeWidth={1.75} />
+                            <span className="text-[13px] text-[#3B2A35] font-medium">
+                              {row.phone}
                             </span>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Cột 2: Liên hệ */}
-                      <div className="flex flex-col justify-center gap-0.5 min-w-0 pr-2">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <Mail className="w-3.5 h-3.5 text-[#6B5560] flex-shrink-0" strokeWidth={1.75} />
-                          <span className="text-[13px] text-[#3B2A35] font-medium truncate">
-                            {row.email}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <Phone className="w-3.5 h-3.5 text-[#6B5560] flex-shrink-0" strokeWidth={1.75} />
-                          <span className="text-[13px] text-[#3B2A35] font-medium">
-                            {row.phone}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Cột 3: Lớp */}
-                      <div className="flex items-center pr-2">
-                        {row.className === 'Chưa xếp lớp' ? (
-                          <span className="inline-block bg-[#EFE9ED] text-[#6B5560] font-semibold text-[12px] px-2.5 py-1 rounded-md">
-                            Chưa xếp lớp
-                          </span>
-                        ) : (
-                          <span className="inline-block bg-[#FFE0EB] text-[#A61E4D] font-bold text-[12px] px-2.5 py-1 rounded-md">
-                            {row.className}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Cột 4: Trạng thái */}
-                      <div className="flex items-center pr-2">
-                        {row.status === 'Hoạt động' && (
-                          <span className="inline-flex items-center gap-1.5 bg-[#DCEBFA] text-[#1F4E79] font-bold text-[12px] px-2.5 py-1 rounded-full whitespace-nowrap">
-                            <Check className="w-3.5 h-3.5 text-[#1F4E79]" strokeWidth={2.2} />
-                            <span>Hoạt động</span>
-                          </span>
-                        )}
-                        {row.status === 'Tạm khóa' && (
-                          <span className="inline-flex items-center gap-1.5 bg-[#FFE0EB] text-[#A61E4D] font-bold text-[12px] px-2.5 py-1 rounded-full whitespace-nowrap">
-                            <Lock className="w-3.5 h-3.5 text-[#A61E4D]" strokeWidth={2} />
-                            <span>Tạm khóa</span>
-                          </span>
-                        )}
-                        {row.status === 'Chưa kích hoạt' && (
-                          <span className="inline-flex items-center gap-1.5 bg-[#EFE9ED] text-[#6B5560] font-bold text-[12px] px-2.5 py-1 rounded-full whitespace-nowrap">
-                            <Mail className="w-3.5 h-3.5 text-[#6B5560]" strokeWidth={2} />
-                            <span>Chưa kích hoạt</span>
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Cột 5: Đăng nhập cuối (Thu nhỏ vừa vặn 140px, text hiển thị trọn vẹn, không dư thừa khoảng trống) */}
-                      <div className="flex items-center gap-1.5 text-[13px] text-[#6B5560] whitespace-nowrap">
-                        <Clock className="w-3.5 h-3.5 text-[#6B5560] flex-shrink-0" strokeWidth={1.75} />
-                        <span className="font-medium text-[#6B5560]">{row.lastLogin}</span>
-                      </div>
-
-                      {/* Cột 6: Thao tác (Căn vừa khít 138px, nằm liền kề Đăng nhập cuối) */}
-                      <div className="flex items-center justify-end gap-1 relative">
-                        <button
-                          type="button"
-                          title="Đặt lại mật khẩu"
-                          aria-label="Đặt lại mật khẩu"
-                          onClick={() =>
-                            setActiveResetModal({
-                              id: row.id,
-                              fullName: row.name,
-                              studentCode: row.code,
-                              email: row.email,
-                            })
-                          }
-                          className="w-10 h-10 rounded-xl flex items-center justify-center text-[#1F4E79] hover:bg-[#E9F3FF] transition-colors cursor-pointer"
-                        >
-                          <KeyRound className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
-                        </button>
-
-                        <button
-                          type="button"
-                          title={isLocked ? 'Mở khóa' : 'Khóa tài khoản'}
-                          aria-label={isLocked ? 'Mở khóa' : 'Khóa tài khoản'}
-                          onClick={() => handleToggleLock(row.id)}
-                          className="w-10 h-10 rounded-xl flex items-center justify-center text-[#1F4E79] hover:bg-[#E9F3FF] transition-colors cursor-pointer"
-                        >
-                          {isLocked ? (
-                            <Unlock className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
+                        {/* Cột 3: Lớp */}
+                        <div className="flex items-center pr-2">
+                          {row.className === 'Chưa xếp lớp' ? (
+                            <span className="inline-block bg-[#EFE9ED] text-[#6B5560] font-semibold text-[12px] px-2.5 py-1 rounded-md">
+                              Chưa xếp lớp
+                            </span>
                           ) : (
-                            <Lock className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
+                            <span className="inline-block bg-[#FFE0EB] text-[#A61E4D] font-bold text-[12px] px-2.5 py-1 rounded-md">
+                              {row.className}
+                            </span>
                           )}
-                        </button>
+                        </div>
 
-                        <div className="relative group/trash flex items-center justify-center">
+                        {/* Cột 4: Trạng thái */}
+                        <div className="flex items-center pr-2">
+                          {row.status === 'Hoạt động' && (
+                            <span className="inline-flex items-center gap-1.5 bg-[#DCEBFA] text-[#1F4E79] font-bold text-[12px] px-2.5 py-1 rounded-full whitespace-nowrap">
+                              <Check className="w-3.5 h-3.5 text-[#1F4E79]" strokeWidth={2.2} />
+                              <span>Hoạt động</span>
+                            </span>
+                          )}
+                          {row.status === 'Tạm khóa' && (
+                            <span className="inline-flex items-center gap-1.5 bg-[#FFE0EB] text-[#A61E4D] font-bold text-[12px] px-2.5 py-1 rounded-full whitespace-nowrap">
+                              <Lock className="w-3.5 h-3.5 text-[#A61E4D]" strokeWidth={2} />
+                              <span>Tạm khóa</span>
+                            </span>
+                          )}
+                          {row.status === 'Chưa kích hoạt' && (
+                            <span className="inline-flex items-center gap-1.5 bg-[#EFE9ED] text-[#6B5560] font-bold text-[12px] px-2.5 py-1 rounded-full whitespace-nowrap">
+                              <Mail className="w-3.5 h-3.5 text-[#6B5560]" strokeWidth={2} />
+                              <span>Chưa kích hoạt</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Cột 5: Đăng nhập cuối */}
+                        <div className="flex items-center gap-1.5 text-[13px] text-[#6B5560] whitespace-nowrap">
+                          <Clock className="w-3.5 h-3.5 text-[#6B5560] flex-shrink-0" strokeWidth={1.75} />
+                          <span className="font-medium text-[#6B5560]">{row.lastLogin}</span>
+                        </div>
+
+                        {/* Cột 6: Thao tác */}
+                        <div className="flex items-center justify-end gap-1 relative">
                           <button
                             type="button"
-                            aria-label="Chuyển vào thùng rác"
-                            onClick={() => handleOpenTrashConfirm(row)}
-                            className="w-10 h-10 rounded-xl flex items-center justify-center text-[#A61E4D] hover:bg-[#FFE0EB] transition-colors cursor-pointer"
+                            title="Xem chi tiết hồ sơ"
+                            aria-label="Xem chi tiết hồ sơ"
+                            onClick={() => handleViewAccountDetail(row)}
+                            className="w-9 h-9 rounded-xl flex items-center justify-center text-[#1F4E79] hover:bg-[#E9F3FF] transition-colors cursor-pointer"
                           >
-                            <Trash2 className="w-4 h-4 text-[#A61E4D]" strokeWidth={1.75} />
+                            <Eye className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
                           </button>
 
-                          {/* Tooltip xuất hiện chuẩn xác ngay tâm nút Trash, mũi tên chỉ đúng tâm icon, không bị cắt text */}
-                          <div
-                            role="tooltip"
-                            className="absolute -top-9.5 left-1/2 -translate-x-1/2 z-50 px-2.5 py-1 rounded-md bg-[#3B2A35] text-white text-[11px] font-nunito font-semibold shadow-md whitespace-nowrap pointer-events-none opacity-0 group-hover/trash:opacity-100 transition-opacity duration-150 after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-[#3B2A35]"
+                          <button
+                            type="button"
+                            title="Đặt lại mật khẩu"
+                            aria-label="Đặt lại mật khẩu"
+                            onClick={() =>
+                              setActiveResetModal({
+                                id: row.id,
+                                fullName: row.name,
+                                studentCode: row.code,
+                                email: row.email === 'Chưa cập nhật email' ? '' : row.email,
+                              })
+                            }
+                            className="w-9 h-9 rounded-xl flex items-center justify-center text-[#1F4E79] hover:bg-[#E9F3FF] transition-colors cursor-pointer"
                           >
-                            Chuyển vào thùng rác
+                            <KeyRound className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
+                          </button>
+
+                          <button
+                            type="button"
+                            title={isLocked ? 'Mở khóa' : 'Khóa tài khoản'}
+                            aria-label={isLocked ? 'Mở khóa' : 'Khóa tài khoản'}
+                            disabled={actionLoadingId === row.id}
+                            onClick={() => handleToggleLock(row)}
+                            className="w-9 h-9 rounded-xl flex items-center justify-center text-[#1F4E79] hover:bg-[#E9F3FF] disabled:opacity-50 transition-colors cursor-pointer"
+                          >
+                            {actionLoadingId === row.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-[#1F4E79]" />
+                            ) : isLocked ? (
+                              <Unlock className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
+                            ) : (
+                              <Lock className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
+                            )}
+                          </button>
+
+                          <div className="relative group/trash flex items-center justify-center">
+                            <button
+                              type="button"
+                              aria-label="Chuyển vào thùng rác"
+                              onClick={() => handleOpenTrashConfirm(row)}
+                              className="w-9 h-9 rounded-xl flex items-center justify-center text-[#A61E4D] hover:bg-[#FFE0EB] transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-4 h-4 text-[#A61E4D]" strokeWidth={1.75} />
+                            </button>
+
+                            {/* Tooltip hiển thị đầy đủ "Chuyển vào thùng rác", căn phải (right-0) không bị cắt lề */}
+                            <div
+                              role="tooltip"
+                              className="absolute -top-9.5 right-0 z-50 px-2.5 py-1 rounded-md bg-[#3B2A35] text-white text-[11px] font-nunito font-semibold shadow-md whitespace-nowrap pointer-events-none opacity-0 group-hover/trash:opacity-100 transition-opacity duration-150 after:content-[''] after:absolute after:top-full after:right-[14px] after:border-4 after:border-transparent after:border-t-[#3B2A35]"
+                            >
+                              Chuyển vào thùng rác
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
 
               {/* FOOTER TÀI KHOẢN (56px) */}
               <footer className="h-[56px] px-6 border-t border-[#F3D9E3] bg-white rounded-b-[16px] flex items-center justify-between box-border">
                 <div className="text-[13px] font-nunito font-semibold text-[#6B5560]">
-                  Hiển thị 1–10 trên 44 tài khoản
+                  Hiển thị {totalAccounts === 0 ? 0 : (currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, totalAccounts)} trên {totalAccounts} tài khoản
                 </div>
 
                 <div className="flex items-center gap-3">
                   <select
-                    defaultValue="10"
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
                     aria-label="Số bản ghi trên trang"
                     className="h-9 px-2.5 rounded-lg border border-[#9C6B84] bg-white font-nunito font-semibold text-[13px] text-[#3B2A35] focus:outline-none focus:ring-1 focus:ring-[#2F6FA8] cursor-pointer"
                   >
@@ -1059,56 +1189,39 @@ export const AccountListPage: React.FC = () => {
                     <option value="50">50 / trang</option>
                   </select>
 
-                  <nav aria-label="Phân trang" className="flex items-center gap-1.5">
+                  <nav aria-label="Phân trang tài khoản" className="flex items-center gap-1.5">
                     <button
                       type="button"
-                      disabled
+                      disabled={currentPage <= 1}
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                       aria-label="Trang trước"
-                      className="w-10 h-10 rounded-lg border border-[#F3D9E3] text-slate-300 font-bold text-[15px] flex items-center justify-center cursor-not-allowed select-none"
+                      className="w-10 h-10 rounded-lg border border-[#F3D9E3] text-[#3B2A35] disabled:text-slate-300 font-bold text-[15px] flex items-center justify-center hover:bg-[#E9F3FF] disabled:hover:bg-transparent disabled:cursor-not-allowed select-none transition-colors"
                     >
                       ‹
                     </button>
 
-                    <button
-                      type="button"
-                      aria-current="page"
-                      className="w-10 h-10 rounded-full bg-[#2F6FA8] text-white font-bold text-[14px] flex items-center justify-center shadow-xs select-none"
-                    >
-                      1
-                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setCurrentPage(pageNum)}
+                        aria-current={currentPage === pageNum ? 'page' : undefined}
+                        className={`w-10 h-10 rounded-full font-bold text-[14px] flex items-center justify-center transition-colors select-none ${
+                          currentPage === pageNum
+                            ? 'bg-[#2F6FA8] text-white shadow-xs'
+                            : 'border border-[#F3D9E3] text-[#3B2A35] hover:bg-[#E9F3FF] cursor-pointer'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
 
                     <button
                       type="button"
-                      className="w-10 h-10 rounded-lg border border-[#F3D9E3] text-[#3B2A35] font-semibold text-[14px] flex items-center justify-center hover:bg-[#E9F3FF] transition-colors cursor-pointer select-none"
-                    >
-                      2
-                    </button>
-
-                    <button
-                      type="button"
-                      className="w-10 h-10 rounded-lg border border-[#F3D9E3] text-[#3B2A35] font-semibold text-[14px] flex items-center justify-center hover:bg-[#E9F3FF] transition-colors cursor-pointer select-none"
-                    >
-                      3
-                    </button>
-
-                    <button
-                      type="button"
-                      className="w-10 h-10 rounded-lg border border-[#F3D9E3] text-[#3B2A35] font-semibold text-[14px] flex items-center justify-center hover:bg-[#E9F3FF] transition-colors cursor-pointer select-none"
-                    >
-                      4
-                    </button>
-
-                    <button
-                      type="button"
-                      className="w-10 h-10 rounded-lg border border-[#F3D9E3] text-[#3B2A35] font-semibold text-[14px] flex items-center justify-center hover:bg-[#E9F3FF] transition-colors cursor-pointer select-none"
-                    >
-                      5
-                    </button>
-
-                    <button
-                      type="button"
+                      disabled={currentPage >= totalPages}
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                       aria-label="Trang tiếp theo"
-                      className="w-10 h-10 rounded-lg border border-[#F3D9E3] text-[#3B2A35] font-bold text-[15px] flex items-center justify-center hover:bg-[#E9F3FF] transition-colors cursor-pointer select-none"
+                      className="w-10 h-10 rounded-lg border border-[#F3D9E3] text-[#3B2A35] disabled:text-slate-300 font-bold text-[15px] flex items-center justify-center hover:bg-[#E9F3FF] disabled:hover:bg-transparent disabled:cursor-not-allowed select-none transition-colors"
                     >
                       ›
                     </button>
@@ -1126,6 +1239,8 @@ export const AccountListPage: React.FC = () => {
         onClose={() => setIsCreateOpen(false)}
         onSuccess={(created) => {
           setActiveCredentialCard(created);
+          fetchAccounts();
+          showToast(`Cấp tài khoản mới cho ${created.fullName} thành công!`);
         }}
       />
 
@@ -1133,7 +1248,29 @@ export const AccountListPage: React.FC = () => {
       <CredentialCardModal
         isOpen={!!activeCredentialCard}
         onClose={() => setActiveCredentialCard(null)}
+        onViewDetail={(createdAcc) => {
+          setViewingAccountDetail({
+            id: createdAcc.id,
+            name: createdAcc.fullName,
+            code: createdAcc.studentCode,
+            email: createdAcc.email || 'Chưa cập nhật email',
+            phone: '—',
+            className: createdAcc.className || 'Chưa xếp lớp',
+            status: 'Hoạt động',
+            lastLogin: 'Chưa đăng nhập lần nào',
+            avatarBg: '#DCEBFA',
+            avatarText: '#1F4E79',
+          });
+        }}
         account={activeCredentialCard}
+      />
+
+      {/* Modal Xem chi tiết hồ sơ tài khoản học sinh */}
+      <AccountDetailModal
+        isOpen={!!viewingAccountDetail}
+        onClose={() => setViewingAccountDetail(null)}
+        account={viewingAccountDetail}
+        onResetPassword={(acc) => setActiveResetModal(acc)}
       />
 
       {/* Modal Đặt lại mật khẩu */}
@@ -1147,6 +1284,8 @@ export const AccountListPage: React.FC = () => {
               ...activeResetModal,
               temporaryPassword: newPassword,
             });
+            fetchAccounts();
+            showToast(`Đã đặt lại mật khẩu cho ${activeResetModal.fullName}`);
           }
         }}
       />
@@ -1157,6 +1296,7 @@ export const AccountListPage: React.FC = () => {
         onClose={() => setTrashConfirmStudent(null)}
         onConfirm={handleConfirmMoveToTrash}
         student={trashConfirmStudent}
+        isLoading={isSubmittingTrash}
       />
 
       {/* Modal Xác nhận xóa vĩnh viễn khỏi hệ thống */}
@@ -1165,7 +1305,16 @@ export const AccountListPage: React.FC = () => {
         onClose={() => setPermanentDeleteStudent(null)}
         onConfirm={handleConfirmPermanentDelete}
         student={permanentDeleteStudent}
+        isLoading={isSubmittingPermDelete}
       />
+
+      {/* Thông báo nổi (Toast Feedback) */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#3B2A35] text-white px-4 py-3 rounded-[14px] shadow-xl text-[13px] font-nunito font-semibold flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-2 border border-[#F3D9E3]/30">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 };

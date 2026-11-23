@@ -13,6 +13,8 @@ export interface AccountRecord {
   isEmailVerified: boolean;
   lastLoginAt?: string | null;
   createdAt: string;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
 }
 
 export interface AccountStats {
@@ -20,6 +22,8 @@ export interface AccountStats {
   active: number;
   locked: number;
   unverified: number;
+  trash?: number;
+  classes?: string[];
 }
 
 export interface AccountListResponseData {

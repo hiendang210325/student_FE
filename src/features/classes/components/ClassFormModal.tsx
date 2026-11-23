@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Users, ChevronRight, Palette, Check } from 'lucide-react';
+import { BookOpen, Users, ChevronRight, Palette, Check, Loader2, AlertCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ClassColorTheme, ClassTileItem } from '../types/class.types';
+import { ClassColorTheme, ClassPayload, ClassRoom } from '../types/class.types';
+import { ApiError } from '@/services/api/apiError';
 
 // Danh sách các bảng màu Pastel có sẵn chuẩn thẩm mỹ Lớp Văn chị Vân
 export const PRESET_COLOR_THEMES: ClassColorTheme[] = [
@@ -56,13 +57,8 @@ export const PRESET_COLOR_THEMES: ClassColorTheme[] = [
 interface ClassFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: {
-    name: string;
-    grade: number;
-    studentCount: number;
-    colorTheme: ClassColorTheme;
-  }) => void;
-  initialData?: ClassTileItem | null;
+  onSubmit: (data: ClassPayload) => Promise<void>;
+  initialData?: ClassRoom | null;
 }
 
 export const ClassFormModal: React.FC<ClassFormModalProps> = ({
@@ -73,40 +69,53 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
 }) => {
   const isEditing = Boolean(initialData);
 
-  // Trạng thái các trường trong biểu mẫu
   const [name, setName] = useState('');
-  const [grade, setGrade] = useState<number>(10);
-  const [studentCount, setStudentCount] = useState<number>(0);
+  const [grade, setGrade] = useState<number>(9);
+  const [homeroomTeacher, setHomeroomTeacher] = useState('Chị Vân');
+  const [roomNumber, setRoomNumber] = useState('P.201');
+  const [schedule, setSchedule] = useState('Thứ 2, Thứ 5 (18:00 - 20:00)');
+  const [maxCapacity, setMaxCapacity] = useState<number>(30);
   const [selectedTheme, setSelectedTheme] = useState<ClassColorTheme>(PRESET_COLOR_THEMES[0]);
   const [isCustomColor, setIsCustomColor] = useState(false);
   const [customBg, setCustomBg] = useState('#FFE0EB');
   const [customText, setCustomText] = useState('#A61E4D');
   const [customBorder, setCustomBorder] = useState('#F8A5C2');
 
-  // Khởi tạo hoặc đặt lại dữ liệu form khi mở modal
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
+    if (!isOpen) return;
+    setError(null);
     if (initialData) {
       setName(initialData.name);
-      setGrade(initialData.grade || 10);
-      setStudentCount(initialData.studentCount || 0);
-      setSelectedTheme(initialData.colorTheme);
+      setGrade(initialData.grade || 9);
+      setHomeroomTeacher(initialData.homeroomTeacher || 'Chị Vân');
+      setRoomNumber(initialData.roomNumber || 'P.201');
+      setSchedule(initialData.schedule || '');
+      setMaxCapacity(initialData.maxCapacity || 30);
 
-      // Kiểm tra xem màu hiện tại có phải là màu tùy chỉnh không
+      const theme = initialData.colorTheme || PRESET_COLOR_THEMES[0];
+      setSelectedTheme(theme);
+
       const matchedPreset = PRESET_COLOR_THEMES.find(
-        (p) => p.bg.toLowerCase() === initialData.colorTheme.bg.toLowerCase()
+        (p) => p.bg.toLowerCase() === theme.bg.toLowerCase()
       );
       if (!matchedPreset) {
         setIsCustomColor(true);
-        setCustomBg(initialData.colorTheme.bg);
-        setCustomText(initialData.colorTheme.text);
-        setCustomBorder(initialData.colorTheme.border);
+        setCustomBg(theme.bg);
+        setCustomText(theme.text);
+        setCustomBorder(theme.border);
       } else {
         setIsCustomColor(false);
       }
     } else {
       setName('');
-      setGrade(10);
-      setStudentCount(0);
+      setGrade(9);
+      setHomeroomTeacher('Chị Vân');
+      setRoomNumber('P.201');
+      setSchedule('Thứ 2, Thứ 5 (18:00 - 20:00)');
+      setMaxCapacity(30);
       setSelectedTheme(PRESET_COLOR_THEMES[0]);
       setIsCustomColor(false);
       setCustomBg('#FFE0EB');
@@ -115,7 +124,6 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
     }
   }, [initialData, isOpen]);
 
-  // Màu sắc hiện tại đang áp dụng (Preset hoặc Custom)
   const currentTheme: ClassColorTheme = isCustomColor
     ? {
         name: 'Tùy chỉnh',
@@ -125,35 +133,64 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
       }
     : selectedTheme;
 
-  // Xử lý gửi biểu mẫu
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    setError(null);
 
-    onSubmit({
-      name: name.trim(),
-      grade: Number(grade) || 10,
-      studentCount: Number(studentCount) || 0,
-      colorTheme: currentTheme,
-    });
-    onClose();
+    if (!name.trim()) {
+      setError('Vui lòng nhập tên lớp học.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        name: name.trim(),
+        grade: Math.min(12, Math.max(1, Number(grade) || 9)),
+        homeroomTeacher: homeroomTeacher.trim() || 'Chị Vân',
+        roomNumber: roomNumber.trim() || 'P.201',
+        schedule: schedule.trim(),
+        maxCapacity: Math.max(1, Number(maxCapacity) || 30),
+        colorTheme: {
+          bg: currentTheme.bg,
+          border: currentTheme.border,
+          text: currentTheme.text,
+        },
+      });
+      onClose();
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : 'Không thể lưu thông tin lớp học. Vui lòng thử lại.'
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[560px] max-h-[90vh] overflow-y-auto p-6 sm:p-7 rounded-[12px] bg-white border border-[#F3D9E3] shadow-[0_20px_50px_rgba(59,42,53,0.18)]">
-        <DialogHeader className="space-y-1">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && !isSubmitting && onClose()}>
+      <DialogContent className="sm:max-w-[580px] max-h-[90vh] overflow-y-auto p-6 sm:p-7 rounded-[12px] bg-white border border-[#F3D9E3] shadow-[0_20px_50px_rgba(59,42,53,0.18)]">
+        <DialogHeader className="space-y-1 text-left">
           <DialogTitle className="font-playfair text-[22px] font-bold text-[#3B2A35]">
             {isEditing ? 'Sửa thông tin lớp học' : 'Thêm lớp học mới'}
           </DialogTitle>
           <DialogDescription className="font-nunito text-[13px] text-[#6B5560]">
             {isEditing
-              ? 'Cập nhật tên lớp, sĩ số và tùy biến màu sắc ô vuông hiển thị.'
-              : 'Nhập thông tin lớp học mới và chọn gam màu sắc đại diện.'}
+              ? 'Cập nhật thông tin lớp học và tùy biến màu sắc ô vuông hiển thị.'
+              : 'Tạo ô vuông lớp học mới với thông tin lịch học và gam màu đại diện.'}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+        {error && (
+          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           {/* Hàng 1: Tên lớp học & Khối lớp */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div className="space-y-1.5">
@@ -163,15 +200,15 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="VD: Lớp 10, Lớp 10A1..."
+                placeholder="VD: Văn 9A, Ôn thi vào 10..."
                 required
-                className="h-[44px] rounded-[10px] border-[#9C6B84] text-[14px]"
+                className="h-[42px] rounded-[10px] border-[#9C6B84] text-[14px]"
               />
             </div>
 
             <div className="space-y-1.5">
               <Label className="text-[13px] font-bold text-[#3B2A35]">
-                Khối lớp (1 - 12)
+                Khối lớp (1 – 12) <span className="text-brand-raspberry">*</span>
               </Label>
               <Input
                 type="number"
@@ -180,23 +217,54 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
                 value={grade}
                 onChange={(e) => setGrade(Number(e.target.value))}
                 required
-                className="h-[44px] rounded-[10px] border-[#9C6B84] text-[14px]"
+                className="h-[42px] rounded-[10px] border-[#9C6B84] text-[14px]"
               />
             </div>
           </div>
 
-          {/* Hàng 2: Sĩ số học sinh ban đầu */}
+          {/* Hàng 2: Giáo viên & Phòng học & Sĩ số tối đa */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-[13px] font-bold text-[#3B2A35]">Giáo viên</Label>
+              <Input
+                value={homeroomTeacher}
+                onChange={(e) => setHomeroomTeacher(e.target.value)}
+                placeholder="Chị Vân"
+                className="h-[42px] rounded-[10px] border-[#9C6B84] text-[13px]"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[13px] font-bold text-[#3B2A35]">Phòng học</Label>
+              <Input
+                value={roomNumber}
+                onChange={(e) => setRoomNumber(e.target.value)}
+                placeholder="VD: P.201"
+                className="h-[42px] rounded-[10px] border-[#9C6B84] text-[13px]"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-[13px] font-bold text-[#3B2A35]">Sĩ số tối đa</Label>
+              <Input
+                type="number"
+                min={1}
+                max={200}
+                value={maxCapacity}
+                onChange={(e) => setMaxCapacity(Number(e.target.value))}
+                className="h-[42px] rounded-[10px] border-[#9C6B84] text-[13px]"
+              />
+            </div>
+          </div>
+
+          {/* Hàng 3: Lịch học */}
           <div className="space-y-1.5">
-            <Label className="text-[13px] font-bold text-[#3B2A35]">
-              Sĩ số học sinh ban đầu
-            </Label>
+            <Label className="text-[13px] font-bold text-[#3B2A35]">Lịch học định kỳ</Label>
             <Input
-              type="number"
-              min={0}
-              value={studentCount}
-              onChange={(e) => setStudentCount(Number(e.target.value))}
-              placeholder="VD: 10"
-              className="h-[44px] rounded-[10px] border-[#9C6B84] text-[14px]"
+              value={schedule}
+              onChange={(e) => setSchedule(e.target.value)}
+              placeholder="VD: Thứ 2, Thứ 5 (18:00 - 20:00)"
+              className="h-[42px] rounded-[10px] border-[#9C6B84] text-[13px]"
             />
           </div>
 
@@ -212,7 +280,6 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
               </span>
             </div>
 
-            {/* Bảng 6 bộ màu pastel thiết kế sẵn */}
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
               {PRESET_COLOR_THEMES.map((theme) => {
                 const isSelected =
@@ -243,7 +310,6 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
               })}
             </div>
 
-            {/* Tùy chỉnh màu tự do (Bảng chọn màu tùy chỉnh) */}
             <div className="pt-2 border-t border-[#F3D9E3]/70">
               <div className="flex items-center justify-between mb-2">
                 <button
@@ -251,13 +317,14 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
                   onClick={() => setIsCustomColor(!isCustomColor)}
                   className="text-[12px] font-bold text-[#2F6FA8] hover:underline flex items-center gap-1 cursor-pointer"
                 >
-                  {isCustomColor ? '← Sử dụng bảng màu có sẵn' : '+ Tự chọn màu tùy thích (Color Picker)'}
+                  {isCustomColor
+                    ? '← Sử dụng bảng màu có sẵn'
+                    : '+ Tự chọn màu tùy thích (Color Picker)'}
                 </button>
               </div>
 
               {isCustomColor && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-[#FCF8FA] p-3 rounded-[10px] border border-[#F3D9E3]">
-                  {/* Màu nền */}
                   <div className="space-y-1">
                     <span className="text-[11px] font-semibold text-[#6B5560]">Màu nền</span>
                     <div className="flex items-center gap-2">
@@ -276,7 +343,6 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Màu viền */}
                   <div className="space-y-1">
                     <span className="text-[11px] font-semibold text-[#6B5560]">Màu viền</span>
                     <div className="flex items-center gap-2">
@@ -295,7 +361,6 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Màu chữ */}
                   <div className="space-y-1">
                     <span className="text-[11px] font-semibold text-[#6B5560]">Màu chữ</span>
                     <div className="flex items-center gap-2">
@@ -317,13 +382,12 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
               )}
             </div>
 
-            {/* ==================== XEM TRƯỚC Ô VUÔNG TRỰC TIẾP ==================== */}
+            {/* Xem trước ô vuông trực tiếp */}
             <div className="pt-2">
               <span className="text-[11px] font-bold text-[#6B5560] block mb-1.5 uppercase tracking-wider">
                 Xem trước ô vuông hiển thị
               </span>
               <div className="flex justify-center p-3 rounded-[10px] bg-[#FFF6F9] border border-dashed border-[#F3D9E3]">
-                {/* Ô vuông mô phỏng thu nhỏ */}
                 <div
                   style={{
                     backgroundColor: currentTheme.bg,
@@ -331,7 +395,6 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
                   }}
                   className="w-[180px] h-[180px] rounded-[16px] border p-4 flex flex-col justify-between shadow-card transition-all"
                 >
-                  {/* Góc trên bên trái: Vòng tròn trắng chứa biểu tượng sách */}
                   <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-2xs">
                     <BookOpen
                       className="w-4 h-4"
@@ -340,21 +403,20 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
                     />
                   </div>
 
-                  {/* Đáy ô: Tên lớp và số học sinh */}
-                  <div className="flex items-end justify-between">
-                    <div>
+                  <div className="flex items-end justify-between gap-2">
+                    <div className="min-w-0">
                       <span
-                        className="font-playfair text-[26px] font-bold leading-none block"
+                        className="font-playfair text-[24px] font-bold leading-tight block truncate"
                         style={{ color: currentTheme.text }}
                       >
                         {name || 'Tên lớp'}
                       </span>
                       <div className="flex items-center gap-1.5 mt-1 font-nunito text-[12px] text-[#3B2A35] font-semibold">
                         <Users className="w-3.5 h-3.5 text-[#3B2A35]" strokeWidth={1.75} />
-                        <span>{studentCount || 0} học sinh</span>
+                        <span>{initialData?.totalStudents ?? 0} học sinh</span>
                       </div>
                     </div>
-                    <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center shadow-2xs text-[#3B2A35]">
+                    <div className="w-7 h-7 rounded-full bg-white flex items-center justify-center shadow-2xs text-[#3B2A35] flex-shrink-0">
                       <ChevronRight className="w-3.5 h-3.5" strokeWidth={1.75} />
                     </div>
                   </div>
@@ -367,16 +429,19 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
             <Button
               type="button"
               variant="outline"
+              disabled={isSubmitting}
               onClick={onClose}
-              className="h-[44px] px-5 rounded-[10px] text-[#6B5560] border-[#F3D9E3] hover:bg-slate-50 text-[14px]"
+              className="h-[44px] px-5 rounded-[10px] text-[#6B5560] border-[#F3D9E3] hover:bg-slate-50 text-[14px] cursor-pointer"
             >
               Hủy
             </Button>
             <Button
               type="submit"
-              className="h-[44px] px-6 rounded-[10px] bg-[#2F6FA8] hover:bg-[#1F4E79] text-white font-bold text-[14px] shadow-xs active:scale-95"
+              disabled={isSubmitting}
+              className="h-[44px] px-6 rounded-[10px] bg-[#2F6FA8] hover:bg-[#1F4E79] text-white font-bold text-[14px] shadow-xs active:scale-95 gap-2 cursor-pointer"
             >
-              {isEditing ? 'Lưu thay đổi' : 'Thêm lớp học'}
+              {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+              <span>{isEditing ? 'Lưu thay đổi' : 'Thêm lớp học'}</span>
             </Button>
           </DialogFooter>
         </form>
@@ -384,4 +449,3 @@ export const ClassFormModal: React.FC<ClassFormModalProps> = ({
     </Dialog>
   );
 };
-

@@ -7,25 +7,26 @@ import { StudentFilterParams, StudentStatus } from '../types/student.types';
 interface StudentFilterProps {
   filter: StudentFilterParams;
   onChange: (newFilter: Partial<StudentFilterParams>) => void;
+  classList?: string[];
 }
 
 const statusOptions = [
   { label: 'Tất cả trạng thái', value: '' },
-  { label: 'Đang học', value: 'STUDYING' },
-  { label: 'Bảo lưu', value: 'RESERVED' },
-  { label: 'Đã tốt nghiệp', value: 'GRADUATED' },
-  { label: 'Thôi học', value: 'DROPOUT' },
+  { label: 'Đang học', value: 'Đang học' },
+  { label: 'Bảo lưu', value: 'Bảo lưu' },
+  { label: 'Nghỉ học', value: 'Nghỉ học' },
 ];
 
-const classOptions = [
-  { label: 'Tất cả các lớp', value: '' },
-  { label: 'Lớp 10A1', value: '10A1' },
-  { label: 'Lớp 10A2', value: '10A2' },
-  { label: 'Lớp 11A1', value: '11A1' },
-  { label: 'Lớp 12A1', value: '12A1' },
-];
+export const StudentFilter: React.FC<StudentFilterProps> = ({
+  filter,
+  onChange,
+  classList = ['Văn 7C', 'Văn 8B', 'Văn 9A', 'Luyện thi vào 10', 'Văn 10 nâng cao'],
+}) => {
+  const classOptions = [
+    { label: 'Tất cả các lớp', value: '' },
+    ...classList.map((c) => ({ label: c, value: c })),
+  ];
 
-export const StudentFilter: React.FC<StudentFilterProps> = ({ filter, onChange }) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
       <div className="lg:col-span-2">
@@ -57,4 +58,3 @@ export const StudentFilter: React.FC<StudentFilterProps> = ({ filter, onChange }
     </div>
   );
 };
-

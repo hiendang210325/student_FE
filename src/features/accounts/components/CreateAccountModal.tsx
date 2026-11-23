@@ -39,8 +39,6 @@ interface CreateAccountModalProps {
   }) => void;
 }
 
-const CLASS_OPTIONS = ['Văn 9A', 'Văn 8B', 'Văn 7C', 'Văn 6D', 'Ôn thi vào 10', 'Văn 10'];
-
 export const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
   isOpen,
   onClose,
@@ -50,7 +48,7 @@ export const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
   const [studentCode, setStudentCode] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [className, setClassName] = useState('Văn 9A');
+  const [className, setClassName] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [sendEmail, setSendEmail] = useState(true);
@@ -88,7 +86,7 @@ export const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
         email: email.trim() ? email.trim().toLowerCase() : undefined,
         password: password.trim(),
         phoneNumber: phoneNumber.trim(),
-        className,
+        className: className.trim() || undefined,
         sendEmail: email.trim() ? sendEmail : false,
       });
 
@@ -102,7 +100,7 @@ export const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
         fullName: createdUser.fullName,
         studentCode: createdUser.studentCode || studentCode.trim().toUpperCase(),
         email: createdUser.email || '',
-        className,
+        className: className.trim() || 'Chưa xếp lớp',
         temporaryPassword: tempPass,
       });
 
@@ -111,6 +109,7 @@ export const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
       setStudentCode('');
       setEmail('');
       setPhoneNumber('');
+      setClassName('');
       setPassword('');
     } catch (err: unknown) {
       if (err instanceof ApiError) {
@@ -190,18 +189,14 @@ export const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
                 Lớp theo học
               </Label>
               <div className="relative">
-                <select
+                <Input
                   id="create-class"
+                  type="text"
+                  placeholder="VD: Văn 9A, Ôn thi vào 10..."
                   value={className}
                   onChange={(e) => setClassName(e.target.value)}
-                  className="w-full h-10 pl-9 pr-3 rounded-lg border border-brand-inputBorder bg-white font-nunito text-sm font-medium text-brand-textDark focus:outline-none focus:ring-2 focus:ring-brand-focusBlue"
-                >
-                  {CLASS_OPTIONS.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
+                  className="pl-9 h-10 text-sm font-nunito"
+                />
                 <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               </div>
             </div>
