@@ -41,8 +41,15 @@ export interface ClassPayload {
   colorTheme?: ClassColorTheme;
 }
 
+export interface ApprovedLeaveAttendanceInfo {
+  studentId: string;
+  reason: string;
+  teacherNote?: string;
+}
+
 export interface AttendanceRecord {
   classId: string;
   date: string; // YYYY-MM-DD
   presentStudentIds: string[];
+  approvedLeaves?: ApprovedLeaveAttendanceInfo[];
 }

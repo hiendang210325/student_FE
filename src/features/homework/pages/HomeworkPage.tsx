@@ -1,6 +1,22 @@
-import React, { useState, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/useAuthStore';
+import { classApi } from '@/features/classes/api/classApi';
+import { ClassRoom } from '@/features/classes/types/class.types';
+import {
+  homeworkApi,
+  getFileViewUrl,
+  getFileDownloadUrl,
+} from '../api/homeworkApi';
+import {
+  AssignmentStatus,
+  HomeworkAdminItem,
+  HomeworkAttachment,
+  HomeworkFileType,
+  HomeworkGradingDetail,
+  StudentHomeworkItem,
+  SubmissionPhoto,
+} from '../types/homework.types';
 import {
   Check,
   Clock,
@@ -18,6 +34,7 @@ import {
   Download,
   ZoomIn,
   CheckCircle2,
+  AlertCircle,
   Camera,
   X,
   Pencil,
@@ -26,7 +43,8 @@ import {
   Calendar as CalendarIcon,
   ArrowLeft,
   RotateCw,
-  Info,
+  Loader2,
+  BookOpen,
 } from 'lucide-react';
 import {
   Dialog,
@@ -36,1557 +54,1617 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 
-// Kiểu trạng thái của bài tập học sinh (chỉ dùng xanh dương đã chấm, hồng chưa nộp, xám chờ chấm)
-type AssignmentStatus = 'graded' | 'not_submitted' | 'pending';
-
-// Cấu trúc dữ liệu một bài tập trong danh sách của học sinh
-interface StudentAssignment {
-  id: number;
-  title: string;
-  fullTitle: string;
-  dueDate: string;
-  dueDateTime: string;
-  remainingText?: string;
-  assignedBy: string;
-  className: string;
-  status: AssignmentStatus;
+interface LocalDraftPhoto {
+  tempId: string;
+  file: File;
+  previewUrl: string;
 }
 
-// Danh sách 5 bài tập cố định hiển thị ở cột bên trái màn hình Học sinh
-const STUDENT_ASSIGNMENTS: StudentAssignment[] = [
-  {
-    id: 1,
-    title: 'Phân tích "Kiều ở lầu Ngưng Bích"',
-    fullTitle: 'Phân tích đoạn trích "Kiều ở lầu Ngưng Bích"',
-    dueDate: 'Hạn nộp 14/11/2026',
-    dueDateTime: 'Hạn nộp 23:59, 14/11/2026',
-    assignedBy: 'Giao bởi Chị Vân · 09/11/2026',
-    className: 'Lớp 9',
-    status: 'graded',
-  },
-  {
-    id: 2,
-    title: 'Nghị luận về tinh thần tự học',
-    fullTitle: 'Nghị luận về tinh thần tự học',
-    dueDate: 'Hạn nộp 17/11/2026',
-    dueDateTime: 'Hạn nộp 23:59, 17/11/2026',
-    remainingText: 'Còn 5 ngày',
-    assignedBy: 'Giao bởi Chị Vân · 11/11/2026',
-    className: 'Lớp 9',
-    status: 'not_submitted',
-  },
-  {
-    id: 3,
-    title: 'Đọc hiểu "Làng" – Kim Lân',
-    fullTitle: 'Đọc hiểu "Làng" – Kim Lân',
-    dueDate: 'Hạn nộp 21/11/2026',
-    dueDateTime: 'Hạn nộp 23:59, 21/11/2026',
-    remainingText: 'Còn 9 ngày',
-    assignedBy: 'Giao bởi Chị Vân · 11/11/2026',
-    className: 'Lớp 9',
-    status: 'not_submitted',
-  },
-  {
-    id: 4,
-    title: 'Viết bài thuyết minh về một danh lam',
-    fullTitle: 'Viết bài thuyết minh về một danh lam',
-    dueDate: 'Hạn nộp 07/11/2026',
-    dueDateTime: 'Hạn nộp 23:59, 07/11/2026',
-    assignedBy: 'Giao bởi Chị Vân · 01/11/2026',
-    className: 'Lớp 9',
-    status: 'pending',
-  },
-  {
-    id: 5,
-    title: 'Soạn bài "Chuyện người con gái Nam Xương"',
-    fullTitle: 'Soạn bài "Chuyện người con gái Nam Xương"',
-    dueDate: 'Hạn nộp 02/11/2026',
-    dueDateTime: 'Hạn nộp 23:59, 02/11/2026',
-    assignedBy: 'Giao bởi Chị Vân · 26/10/2026',
-    className: 'Lớp 9',
-    status: 'graded',
-  },
-];
+const formatScoreVN = (score: number | null | undefined): string => {
+  if (score === null || score === undefined || Number.isNaN(score)) return '';
+  const rounded = Math.round(score * 100) / 100;
+  return String(rounded).replace('.', ',');
+};
 
-// Cấu trúc dữ liệu học sinh trong màn hình "Chấm bài" của Admin
-interface GradingStudentRow {
-  id: number;
-  initials: string;
-  fullName: string;
-  status: AssignmentStatus;
-  badgeText: string;
-  submittedAt: string;
-  photoCount: number;
-  score: string;
-  comment: string;
-}
+const formatDateDMY = (ymd?: string): string => {
+  if (!ymd) return '';
+  const parts = ymd.split('-');
+  if (parts.length !== 3) return ymd;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+};
 
-const GRADING_STUDENTS: GradingStudentRow[] = [
-  {
-    id: 1,
-    initials: 'MA',
-    fullName: 'Nguyễn Minh Anh',
-    status: 'graded',
-    badgeText: 'Đã chấm 8,5',
-    submittedAt: 'Nộp lúc 20:14, 11/11/2026',
-    photoCount: 2,
-    score: '8,5',
-    comment:
-      'Em hiểu đúng tâm trạng cô đơn và nỗi nhớ của Kiều. Phần phân tích hình ảnh "cửa bể chiều hôm" rất tốt, cần thêm dẫn chứng ở câu 1. Chữ viết đẹp, trình bày sạch sẽ.',
-  },
-  {
-    id: 2,
-    initials: 'GH',
-    fullName: 'Đỗ Gia Hân',
-    status: 'pending',
-    badgeText: 'Chờ chấm',
-    submittedAt: 'Nộp lúc 20:41, 11/11/2026',
-    photoCount: 2,
-    score: '8',
-    comment:
-      'Bài viết có bố cục rõ ràng, đúng tâm trạng của Kiều. Cần bổ sung dẫn chứng ở câu 1 và sửa lỗi chính tả ở đoạn kết.',
-  },
-  {
-    id: 3,
-    initials: 'ND',
-    fullName: 'Đặng Ngọc Diệp',
-    status: 'graded',
-    badgeText: 'Đã chấm 7,5',
-    submittedAt: 'Nộp lúc 21:05, 11/11/2026',
-    photoCount: 2,
-    score: '7,5',
-    comment:
-      'Bài làm nắm được ý chính của đoạn trích, diễn đạt mạch lạc. Em lưu ý phân tích kỹ hơn điệp ngữ "Buồn trông" ở 8 câu thơ cuối.',
-  },
-  {
-    id: 4,
-    initials: 'TK',
-    fullName: 'Phạm Tuấn Kiệt',
-    status: 'pending',
-    badgeText: 'Chờ chấm',
-    submittedAt: 'Nộp lúc 21:32, 11/11/2026',
-    photoCount: 2,
-    score: '8',
-    comment:
-      'Bài viết có bố cục rõ ràng, đúng tâm trạng của Kiều. Cần bổ sung dẫn chứng ở câu 1 và sửa lỗi chính tả ở đoạn kết.',
-  },
-  {
-    id: 5,
-    initials: 'HM',
-    fullName: 'Lương Hà My',
-    status: 'not_submitted',
-    badgeText: 'Chưa nộp',
-    submittedAt: 'Chưa nộp bài',
-    photoCount: 0,
-    score: '',
-    comment: '',
-  },
-];
+const formatDateTimeVN = (iso?: string | null): string => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${hh}:${mm}, ${dd}/${mo}/${yyyy}`;
+};
 
-// Cấu trúc dữ liệu bài tập dành cho màn hình Admin (9 dòng hiển thị trên bảng)
-interface AdminAssignmentRow {
-  id: number;
-  title: string;
-  files: Array<'PDF' | 'DOCX' | 'XLSX' | 'JPG'>;
-  className: string;
-  dueDate: string;
-  submittedCount: number;
-  totalStudents: number;
-  gradedCount: number;
-  isAllGraded?: boolean;
-}
+const formatDateOnlyFromIso = (iso?: string | null): string => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${dd}/${mo}/${yyyy}`;
+};
 
-const ADMIN_ASSIGNMENTS: AdminAssignmentRow[] = [
-  {
-    id: 1,
-    title: 'Phân tích "Kiều ở lầu Ngưng Bích"',
-    files: ['PDF', 'DOCX'],
-    className: 'Lớp 9',
-    dueDate: '14/11/2026',
-    submittedCount: 4,
-    totalStudents: 5,
-    gradedCount: 2,
-  },
-  {
-    id: 2,
-    title: 'Nghị luận về tinh thần tự học',
-    files: ['PDF'],
-    className: 'Lớp 9',
-    dueDate: '17/11/2026',
-    submittedCount: 0,
-    totalStudents: 5,
-    gradedCount: 0,
-  },
-  {
-    id: 3,
-    title: 'Đọc hiểu "Làng" – Kim Lân',
-    files: ['PDF', 'JPG'],
-    className: 'Lớp 9',
-    dueDate: '21/11/2026',
-    submittedCount: 0,
-    totalStudents: 5,
-    gradedCount: 0,
-  },
-  {
-    id: 4,
-    title: 'Viết bài thuyết minh về một danh lam',
-    files: ['DOCX'],
-    className: 'Lớp 9',
-    dueDate: '07/11/2026',
-    submittedCount: 5,
-    totalStudents: 5,
-    gradedCount: 3,
-  },
-  {
-    id: 5,
-    title: 'Viết đoạn văn về lòng biết ơn',
-    files: ['PDF'],
-    className: 'Lớp 10',
-    dueDate: '14/11/2026',
-    submittedCount: 7,
-    totalStudents: 10,
-    gradedCount: 3,
-  },
-  {
-    id: 6,
-    title: 'Đọc hiểu "Lão Hạc"',
-    files: ['PDF', 'JPG'],
-    className: 'Lớp 8',
-    dueDate: '15/11/2026',
-    submittedCount: 4,
-    totalStudents: 4,
-    gradedCount: 4,
-    isAllGraded: true,
-  },
-  {
-    id: 7,
-    title: 'Tả người thân trong gia đình',
-    files: ['DOCX'],
-    className: 'Lớp 6',
-    dueDate: '13/11/2026',
-    submittedCount: 3,
-    totalStudents: 3,
-    gradedCount: 3,
-    isAllGraded: true,
-  },
-  {
-    id: 8,
-    title: 'Bảng thống kê lỗi chính tả',
-    files: ['XLSX'],
-    className: 'Lớp 5',
-    dueDate: '17/11/2026',
-    submittedCount: 1,
-    totalStudents: 3,
-    gradedCount: 0,
-  },
-  {
-    id: 9,
-    title: 'Luyện đề nghị luận văn học',
-    files: ['PDF'],
-    className: 'Lớp 11',
-    dueDate: '12/11/2026',
-    submittedCount: 2,
-    totalStudents: 2,
-    gradedCount: 1,
-  },
-];
-
-const ADMIN_CLASS_FILTERS = [
-  'Tất cả 14',
-  'Lớp 1',
-  'Lớp 2',
-  'Lớp 3',
-  'Lớp 4',
-  'Lớp 5',
-  'Lớp 6',
-  'Lớp 7',
-  'Lớp 8',
-  'Lớp 9',
-  'Lớp 10',
-  'Lớp 11',
-  'Lớp 12',
-];
-
-// Cấu trúc dữ liệu tệp đính kèm trong ngăn kéo "Giao bài tập"
-interface DrawerUploadedFile {
-  id: string;
-  name: string;
-  size: string;
-  type: 'PDF' | 'DOCX' | 'XLSX' | 'JPG';
-  status: 'uploaded' | 'uploading';
-  progress?: number;
-}
-
-const INITIAL_DRAWER_FILES: DrawerUploadedFile[] = [
-  {
-    id: 'file-1',
-    name: 'De-bai-tinh-than-tu-hoc.pdf',
-    size: '1,2 MB',
-    type: 'PDF',
-    status: 'uploaded',
-  },
-  {
-    id: 'file-2',
-    name: 'Goi-y-lam-bai.docx',
-    size: '340 KB',
-    type: 'DOCX',
-    status: 'uploaded',
-  },
-  {
-    id: 'file-3',
-    name: 'Bang-diem-mau.xlsx',
-    size: '820 KB',
-    type: 'XLSX',
-    status: 'uploading',
-    progress: 70,
-  },
-];
-
-// Thành phần minh họa phẳng trang vở kẻ ngang viết tay bằng nét bút chì mềm (không dùng ảnh stock, không lorem ipsum)
-const GradingNotebookIllustration: React.FC<{
-  pageNumber: 1 | 2;
-  variant?: 'canvas' | 'thumb';
-}> = ({ pageNumber, variant = 'canvas' }) => {
-  if (variant === 'thumb') {
-    return (
-      <div className="w-[46px] h-[58px] rounded-[6px] bg-[#FBF6EA] border border-[#F3D9E3] relative overflow-hidden p-1.5 flex-shrink-0">
-        {/* Kẻ ngang vở học sinh */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage:
-              'linear-gradient(to bottom, transparent 6px, #CFE8FF 6px, #CFE8FF 7px)',
-            backgroundSize: '100% 7px',
-            backgroundPosition: '0 3px',
-          }}
-        />
-        {/* Kẻ lề dọc màu hồng */}
-        <div className="absolute top-0 bottom-0 left-[9px] w-[1px] bg-[#F8A5C2]/80 pointer-events-none" />
-        {/* Các nét bút chì mềm mô phỏng chữ viết tay */}
-        <div className="relative z-10 pl-2 pt-0.5 space-y-[3.5px]">
-          <div className="h-[2px] w-5 bg-[#A61E4D]/65 rounded-full" />
-          <div className="h-[1.5px] w-7 bg-[#6B5560]/65 rounded-full" />
-          <div className="h-[1.5px] w-6 bg-[#6B5560]/55 rounded-full" />
-          <div className="h-[1.5px] w-7 bg-[#6B5560]/65 rounded-full" />
-          <div className="h-[1.5px] w-5 bg-[#6B5560]/50 rounded-full" />
-          <div className="h-[1.5px] w-6 bg-[#6B5560]/60 rounded-full" />
-        </div>
-      </div>
-    );
+const formatBytes = (bytes?: number): string => {
+  if (!bytes || bytes <= 0) return '0 KB';
+  if (bytes < 1024 * 1024) {
+    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   }
-
-  return (
-    <div className="w-[540px] h-[270px] rounded-[12px] bg-[#FBF6EA] border border-[#F3D9E3] shadow-[0_4px_14px_rgba(59,42,53,0.08)] relative overflow-hidden px-6 py-4 select-none">
-      {/* Dòng kẻ ngang trang vở (#CFE8FF) */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage:
-            'linear-gradient(to bottom, transparent 21px, #CFE8FF 21px, #CFE8FF 22px)',
-          backgroundSize: '100% 22px',
-          backgroundPosition: '0 12px',
-        }}
-      />
-
-      {/* Đường lề dọc màu hồng (#F8A5C2) */}
-      <div className="absolute top-0 bottom-0 left-[54px] w-[1.5px] bg-[#F8A5C2]/85 pointer-events-none" />
-
-      {/* Nội dung trang vở kết hợp tiêu đề bài làm tiếng Việt và các đường nét bút chì mềm */}
-      <div className="relative z-10 pl-11 space-y-[10px]">
-        <div className="flex items-center justify-between text-[12px] font-bold text-[#A61E4D]">
-          <span>Họ và tên: Đỗ Gia Hân · Lớp 9</span>
-          <span>Trang {pageNumber} / 2</span>
-        </div>
-
-        {pageNumber === 1 ? (
-          <>
-            <div className="font-playfair italic font-bold text-[14px] text-[#1F4E79] leading-none">
-              Bài làm: Phân tích đoạn trích &ldquo;Kiều ở lầu Ngưng Bích&rdquo; (Nguyễn Du)
-            </div>
-
-            {/* Các dòng nét bút chì mềm mô phỏng bài viết tay trên giấy kẻ ngang */}
-            <svg
-              className="w-full h-[180px] text-[#6B5560]"
-              viewBox="0 0 430 180"
-              fill="none"
-              aria-label="Minh họa trang vở viết tay Trang 1"
-            >
-              {/* Đoạn 1: Câu 1 chép thơ */}
-              <path
-                d="M4 12 C 42 10, 85 14, 132 11 C 180 9, 230 13, 286 11"
-                stroke="#1F4E79"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                opacity="0.78"
-              />
-              <path
-                d="M18 34 C 70 32, 130 35, 195 33 C 245 31, 300 35, 348 33"
-                stroke="#6B5560"
-                strokeWidth="2"
-                strokeLinecap="round"
-                opacity="0.72"
-              />
-              <path
-                d="M18 56 C 68 55, 128 57, 190 55 C 250 53, 315 57, 372 55"
-                stroke="#6B5560"
-                strokeWidth="2"
-                strokeLinecap="round"
-                opacity="0.68"
-              />
-              <path
-                d="M18 78 C 64 76, 124 79, 184 77 C 240 75, 295 79, 336 77"
-                stroke="#6B5560"
-                strokeWidth="2"
-                strokeLinecap="round"
-                opacity="0.72"
-              />
-              {/* Đoạn 2: Câu 2 phân tích */}
-              <path
-                d="M4 100 C 56 98, 118 102, 178 99 C 242 97, 310 101, 392 99"
-                stroke="#1F4E79"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                opacity="0.78"
-              />
-              <path
-                d="M16 122 C 78 120, 148 124, 218 121 C 288 119, 352 123, 412 121"
-                stroke="#6B5560"
-                strokeWidth="2"
-                strokeLinecap="round"
-                opacity="0.7"
-              />
-              <path
-                d="M4 144 C 72 142, 144 146, 214 143 C 284 141, 348 145, 404 143"
-                stroke="#6B5560"
-                strokeWidth="2"
-                strokeLinecap="round"
-                opacity="0.65"
-              />
-              <path
-                d="M4 166 C 62 164, 132 168, 198 165 C 248 164, 292 167, 330 165"
-                stroke="#6B5560"
-                strokeWidth="2"
-                strokeLinecap="round"
-                opacity="0.7"
-              />
-            </svg>
-          </>
-        ) : (
-          <>
-            <div className="font-playfair italic font-bold text-[14px] text-[#1F4E79] leading-none">
-              Phần tiếp theo: Nghệ thuật tả cảnh ngụ tình qua điệp ngữ &ldquo;Buồn trông&rdquo;
-            </div>
-
-            <svg
-              className="w-full h-[180px] text-[#6B5560]"
-              viewBox="0 0 430 180"
-              fill="none"
-              aria-label="Minh họa trang vở viết tay Trang 2"
-            >
-              <path
-                d="M16 12 C 74 10, 142 14, 212 11 C 282 9, 348 13, 408 11"
-                stroke="#6B5560"
-                strokeWidth="2"
-                strokeLinecap="round"
-                opacity="0.72"
-              />
-              <path
-                d="M4 34 C 68 32, 138 35, 208 33 C 276 31, 342 35, 396 33"
-                stroke="#6B5560"
-                strokeWidth="2"
-                strokeLinecap="round"
-                opacity="0.68"
-              />
-              <path
-                d="M4 56 C 64 55, 132 57, 198 55 C 264 53, 330 57, 384 55"
-                stroke="#6B5560"
-                strokeWidth="2"
-                strokeLinecap="round"
-                opacity="0.72"
-              />
-              <path
-                d="M16 78 C 72 76, 140 79, 210 77 C 274 75, 336 79, 402 77"
-                stroke="#6B5560"
-                strokeWidth="2"
-                strokeLinecap="round"
-                opacity="0.66"
-              />
-              <path
-                d="M4 100 C 66 98, 134 102, 202 99 C 268 97, 328 101, 378 99"
-                stroke="#6B5560"
-                strokeWidth="2"
-                strokeLinecap="round"
-                opacity="0.7"
-              />
-              <path
-                d="M16 122 C 68 120, 132 124, 196 121 C 260 119, 322 123, 390 121"
-                stroke="#1F4E79"
-                strokeWidth="2.1"
-                strokeLinecap="round"
-                opacity="0.76"
-              />
-              <path
-                d="M4 144 C 58 142, 118 146, 182 143 C 232 141, 276 145, 312 143"
-                stroke="#6B5560"
-                strokeWidth="2"
-                strokeLinecap="round"
-                opacity="0.68"
-              />
-            </svg>
-          </>
-        )}
-      </div>
-    </div>
-  );
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} MB`;
 };
 
-// Thành phần minh họa trang vở kẻ ngang viết tay phẳng cho màn hình Học sinh
-const NotebookThumbnailSvg: React.FC<{
-  pageNumber: number;
-  size?: '96x128' | '104x140' | 'large';
-}> = ({ pageNumber, size = '96x128' }) => {
-  const isLarge = size === 'large';
-  const sizeClasses =
-    size === 'large'
-      ? 'w-full h-[460px] rounded-[12px] p-6'
-      : size === '104x140'
-      ? 'w-[104px] h-[140px] rounded-[10px] p-2'
-      : 'w-[96px] h-[128px] rounded-[10px] p-2';
-
-  return (
-    <div
-      className={`relative bg-[#FBF6EA] overflow-hidden select-none border border-[#F3D9E3] ${sizeClasses}`}
-    >
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `linear-gradient(to bottom, transparent ${
-            isLarge ? '27px' : '10px'
-          }, #CFE8FF ${isLarge ? '27px' : '10px'}, #CFE8FF ${isLarge ? '28px' : '11px'})`,
-          backgroundSize: `100% ${isLarge ? '28px' : '11px'}`,
-          backgroundPosition: `0 ${isLarge ? '16px' : '5px'}`,
-        }}
-      />
-
-      <div
-        className="absolute top-0 bottom-0 bg-[#F8A5C2]/80 pointer-events-none"
-        style={{
-          left: isLarge ? '52px' : '16px',
-          width: isLarge ? '1.5px' : '1px',
-        }}
-      />
-
-      {isLarge ? (
-        <div className="relative z-10 pl-12 pt-1 font-playfair italic text-[#1F4E79] space-y-[9px] text-[15px] leading-[19px]">
-          <div className="font-bold text-[#A61E4D] not-italic text-[14px]">
-            Nguyễn Minh Anh – Lớp 9 · Bài làm (Trang {pageNumber})
-          </div>
-          {pageNumber === 1 && (
-            <>
-              <div className="font-semibold">
-                Đề bài: Nghị luận về tinh thần tự học của học sinh hiện nay
-              </div>
-              <div>
-                Mở bài: Trong hành trình chinh phục tri thức của mỗi con người, tự học luôn là chiếc chìa khóa vàng mở ra cánh cửa thành công...
-              </div>
-              <div>
-                Luận điểm 1: Tự học là sự chủ động tìm tòi, suy ngẫm và lĩnh hội kiến thức bằng chính nỗ lực tự thân mà không đợi ai nhắc nhở...
-              </div>
-            </>
-          )}
-          {pageNumber >= 2 && (
-            <>
-              <div>
-                Luận điểm 2: Tinh thần tự học giúp học sinh hiểu sâu, nhớ lâu và rèn luyện tư duy độc lập trước mọi vấn đề trong cuộc sống...
-              </div>
-              <div className="font-semibold pt-1">
-                Kết bài: Mỗi học sinh chúng em cần xây dựng kế hoạch tự học khoa học ngay từ hôm nay.
-              </div>
-            </>
-          )}
-        </div>
-      ) : (
-        <div className="relative z-10 pl-3 pt-0.5 space-y-[4.5px]">
-          <div className="h-[3px] w-11 bg-[#A61E4D]/60 rounded-full mb-1" />
-          <div className="h-[2px] w-14 bg-[#1F4E79]/75 rounded-full" />
-          <div className="h-[2px] w-12 bg-[#1F4E79]/65 rounded-full" />
-          <div className="h-[2px] w-14 bg-[#1F4E79]/75 rounded-full" />
-          <div className="h-[2px] w-10 bg-[#1F4E79]/60 rounded-full" />
-          <div className="h-[2px] w-13 bg-[#1F4E79]/70 rounded-full mt-1" />
-          <div className="h-[2px] w-14 bg-[#1F4E79]/75 rounded-full" />
-          <div className="h-[2px] w-11 bg-[#1F4E79]/65 rounded-full" />
-        </div>
-      )}
-    </div>
-  );
+const getDefaultDueDateYMD = (): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + 7);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 };
+
+const detectLocalFileType = (filename: string): HomeworkFileType => {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith('.pdf')) return 'PDF';
+  if (lower.endsWith('.doc') || lower.endsWith('.docx')) return 'DOCX';
+  if (lower.endsWith('.xls') || lower.endsWith('.xlsx')) return 'XLSX';
+  return 'IMAGE';
+};
+
+const getInitialsFromName = (name?: string | null): string => {
+  const parts = String(name || 'Chị Vân')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) return 'CV';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+};
+
+const QUICK_SCORES = ['7', '7,5', '8', '8,5', '9', '9,5', '10'];
 
 export const HomeworkPage: React.FC = () => {
   const location = useLocation();
-  const { activeRole } = useAuthStore();
-  // Hiển thị theo vai trò đang chọn (Admin hoặc Học sinh) từ thanh chuyển đổi Role trên Sidebar
-  const isAdminMode = activeRole === 'admin' && !location.search.includes('role=student');
+  const navigate = useNavigate();
+  const user = useAuthStore((state) => state.user);
+  const activeRole = useAuthStore((state) => state.activeRole);
 
-  // Chế độ con của Admin: 'grading' (Màn hình Chấm bài mặc định theo yêu cầu mới nhất) hoặc 'list' (Danh sách 14 bài tập)
-  const [adminSubView, setAdminSubView] = useState<'grading' | 'list'>('grading');
-  // Tên bài tập đang chấm trên thanh breadcrumb
-  const [gradingAssignmentTitle, setGradingAssignmentTitle] = useState<string>(
-    'Phân tích "Kiều ở lầu Ngưng Bích"'
+  // Bảo vệ phân quyền: tài khoản học sinh thật luôn ở chế độ Học sinh
+  const isActualStudent = user?.role === 'user';
+  const isAdminMode =
+    !isActualStudent &&
+    activeRole === 'admin' &&
+    !location.search.includes('role=student');
+
+  // ==================== THÔNG BÁO TOAST ====================
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'error';
+  } | null>(null);
+  const toastTimeoutRef = useRef<number | null>(null);
+
+  const showToast = useCallback(
+    (message: string, type: 'success' | 'error' = 'success') => {
+      setToast({ message, type });
+      if (toastTimeoutRef.current) {
+        window.clearTimeout(toastTimeoutRef.current);
+      }
+      toastTimeoutRef.current = window.setTimeout(() => {
+        setToast(null);
+      }, 3200);
+    },
+    []
   );
 
-  // Danh sách học sinh và học sinh đang được chọn trên màn hình "Chấm bài" (mặc định chọn #2 Đỗ Gia Hân)
-  const [gradingStudents, setGradingStudents] =
-    useState<GradingStudentRow[]>(GRADING_STUDENTS);
-  const [selectedGradingStudentId, setSelectedGradingStudentId] = useState<number>(2);
-  // Trang ảnh bài làm đang chọn ở màn hình "Chấm bài" (1 hoặc 2)
-  const [gradingSelectedPage, setGradingSelectedPage] = useState<1 | 2>(1);
-  // Mức thu phóng và góc xoay ảnh bài làm trên màn hình "Chấm bài"
+  // ==================== STATE CHẾ ĐỘ ADMIN ====================
+  const [adminSubView, setAdminSubView] = useState<'list' | 'grading'>('list');
+  const [classes, setClasses] = useState<ClassRoom[]>([]);
+  const [selectedClassFilter, setSelectedClassFilter] = useState<string>('all');
+  const [adminHomeworks, setAdminHomeworks] = useState<HomeworkAdminItem[]>([]);
+  const [totalAllHomeworks, setTotalAllHomeworks] = useState<number>(0);
+  const [adminPage, setAdminPage] = useState<number>(1);
+  const [adminPagination, setAdminPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 9,
+    totalPages: 1,
+  });
+  const [isLoadingAdminList, setIsLoadingAdminList] = useState<boolean>(false);
+
+  // State Ngăn kéo Giao / Sửa bài tập
+  const [isAssignDrawerOpen, setIsAssignDrawerOpen] = useState<boolean>(false);
+  const [drawerMode, setDrawerMode] = useState<'create' | 'edit'>('create');
+  const [editingHomeworkId, setEditingHomeworkId] = useState<string | null>(null);
+  const [drawerTitle, setDrawerTitle] = useState<string>('');
+  const [drawerSelectedClassIds, setDrawerSelectedClassIds] = useState<string[]>([]);
+  const [drawerSingleClassId, setDrawerSingleClassId] = useState<string>('');
+  const [drawerDueDate, setDrawerDueDate] = useState<string>(getDefaultDueDateYMD());
+  const [drawerDueTime, setDrawerDueTime] = useState<string>('23:59');
+  const [drawerInstructions, setDrawerInstructions] = useState<string>('');
+  const [drawerKeptAttachments, setDrawerKeptAttachments] = useState<HomeworkAttachment[]>([]);
+  const [drawerNewFiles, setDrawerNewFiles] = useState<File[]>([]);
+  const [isSubmittingDrawer, setIsSubmittingDrawer] = useState<boolean>(false);
+  const drawerFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // State Xóa bài tập
+  const [deleteTarget, setDeleteTarget] = useState<HomeworkAdminItem | null>(null);
+  const [isDeletingHomework, setIsDeletingHomework] = useState<boolean>(false);
+
+  // State Không gian Chấm bài (Admin Grading)
+  const [gradingDetail, setGradingDetail] = useState<HomeworkGradingDetail | null>(null);
+  const [isLoadingGrading, setIsLoadingGrading] = useState<boolean>(false);
+  const [gradingStatusFilter, setGradingStatusFilter] = useState<
+    'all' | 'pending' | 'not_submitted' | 'graded'
+  >('all');
+  const [selectedGradingStudentId, setSelectedGradingStudentId] = useState<string>('');
+  const [mobileAdminGradingDetail, setMobileAdminGradingDetail] = useState<boolean>(false);
+  const [activeGradingPhotoIdx, setActiveGradingPhotoIdx] = useState<number>(0);
   const [gradingZoom, setGradingZoom] = useState<number>(100);
   const [gradingRotation, setGradingRotation] = useState<number>(0);
-  // Điểm số và nhận xét đang nhập trên màn hình "Chấm bài"
-  const [gradingScore, setGradingScore] = useState<string>('8');
-  const [gradingComment, setGradingComment] = useState<string>(
-    'Bài viết có bố cục rõ ràng, đúng tâm trạng của Kiều. Cần bổ sung dẫn chứng ở câu 1 và sửa lỗi chính tả ở đoạn kết.'
-  );
-  // Trạng thái phóng to toàn màn hình bài làm trên màn hình "Chấm bài" (mặc định đóng)
-  const [isGradingFullscreen, setIsGradingFullscreen] = useState<boolean>(false);
+  const [isAdminPhotoFullscreen, setIsAdminPhotoFullscreen] = useState<boolean>(false);
+  const [isAdminPromptDialogOpen, setIsAdminPromptDialogOpen] = useState<boolean>(false);
+  const [gradingScoreInput, setGradingScoreInput] = useState<string>('');
+  const [gradingCommentInput, setGradingCommentInput] = useState<string>('');
+  const [isSavingGrade, setIsSavingGrade] = useState<boolean>(false);
 
-  // Trạng thái mở Side Drawer "Giao bài tập" ở màn hình danh sách (mặc định đóng, mở khi bấm "Giao bài tập" hoặc "Sửa")
-  const [isAssignDrawerOpen, setIsAssignDrawerOpen] = useState<boolean>(false);
-
-  // Các trường dữ liệu trong Side Drawer "Giao bài tập"
-  const [drawerTitle, setDrawerTitle] = useState<string>('Nghị luận về tinh thần tự học');
-  const [drawerClass, setDrawerClass] = useState<string>('Lớp 9');
-  const [drawerDueDate, setDrawerDueDate] = useState<string>('17/11/2026');
-  const [drawerDueTime, setDrawerDueTime] = useState<string>('23:59');
-  const [drawerInstructions, setDrawerInstructions] = useState<string>(
-    'Viết khoảng 400 chữ, có mở bài, 3 luận điểm và kết bài. Chụp ảnh bài làm rõ chữ rồi nộp trên web.'
-  );
-  const [drawerFiles, setDrawerFiles] = useState<DrawerUploadedFile[]>(INITIAL_DRAWER_FILES);
-
-  // Bài tập đang được chọn ở màn hình Học sinh (mặc định là bài #2 "Nghị luận về tinh thần tự học" – trạng thái "Chưa nộp")
-  const [selectedId, setSelectedId] = useState<number>(2);
-  const [activeFileTab, setActiveFileTab] = useState<'pdf' | 'docx'>('pdf');
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [zoomLevel, setZoomLevel] = useState<number>(100);
-  const [uploadedPages, setUploadedPages] = useState<number[]>([1, 2, 3]);
-  const [previewNotebookPage, setPreviewNotebookPage] = useState<number | null>(null);
-  const [isFullscreenViewer, setIsFullscreenViewer] = useState<boolean>(false);
-  const [selectedAdminClass, setSelectedAdminClass] = useState<string>('Tất cả 14');
-  const [adminPage, setAdminPage] = useState<number>(1);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  // ==================== STATE CHẾ ĐỘ HỌC SINH ====================
+  const [myHomeworks, setMyHomeworks] = useState<StudentHomeworkItem[]>([]);
+  const [studentInfo, setStudentInfo] = useState<{
+    id: string;
+    studentCode: string;
+    fullName: string;
+    classes: string[];
+  } | null>(null);
+  const [isLoadingStudentView, setIsLoadingStudentView] = useState<boolean>(false);
+  const [selectedStudentHwId, setSelectedStudentHwId] = useState<string>('');
   const [mobileShowDetail, setMobileShowDetail] = useState<boolean>(false);
+  const [activeAttachmentIdx, setActiveAttachmentIdx] = useState<number>(0);
+  const [promptZoomLevel, setPromptZoomLevel] = useState<number>(100);
+  const [isFullscreenPrompt, setIsFullscreenPrompt] = useState<boolean>(false);
 
-  // Tham chiếu đến thẻ input chọn file thật từ thư mục máy tính
-  const drawerFileInputRef = useRef<HTMLInputElement | null>(null);
+  // State Nộp bài / Sửa bài nộp của Học sinh
+  const [isEditingSubmission, setIsEditingSubmission] = useState<boolean>(false);
+  const [keptSubmissionPhotos, setKeptSubmissionPhotos] = useState<SubmissionPhoto[]>([]);
+  const [draftNewPhotos, setDraftNewPhotos] = useState<LocalDraftPhoto[]>([]);
+  const [isSubmittingWork, setIsSubmittingWork] = useState<boolean>(false);
+  const [previewPhotoModalIndex, setPreviewPhotoModalIndex] = useState<number | null>(null);
   const studentFileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
-  // Chọn một học sinh khác trong danh sách "Học sinh lớp 9" ở màn hình Chấm bài
-  const handleSelectGradingStudent = (student: GradingStudentRow) => {
-    setSelectedGradingStudentId(student.id);
-    setGradingSelectedPage(1);
-    setGradingRotation(0);
-    setGradingScore(student.score || '8');
-    setGradingComment(
-      student.comment ||
-        'Bài viết có bố cục rõ ràng, đúng tâm trạng của Kiều. Cần bổ sung dẫn chứng ở câu 1 và sửa lỗi chính tả ở đoạn kết.'
-    );
-    setMobileShowDetail(true);
-  };
-
-  // Gửi điểm và nhận xét cho học sinh đang chọn
-  const handleSubmitGrade = () => {
-    const currentStudent =
-      gradingStudents.find((s) => s.id === selectedGradingStudentId) || gradingStudents[1];
-    setGradingStudents((prev) =>
-      prev.map((s) =>
-        s.id === currentStudent.id
-          ? {
-              ...s,
-              status: 'graded',
-              badgeText: `Đã chấm ${gradingScore}`,
-              score: gradingScore,
-              comment: gradingComment,
-            }
-          : s
-      )
-    );
-    showToast(
-      `Đã gửi điểm ${gradingScore}/10 và nhận xét cho học sinh ${currentStudent.fullName}!`
-    );
-  };
-
-  // Định dạng dung lượng tệp từ byte sang KB hoặc MB
-  const formatFileSize = (bytes: number): string => {
-    if (bytes >= 1024 * 1024) {
-      return `${(bytes / (1024 * 1024)).toFixed(1).replace('.', ',')} MB`;
+  // ==================== TẢI DỮ LIỆU ADMIN ====================
+  const fetchClasses = useCallback(async () => {
+    try {
+      const res = await classApi.getClasses();
+      setClasses(res.data || []);
+    } catch {
+      // Bỏ qua nếu chưa có lớp
     }
-    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  }, []);
+
+  const fetchAdminHomeworks = useCallback(
+    async (pageToLoad = adminPage, classFilter = selectedClassFilter) => {
+      setIsLoadingAdminList(true);
+      try {
+        const res = await homeworkApi.getAdminHomeworks({
+          className: classFilter === 'all' ? undefined : classFilter,
+          page: pageToLoad,
+          limit: 9,
+        });
+        if (res.data) {
+          setAdminHomeworks(res.data.items || []);
+          setTotalAllHomeworks(res.data.totalAllHomeworks || 0);
+          setAdminPagination(res.data.pagination);
+          if (res.data.pagination.page !== pageToLoad) {
+            setAdminPage(res.data.pagination.page);
+          }
+        }
+      } catch (err: any) {
+        showToast(err?.message || 'Không thể tải danh sách bài tập.', 'error');
+      } finally {
+        setIsLoadingAdminList(false);
+      }
+    },
+    [adminPage, selectedClassFilter, showToast]
+  );
+
+  useEffect(() => {
+    if (isAdminMode) {
+      fetchClasses();
+    }
+  }, [isAdminMode, fetchClasses]);
+
+  useEffect(() => {
+    if (isAdminMode) {
+      fetchAdminHomeworks(adminPage, selectedClassFilter);
+    }
+  }, [isAdminMode, adminPage, selectedClassFilter, fetchAdminHomeworks]);
+
+  // ==================== TẢI DỮ LIỆU HỌC SINH ====================
+  const fetchStudentHomeworks = useCallback(async () => {
+    setIsLoadingStudentView(true);
+    try {
+      const res = await homeworkApi.getMyHomeworks();
+      if (res.data) {
+        const list = res.data.items || [];
+        setMyHomeworks(list);
+        setStudentInfo(res.data.student || null);
+        setSelectedStudentHwId((prev) => {
+          if (prev && list.some((i) => i.id === prev)) return prev;
+          return list[0]?.id || '';
+        });
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể tải danh sách bài tập của em.', 'error');
+    } finally {
+      setIsLoadingStudentView(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    if (!isAdminMode) {
+      fetchStudentHomeworks();
+    }
+  }, [isAdminMode, fetchStudentHomeworks]);
+
+  // Thu hồi ObjectURL khi đổi bài tập hoặc unmount
+  useEffect(() => {
+    return () => {
+      draftNewPhotos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+    };
+  }, [draftNewPhotos]);
+
+  // ==================== XỬ LÝ NGĂN KÉO GIAO / SỬA BÀI TẬP (ADMIN) ====================
+  const handleOpenCreateDrawer = () => {
+    if (classes.length === 0) {
+      showToast('Vui lòng tạo ít nhất 1 lớp học ở mục Lớp học trước khi giao bài tập.', 'error');
+      return;
+    }
+    setDrawerMode('create');
+    setEditingHomeworkId(null);
+    setDrawerTitle('');
+    const preselectedClass =
+      selectedClassFilter !== 'all'
+        ? classes.find((c) => c.name === selectedClassFilter)
+        : classes[0];
+    setDrawerSelectedClassIds(preselectedClass ? [preselectedClass.id] : []);
+    setDrawerSingleClassId(preselectedClass?.id || classes[0]?.id || '');
+    setDrawerDueDate(getDefaultDueDateYMD());
+    setDrawerDueTime('23:59');
+    setDrawerInstructions('');
+    setDrawerKeptAttachments([]);
+    setDrawerNewFiles([]);
+    setIsAssignDrawerOpen(true);
   };
 
-  // Nhận diện loại tệp từ tên tệp được chọn trong thư mục
-  const detectDrawerFileType = (fileName: string): 'PDF' | 'DOCX' | 'XLSX' | 'JPG' => {
-    const lower = fileName.toLowerCase();
-    if (lower.endsWith('.pdf')) return 'PDF';
-    if (lower.endsWith('.doc') || lower.endsWith('.docx')) return 'DOCX';
-    if (lower.endsWith('.xls') || lower.endsWith('.xlsx') || lower.endsWith('.csv')) return 'XLSX';
-    return 'JPG';
+  const handleOpenEditDrawer = (item: HomeworkAdminItem) => {
+    setDrawerMode('edit');
+    setEditingHomeworkId(item.id);
+    setDrawerTitle(item.title);
+    const matchedClass =
+      classes.find((c) => c.id === item.classId) ||
+      classes.find((c) => c.name === item.className);
+    setDrawerSingleClassId(matchedClass?.id || item.classId);
+    setDrawerSelectedClassIds(matchedClass ? [matchedClass.id] : []);
+    setDrawerDueDate(item.dueDate || getDefaultDueDateYMD());
+    setDrawerDueTime(item.dueTime || '23:59');
+    setDrawerInstructions(item.instructions || '');
+    setDrawerKeptAttachments(item.attachments || []);
+    setDrawerNewFiles([]);
+    setIsAssignDrawerOpen(true);
   };
 
-  // Xử lý danh sách file được chọn từ thư mục máy tính hoặc kéo thả vào khung File đề bài
-  const handleSelectDrawerFiles = (fileList: FileList | null) => {
-    if (!fileList || fileList.length === 0) return;
-
-    const addedFiles: DrawerUploadedFile[] = Array.from(fileList).map((file, idx) => ({
-      id: `local-${Date.now()}-${idx}`,
-      name: file.name,
-      size: formatFileSize(file.size),
-      type: detectDrawerFileType(file.name),
-      status: 'uploaded',
-    }));
-
-    setDrawerFiles((prev) => [...prev, ...addedFiles]);
-    showToast(
-      `Đã tải lên ${addedFiles.length} tệp: ${addedFiles.map((f) => f.name).join(', ')}`
-    );
-  };
-
-  // Đóng ngăn kéo "Giao bài tập"
-  const handleCloseAssignDrawer = () => {
+  const handleCloseDrawer = () => {
+    if (isSubmittingDrawer) return;
     setIsAssignDrawerOpen(false);
   };
 
-  // Mở ngăn kéo "Giao bài tập" với dữ liệu mặc định
-  const handleOpenNewAssignDrawer = () => {
-    setDrawerTitle('Nghị luận về tinh thần tự học');
-    setDrawerClass('Lớp 9');
-    setDrawerDueDate('17/11/2026');
-    setDrawerDueTime('23:59');
-    setDrawerInstructions(
-      'Viết khoảng 400 chữ, có mở bài, 3 luận điểm và kết bài. Chụp ảnh bài làm rõ chữ rồi nộp trên web.'
+  const toggleClassInCreateDrawer = (classId: string) => {
+    setDrawerSelectedClassIds((prev) =>
+      prev.includes(classId) ? prev.filter((id) => id !== classId) : [...prev, classId]
     );
-    setDrawerFiles(INITIAL_DRAWER_FILES);
-    setIsAssignDrawerOpen(true);
   };
 
-  // Mở ngăn kéo để chỉnh sửa một dòng bài tập có sẵn
-  const handleOpenEditAssignDrawer = (row: AdminAssignmentRow) => {
-    setDrawerTitle(row.title);
-    setDrawerClass(row.className);
-    setDrawerDueDate(row.dueDate);
-    setDrawerDueTime('23:59');
-    setDrawerFiles(INITIAL_DRAWER_FILES);
-    setIsAssignDrawerOpen(true);
-  };
-
-  // Xử lý lưu biểu mẫu "Giao bài tập"
-  const handleSubmitAssignDrawer = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleCloseAssignDrawer();
-    showToast(`Đã giao bài tập "${drawerTitle}" cho ${drawerClass} thành công!`);
-  };
-
-  // Xóa một tệp trong danh sách đính kèm của ngăn kéo
-  const handleRemoveDrawerFile = (id: string, name: string) => {
-    setDrawerFiles((prev) => prev.filter((f) => f.id !== id));
-    showToast(`Đã gỡ tệp ${name}.`);
-  };
-
-  // Xóa một ảnh thu nhỏ trong danh sách tải lên của học sinh
-  const handleRemovePage = (pageNum: number) => {
-    setUploadedPages((prev) => prev.filter((p) => p !== pageNum));
-    showToast(`Đã xóa Trang ${pageNum} khỏi danh sách ảnh bài làm.`);
-  };
-
-  // Thêm một ảnh mới vào danh sách tải lên của học sinh
-  const handleAddPage = () => {
-    if (uploadedPages.length >= 10) {
-      showToast('Đã đạt tối đa 10 ảnh cho một lần nộp bài.');
+  const handleSelectDrawerFiles = (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    const incoming = Array.from(fileList);
+    const totalCount =
+      drawerKeptAttachments.length + drawerNewFiles.length + incoming.length;
+    if (totalCount > 10) {
+      showToast('Tối đa 10 tệp đề bài cho mỗi bài tập.', 'error');
       return;
     }
-    const nextNum = uploadedPages.length > 0 ? Math.max(...uploadedPages) + 1 : 1;
-    setUploadedPages((prev) => [...prev, nextNum]);
-    showToast(`Đã thêm Trang ${nextNum} vào bài làm.`);
+    for (const f of incoming) {
+      if (f.size > 20 * 1024 * 1024) {
+        showToast(`Tệp "${f.name}" vượt quá giới hạn 20 MB.`, 'error');
+        return;
+      }
+    }
+    setDrawerNewFiles((prev) => [...prev, ...incoming]);
   };
 
-  // Lấy thông tin bài tập đang chọn của học sinh
-  const currentAssignment =
-    STUDENT_ASSIGNMENTS.find((item) => item.id === selectedId) || STUDENT_ASSIGNMENTS[1];
+  const handleSubmitDrawer = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanTitle = drawerTitle.trim();
+    if (!cleanTitle) {
+      showToast('Vui lòng nhập tiêu đề bài tập.', 'error');
+      return;
+    }
+    if (!drawerDueDate) {
+      showToast('Vui lòng chọn ngày hạn nộp.', 'error');
+      return;
+    }
 
-  // Hàm hiển thị huy hiệu trạng thái (luôn có cả biểu tượng VÀ văn bản)
-  const renderStatusBadge = (status: AssignmentStatus, customText?: string) => {
-    switch (status) {
-      case 'graded':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] text-[12px] font-bold flex-shrink-0">
-            <Check className="w-3.5 h-3.5 text-[#1F4E79]" strokeWidth={2.2} />
-            <span>{customText || 'Đã chấm'}</span>
-          </span>
-        );
-      case 'not_submitted':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-[10px] bg-[#FFE0EB] text-[#A61E4D] text-[12px] font-bold flex-shrink-0">
-            <Clock className="w-3.5 h-3.5 text-[#A61E4D]" strokeWidth={1.75} />
-            <span>{customText || 'Chưa nộp'}</span>
-          </span>
-        );
-      case 'pending':
-        return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-[10px] bg-[#EFE9ED] text-[#6B5560] text-[12px] font-bold flex-shrink-0">
-            <Hourglass className="w-3.5 h-3.5 text-[#6B5560]" strokeWidth={1.75} />
-            <span>{customText || 'Chờ chấm'}</span>
-          </span>
-        );
+    setIsSubmittingDrawer(true);
+    try {
+      if (drawerMode === 'create') {
+        if (drawerSelectedClassIds.length === 0) {
+          showToast('Vui lòng chọn ít nhất một lớp học.', 'error');
+          setIsSubmittingDrawer(false);
+          return;
+        }
+        const res = await homeworkApi.createHomeworks({
+          title: cleanTitle,
+          classIds: drawerSelectedClassIds,
+          dueDate: drawerDueDate,
+          dueTime: drawerDueTime || '23:59',
+          instructions: drawerInstructions.trim(),
+          files: drawerNewFiles,
+        });
+        showToast(res.message || 'Đã giao bài tập thành công!');
+        setIsAssignDrawerOpen(false);
+        setAdminPage(1);
+        await fetchAdminHomeworks(1, selectedClassFilter);
+      } else if (editingHomeworkId) {
+        await homeworkApi.updateHomework(editingHomeworkId, {
+          title: cleanTitle,
+          classId: drawerSingleClassId,
+          dueDate: drawerDueDate,
+          dueTime: drawerDueTime || '23:59',
+          instructions: drawerInstructions.trim(),
+          keptAttachmentIds: drawerKeptAttachments.map((a) => a.id),
+          newFiles: drawerNewFiles,
+        });
+        showToast(`Đã cập nhật bài tập "${cleanTitle}"!`);
+        setIsAssignDrawerOpen(false);
+        await fetchAdminHomeworks(adminPage, selectedClassFilter);
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể lưu bài tập.', 'error');
+    } finally {
+      setIsSubmittingDrawer(false);
     }
   };
 
-  // Nội dung trang giấy A4 hiển thị trực tiếp trong trình xem tài liệu
-  const renderDocumentContent = () => {
-    if (currentAssignment.id === 2 || currentAssignment.status === 'not_submitted') {
-      return (
-        <div className="space-y-2.5 text-[#3B2A35]">
-          <div className="border-b border-[#F3D9E3] pb-1.5 flex items-center justify-between">
-            <span className="text-[12px] font-bold text-[#A61E4D] uppercase tracking-wider">
-              Lớp Văn chị Vân · Đề bài chính thức
-            </span>
-            <span className="text-[12px] text-[#6B5560]">Trang {currentPage} / 2</span>
-          </div>
-
-          <h3 className="font-playfair text-[20px] font-bold text-[#3B2A35] text-center pt-0.5">
-            BÀI TẬP VĂN – TUẦN 3
-          </h3>
-
-          <div className="space-y-2 text-[14px] leading-relaxed pt-1">
-            <p className="font-bold text-[#3B2A35]">
-              Viết một bài văn nghị luận (khoảng 400 chữ) về tinh thần tự học của học sinh hiện nay.
-            </p>
-            <p className="font-semibold text-[#1F4E79]">
-              Yêu cầu: có mở bài, 3 luận điểm có dẫn chứng, kết bài.
-            </p>
-          </div>
-        </div>
-      );
+  const handleConfirmDeleteHomework = async () => {
+    if (!deleteTarget) return;
+    setIsDeletingHomework(true);
+    try {
+      const res = await homeworkApi.deleteHomework(deleteTarget.id);
+      showToast(res.message || `Đã xóa bài tập "${deleteTarget.title}".`);
+      setDeleteTarget(null);
+      await fetchAdminHomeworks(adminPage, selectedClassFilter);
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể xóa bài tập.', 'error');
+    } finally {
+      setIsDeletingHomework(false);
     }
+  };
 
+  // ==================== XỬ LÝ CHẤM BÀI (ADMIN GRADING) ====================
+  const syncSelectedGradingStudentForm = useCallback(
+    (detail: HomeworkGradingDetail, studentIdToSelect?: string) => {
+      const list = detail.students || [];
+      if (list.length === 0) {
+        setSelectedGradingStudentId('');
+        setGradingScoreInput('');
+        setGradingCommentInput('');
+        return;
+      }
+
+      let chosen =
+        (studentIdToSelect && list.find((s) => s.studentId === studentIdToSelect)) ||
+        list.find((s) => s.status === 'pending') ||
+        list.find((s) => s.status === 'graded') ||
+        list[0];
+
+      setSelectedGradingStudentId(chosen.studentId);
+      setActiveGradingPhotoIdx(0);
+      setGradingZoom(100);
+      setGradingRotation(0);
+      setGradingScoreInput(chosen.score !== null ? formatScoreVN(chosen.score) : '');
+      setGradingCommentInput(chosen.comment || '');
+    },
+    []
+  );
+
+  const openGradingWorkspace = async (homeworkId: string) => {
+    setAdminSubView('grading');
+    setGradingStatusFilter('all');
+    setMobileAdminGradingDetail(false);
+    setIsLoadingGrading(true);
+    try {
+      const res = await homeworkApi.getGradingDetail(homeworkId);
+      if (res.data) {
+        setGradingDetail(res.data);
+        syncSelectedGradingStudentForm(res.data);
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể mở không gian chấm bài.', 'error');
+      setAdminSubView('list');
+    } finally {
+      setIsLoadingGrading(false);
+    }
+  };
+
+  const filteredGradingStudents = useMemo(() => {
+    if (!gradingDetail) return [];
+    if (gradingStatusFilter === 'all') return gradingDetail.students;
+    return gradingDetail.students.filter((s) => s.status === gradingStatusFilter);
+  }, [gradingDetail, gradingStatusFilter]);
+
+  const selectedGradingStudent = useMemo(() => {
+    if (!gradingDetail || gradingDetail.students.length === 0) return null;
     return (
-      <div className="space-y-3 text-[#3B2A35]">
-        <div className="border-b border-[#F3D9E3] pb-2 flex items-center justify-between">
-          <span className="text-[12px] font-bold text-[#A61E4D] uppercase tracking-wider">
-            Lớp Văn chị Vân · Đề bài chính thức
+      gradingDetail.students.find((s) => s.studentId === selectedGradingStudentId) ||
+      gradingDetail.students[0]
+    );
+  }, [gradingDetail, selectedGradingStudentId]);
+
+  const handleSelectStudentForGrading = (studentId: string) => {
+    if (!gradingDetail) return;
+    const found = gradingDetail.students.find((s) => s.studentId === studentId);
+    if (!found) return;
+    setSelectedGradingStudentId(studentId);
+    setActiveGradingPhotoIdx(0);
+    setGradingZoom(100);
+    setGradingRotation(0);
+    setGradingScoreInput(found.score !== null ? formatScoreVN(found.score) : '');
+    setGradingCommentInput(found.comment || '');
+    setMobileAdminGradingDetail(true);
+  };
+
+  const handleSaveGrade = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!gradingDetail || !selectedGradingStudent) return;
+    if (selectedGradingStudent.status === 'not_submitted') return;
+
+    const cleanScore = gradingScoreInput.trim();
+    if (!cleanScore) {
+      showToast('Vui lòng nhập điểm số từ 0 đến 10.', 'error');
+      return;
+    }
+
+    setIsSavingGrade(true);
+    try {
+      const res = await homeworkApi.gradeSubmission(
+        gradingDetail.homework.id,
+        selectedGradingStudent.studentId,
+        {
+          score: cleanScore,
+          comment: gradingCommentInput.trim(),
+        }
+      );
+
+      // Tải lại dữ liệu chấm bài để đồng bộ chính xác tiến độ & điểm số
+      const refreshed = await homeworkApi.getGradingDetail(gradingDetail.homework.id);
+      if (refreshed.data) {
+        setGradingDetail(refreshed.data);
+        const updatedSelf = refreshed.data.students.find(
+          (s) => s.studentId === selectedGradingStudent.studentId
+        );
+        if (updatedSelf) {
+          setGradingScoreInput(
+            updatedSelf.score !== null ? formatScoreVN(updatedSelf.score) : ''
+          );
+          setGradingCommentInput(updatedSelf.comment || '');
+        }
+      }
+
+      fetchAdminHomeworks(adminPage, selectedClassFilter);
+
+      const gpaNote =
+        res.data?.updatedStudentGpa !== null && res.data?.updatedStudentGpa !== undefined
+          ? ` · Điểm TB mới: ${formatScoreVN(res.data.updatedStudentGpa)}`
+          : '';
+      showToast(
+        `Đã lưu điểm ${cleanScore}/10 cho ${selectedGradingStudent.fullName}${gpaNote}`
+      );
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể lưu điểm chấm.', 'error');
+    } finally {
+      setIsSavingGrade(false);
+    }
+  };
+
+  // ==================== XỬ LÝ PHÍA HỌC SINH ====================
+  const currentStudentAssignment = useMemo(() => {
+    if (myHomeworks.length === 0) return null;
+    return myHomeworks.find((h) => h.id === selectedStudentHwId) || myHomeworks[0];
+  }, [myHomeworks, selectedStudentHwId]);
+
+  const resetStudentDraft = useCallback(() => {
+    setDraftNewPhotos((prev) => {
+      prev.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+      return [];
+    });
+    setKeptSubmissionPhotos([]);
+    setIsEditingSubmission(false);
+    setPreviewPhotoModalIndex(null);
+  }, []);
+
+  const handleSelectStudentHomework = (hw: StudentHomeworkItem) => {
+    resetStudentDraft();
+    setSelectedStudentHwId(hw.id);
+    setActiveAttachmentIdx(0);
+    setPromptZoomLevel(100);
+    setMobileShowDetail(true);
+  };
+
+  const handleStartEditPendingSubmission = () => {
+    if (!currentStudentAssignment?.submission) return;
+    setKeptSubmissionPhotos(currentStudentAssignment.submission.photos || []);
+    setDraftNewPhotos((prev) => {
+      prev.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+      return [];
+    });
+    setIsEditingSubmission(true);
+  };
+
+  const handleCancelEditPendingSubmission = () => {
+    resetStudentDraft();
+  };
+
+  const handleStudentPickPhotos = (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    const incoming = Array.from(fileList);
+
+    const currentTotal =
+      keptSubmissionPhotos.length + draftNewPhotos.length + incoming.length;
+    if (currentTotal > 10) {
+      showToast('Chỉ được tải lên tối đa 10 ảnh trang vở cho mỗi bài làm.', 'error');
+      return;
+    }
+
+    for (const file of incoming) {
+      if (!file.type.startsWith('image/')) {
+        showToast(`Tệp "${file.name}" không phải là hình ảnh hợp lệ.`, 'error');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showToast(`Ảnh "${file.name}" vượt quá giới hạn 10 MB.`, 'error');
+        return;
+      }
+    }
+
+    const mapped: LocalDraftPhoto[] = incoming.map((file) => ({
+      tempId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }));
+
+    setDraftNewPhotos((prev) => [...prev, ...mapped]);
+  };
+
+  const handleRemoveKeptPhoto = (photoId: string) => {
+    setKeptSubmissionPhotos((prev) => prev.filter((p) => p.id !== photoId));
+  };
+
+  const handleRemoveDraftNewPhoto = (tempId: string) => {
+    setDraftNewPhotos((prev) => {
+      const target = prev.find((p) => p.tempId === tempId);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      return prev.filter((p) => p.tempId !== tempId);
+    });
+  };
+
+  const handleStudentSubmitWork = async () => {
+    if (!currentStudentAssignment) return;
+    const totalCount = keptSubmissionPhotos.length + draftNewPhotos.length;
+    if (totalCount === 0) {
+      showToast('Em hãy chọn hoặc chụp ít nhất 1 ảnh bài làm trước khi bấm Nộp bài nhé!', 'error');
+      return;
+    }
+
+    setIsSubmittingWork(true);
+    try {
+      const res = await homeworkApi.submitHomework(currentStudentAssignment.id, {
+        keptPhotoIds: keptSubmissionPhotos.map((p) => p.id),
+        newPhotos: draftNewPhotos.map((p) => p.file),
+      });
+
+      const lateSuffix = res.data?.isLate ? ' (Ghi nhận Nộp muộn)' : '';
+      showToast(
+        `Đã nộp thành công ${totalCount} ảnh trang vở${lateSuffix}!`
+      );
+      resetStudentDraft();
+      await fetchStudentHomeworks();
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể nộp bài làm.', 'error');
+    } finally {
+      setIsSubmittingWork(false);
+    }
+  };
+
+  // ==================== HELPER HIỂN THỊ HUY HIỆU & ICON ====================
+  const renderStatusBadge = (
+    status: AssignmentStatus,
+    score?: number | null,
+    isLate?: boolean
+  ) => {
+    return (
+      <div className="inline-flex items-center gap-1.5 flex-wrap justify-end">
+        {isLate && status !== 'not_submitted' && (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-[8px] bg-[#FFF0F6] border border-[#FCC2D7] text-[#A61E4D] text-[11px] font-bold">
+            Nộp muộn
           </span>
-          <span className="text-[12px] text-[#6B5560]">Trang {currentPage} / 2</span>
-        </div>
-
-        <h3 className="font-playfair text-[20px] font-bold text-[#3B2A35] text-center pt-0.5">
-          BÀI TẬP VĂN – TUẦN 2
-        </h3>
-        <p className="text-[14px] font-bold text-[#1F4E79] text-center">
-          Đoạn trích: Kiều ở lầu Ngưng Bích (Truyện Kiều – Nguyễn Du)
-        </p>
-
-        <div className="space-y-2.5 text-[14px] leading-relaxed pt-1">
-          <p className="font-semibold text-[#3B2A35]">
-            <span className="text-[#A61E4D] font-bold">Câu 1 (3 điểm).</span> Chép thuộc lòng 8 câu thơ cuối của đoạn trích.
-          </p>
-          <p className="font-semibold text-[#3B2A35]">
-            <span className="text-[#A61E4D] font-bold">Câu 2 (7 điểm).</span> Phân tích nỗi nhớ và nỗi buồn của Thúy Kiều trong 8 câu thơ cuối.
-          </p>
-        </div>
+        )}
+        {status === 'graded' ? (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] text-[12px] font-bold">
+            <Check className="w-3.5 h-3.5 text-[#1F4E79]" strokeWidth={2.2} />
+            <span>
+              Đã chấm{score !== null && score !== undefined ? ` ${formatScoreVN(score)}` : ''}
+            </span>
+          </span>
+        ) : status === 'pending' ? (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-[10px] bg-[#EFE9ED] text-[#3B2A35] text-[12px] font-bold">
+            <Hourglass className="w-3.5 h-3.5 text-[#6B5560]" strokeWidth={1.75} />
+            <span>Chờ chấm</span>
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-[10px] bg-[#FFE0EB] text-[#A61E4D] text-[12px] font-bold">
+            <Clock className="w-3.5 h-3.5 text-[#A61E4D]" strokeWidth={1.75} />
+            <span>Chưa nộp</span>
+          </span>
+        )}
       </div>
     );
   };
 
-  // Hàm vẽ huy hiệu loại tệp đính kèm cho bảng Admin
-  const renderFileTypePill = (fileType: 'PDF' | 'DOCX' | 'XLSX' | 'JPG') => {
-    const getIcon = () => {
-      switch (fileType) {
-        case 'PDF':
-          return <FileText className="w-3 h-3 text-[#1F4E79]" strokeWidth={1.75} />;
-        case 'DOCX':
-          return <FileCode2 className="w-3 h-3 text-[#1F4E79]" strokeWidth={1.75} />;
-        case 'XLSX':
-          return <FileSpreadsheet className="w-3 h-3 text-[#1F4E79]" strokeWidth={1.75} />;
-        case 'JPG':
-          return <ImageIcon className="w-3 h-3 text-[#1F4E79]" strokeWidth={1.75} />;
-      }
-    };
-
-    return (
-      <span
-        key={fileType}
-        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[6px] bg-[#E9F3FF] text-[#1F4E79] text-[12px] font-bold leading-none"
-      >
-        {getIcon()}
-        <span>{fileType}</span>
-      </span>
-    );
-  };
-
-  // Hàm vẽ biểu tượng loại tệp trong danh sách đã tải lên của Side Drawer
-  const renderDrawerFileIcon = (fileType: 'PDF' | 'DOCX' | 'XLSX' | 'JPG') => {
-    switch (fileType) {
+  const renderFileTypeIcon = (type: HomeworkFileType) => {
+    switch (type) {
       case 'PDF':
         return (
-          <div className="w-9 h-9 rounded-[10px] bg-[#FFE0EB] text-[#A61E4D] flex items-center justify-center flex-shrink-0">
-            <FileText className="w-4 h-4 text-[#A61E4D]" strokeWidth={1.75} />
+          <div className="w-9 h-9 rounded-[10px] bg-[#E9F3FF] text-[#2F6FA8] flex items-center justify-center flex-shrink-0">
+            <FileText className="w-4 h-4" strokeWidth={1.75} />
           </div>
         );
       case 'DOCX':
         return (
           <div className="w-9 h-9 rounded-[10px] bg-[#E9F3FF] text-[#1F4E79] flex items-center justify-center flex-shrink-0">
-            <FileCode2 className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
+            <FileCode2 className="w-4 h-4" strokeWidth={1.75} />
           </div>
         );
       case 'XLSX':
         return (
           <div className="w-9 h-9 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] flex items-center justify-center flex-shrink-0">
-            <FileSpreadsheet className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
+            <FileSpreadsheet className="w-4 h-4" strokeWidth={1.75} />
           </div>
         );
-      case 'JPG':
+      default:
         return (
-          <div className="w-9 h-9 rounded-[10px] bg-[#E9F3FF] text-[#1F4E79] flex items-center justify-center flex-shrink-0">
-            <ImageIcon className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
+          <div className="w-9 h-9 rounded-[10px] bg-[#E9F3FF] text-[#2F6FA8] flex items-center justify-center flex-shrink-0">
+            <ImageIcon className="w-4 h-4" strokeWidth={1.75} />
           </div>
         );
     }
   };
 
-  // ==================== GIAO DIỆN ADMIN: MÀN HÌNH "CHẤM BÀI" & DANH SÁCH "BÀI TẬP" ====================
-  if (isAdminMode) {
-    // 1. MÀN HÌNH "CHẤM BÀI" (MẶC ĐỊNH)
-    if (adminSubView === 'grading') {
-      const activeStudent =
-        gradingStudents.find((s) => s.id === selectedGradingStudentId) || gradingStudents[1];
+  const renderToastBanner = () => {
+    if (!toast) return null;
+    return (
+      <div
+        className={`fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 ${
+          toast.type === 'error'
+            ? 'bg-[#B02525] text-white'
+            : 'bg-[#3B2A35] text-white'
+        }`}
+      >
+        {toast.type === 'error' ? (
+          <AlertCircle className="w-4 h-4 text-[#FFE3E3] flex-shrink-0" />
+        ) : (
+          <CheckCircle2 className="w-4 h-4 text-[#CFE8FF] flex-shrink-0" />
+        )}
+        <span>{toast.message}</span>
+      </div>
+    );
+  };
 
-      // Tính bộ đếm ký tự (hiển thị đúng 112/500 cho đoạn văn bản mẫu mặc định)
-      const defaultSampleComment =
-        'Bài viết có bố cục rõ ràng, đúng tâm trạng của Kiều. Cần bổ sung dẫn chứng ở câu 1 và sửa lỗi chính tả ở đoạn kết.';
-      const commentCharCount =
-        gradingComment === defaultSampleComment ? 112 : gradingComment.length;
+  // ==================== GIAO DIỆN ADMIN: MÀN HÌNH 1B — CHẤM BÀI ====================
+  if (isAdminMode && adminSubView === 'grading') {
+    const hw = gradingDetail?.homework;
+    const summary = gradingDetail?.summary;
+    const isSelectedNotSubmitted =
+      !selectedGradingStudent || selectedGradingStudent.status === 'not_submitted';
+    const currentPhotos = selectedGradingStudent?.photos || [];
+    const activePhoto = currentPhotos[activeGradingPhotoIdx] || currentPhotos[0] || null;
 
-      return (
-        <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[100dvh] lg:min-h-[976px]">
-          {/* Khung chuẩn 1200px trên máy tính bàn, co giãn theo khung nhìn trên di động/máy tính bảng */}
-          <div className="w-full lg:w-[1200px] lg:h-[976px] p-0 lg:p-8 flex flex-col gap-4 lg:gap-0 lg:justify-between box-border select-none relative font-nunito">
-            {toastMessage && (
-              <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 bg-[#3B2A35] text-white px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-                <CheckCircle2 className="w-4 h-4 text-[#CFE8FF]" />
-                <span>{toastMessage}</span>
+    return (
+      <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[100dvh]">
+        <div className="w-full max-w-[1200px] p-0 lg:p-6 flex flex-col gap-4 box-border select-none relative font-nunito">
+          {renderToastBanner()}
+
+          {/* HEADER BREADCRUMB CHẤM BÀI */}
+          <header className="min-h-[60px] flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setAdminSubView('list');
+                  setMobileAdminGradingDetail(false);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[10px] bg-white border border-[#F3D9E3] text-[#1F4E79] hover:bg-[#E9F3FF] text-[13px] font-bold cursor-pointer transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" strokeWidth={2} />
+                <span>Danh sách bài tập</span>
+              </button>
+              <span className="text-[#9C8B95] font-bold">›</span>
+              <h1 className="font-playfair text-[20px] lg:text-[24px] font-bold text-[#3B2A35] leading-tight truncate">
+                {hw ? hw.title : 'Đang tải bài tập...'}
+              </h1>
+              {hw && (
+                <span className="px-2.5 py-0.5 rounded-[8px] bg-[#E9F3FF] text-[#1F4E79] text-[12px] font-bold">
+                  {hw.className}
+                </span>
+              )}
+            </div>
+
+            {hw && summary && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-2.5 py-1 rounded-[8px] bg-white border border-[#F3D9E3] text-[#3B2A35] text-[12px] font-bold">
+                  Hạn nộp: {formatDateDMY(hw.dueDate)} · {hw.dueTime}
+                </span>
+                <span className="px-2.5 py-1 rounded-[8px] bg-[#DCEBFA] text-[#1F4E79] text-[12px] font-bold">
+                  Đã nộp {summary.submittedCount}/{summary.totalStudents} · Đã chấm{' '}
+                  {summary.gradedCount}/{summary.submittedCount}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsAdminPromptDialogOpen(true)}
+                  className="h-[34px] px-3 rounded-[10px] bg-white border border-[#2F6FA8] text-[#2F6FA8] hover:bg-[#E9F3FF] text-[12px] font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <BookOpen className="w-3.5 h-3.5" strokeWidth={1.75} />
+                  <span>Xem đề bài ({hw.attachments.length} tệp)</span>
+                </button>
               </div>
             )}
+          </header>
 
-            {/* ==================== HÀNG 1: TIÊU ĐỀ "CHẤM BÀI" ==================== */}
-            <header className="min-h-[72px] lg:h-[88px] flex flex-col justify-between gap-2 lg:gap-0 flex-shrink-0">
-              {/* Dòng Breadcrumb: nút mũi tên quay lại + "Bài tập › Phân tích "Kiều ở lầu Ngưng Bích"" */}
-              <div className="flex flex-wrap items-center gap-2 text-[14px] font-semibold text-[#6B5560] leading-none">
-                <button
-                  type="button"
-                  onClick={() => setAdminSubView('list')}
-                  aria-label="Quay lại danh sách Bài tập"
-                  className="w-8 h-8 lg:w-7 lg:h-7 rounded-[8px] bg-white border border-[#F3D9E3] text-[#1F4E79] hover:bg-[#E9F3FF] flex items-center justify-center transition-colors cursor-pointer"
-                >
-                  <ArrowLeft className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAdminSubView('list')}
-                  className="font-bold text-[#2F6FA8] hover:underline cursor-pointer"
-                >
-                  Bài tập
-                </button>
-                <span className="text-[#6B5560]">›</span>
-                <span className="text-[#6B5560] font-semibold truncate">
-                  {gradingAssignmentTitle}
-                </span>
+          {isLoadingGrading ? (
+            <div className="flex-1 min-h-[520px] bg-white border border-[#F3D9E3] rounded-[16px] flex flex-col items-center justify-center gap-3">
+              <Loader2 className="w-8 h-8 text-[#2F6FA8] animate-spin" />
+              <p className="text-[14px] font-semibold text-[#6B5560]">
+                Đang tải danh sách học sinh và ảnh bài làm...
+              </p>
+            </div>
+          ) : !gradingDetail || gradingDetail.students.length === 0 ? (
+            <div className="flex-1 min-h-[480px] bg-white border border-[#F3D9E3] rounded-[16px] p-8 flex flex-col items-center justify-center text-center gap-3">
+              <div className="w-14 h-14 rounded-full bg-[#E9F3FF] text-[#2F6FA8] flex items-center justify-center">
+                <BookOpen className="w-6 h-6" />
               </div>
-
-              {/* Dòng Tiêu đề "Chấm bài" + thẻ trạng thái */}
-              <div className="flex flex-wrap items-center gap-2 lg:gap-3">
-                <h1 className="font-playfair text-[24px] lg:text-[28px] font-bold text-[#3B2A35] leading-none">
-                  Chấm bài
-                </h1>
-                <span className="px-3 py-1 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] font-nunito text-[13px] font-bold leading-none">
-                  Lớp 9 · 2/4 đã chấm
-                </span>
-              </div>
-
-              {/* Điểm nhấn đặc trưng: Ghi chú viết tay của giáo viên dưới tiêu đề + 2 hình dán (ẩn trên di động) */}
-              <div className="flex items-center gap-6">
-                <div className="inline-block transform -rotate-1 origin-left">
-                  <span className="font-playfair italic text-[14px] font-semibold text-[#A61E4D] squiggle-underline-note">
-                    Học sinh thấy điểm và nhận xét ngay khi em bấm Gửi!
-                  </span>
-                </div>
-
-                {/* 2 hình dán vector phẳng pastel (ẩn trên di động) */}
-                <div className="hidden md:flex items-center gap-2 pl-2">
-                  <svg
-                    className="w-6 h-6 text-[#F8A5C2] flex-shrink-0"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path d="M12 2l2.75 6.63L22 9.24l-5.45 4.73L18.18 21 12 17.27 5.82 21l1.63-7.03L2 9.24l7.25-.61L12 2z" />
-                  </svg>
-                  <svg
-                    className="w-6 h-6 text-[#2F6FA8] flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.75"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-                    />
-                  </svg>
-                </div>
-              </div>
-            </header>
-
-            {/* ==================== HÀNG 2: LƯỚI 12 CỘT (40/60 máy tính bảng, 3/9 máy tính bàn, danh sách - chi tiết trên di động) ==================== */}
-            <div className="w-full lg:w-[1136px] lg:h-[800px] grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-[24px] flex-shrink-0">
-              {/* ========== CỘT TRÁI: THẺ "HỌC SINH LỚP 9" ========== */}
+              <h2 className="font-playfair text-[20px] font-bold text-[#3B2A35]">
+                Lớp {hw?.className} hiện chưa có học sinh nào
+              </h2>
+              <p className="text-[14px] text-[#6B5560] max-w-[440px]">
+                Hãy thêm học sinh vào lớp tại mục Quản lý lớp học để theo dõi tình hình nộp bài và chấm điểm.
+              </p>
+              <button
+                type="button"
+                onClick={() => navigate('/classes')}
+                className="mt-2 h-[42px] px-5 rounded-[12px] bg-[#2F6FA8] text-white text-[13px] font-bold cursor-pointer"
+              >
+                Đi tới Quản lý lớp học
+              </button>
+            </div>
+          ) : (
+            <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-[20px] items-start">
+              {/* CỘT TRÁI: DANH SÁCH HỌC SINH CỦA LỚP */}
               <div
                 className={`${
-                  mobileShowDetail ? 'hidden md:flex' : 'flex'
-                } md:col-span-5 lg:col-span-3 lg:h-[800px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex-col overflow-hidden`}
+                  mobileAdminGradingDetail ? 'hidden md:flex' : 'flex'
+                } md:col-span-5 lg:col-span-4 bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex-col overflow-hidden max-h-[820px]`}
               >
-                <div className="h-[56px] px-4 border-b border-[#F3D9E3] flex items-center justify-between flex-shrink-0">
-                  <h2 className="font-playfair text-[18px] font-bold text-[#3B2A35]">
-                    Học sinh lớp 9
-                  </h2>
-                  <span className="text-[12px] font-bold text-[#6B5560]">5 học sinh</span>
-                </div>
+                <div className="p-3.5 border-b border-[#F3D9E3] space-y-2.5 flex-shrink-0">
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-playfair text-[17px] font-bold text-[#3B2A35]">
+                      Học sinh ({gradingDetail.students.length})
+                    </h2>
+                    <span className="text-[12px] font-bold text-[#1F4E79]">
+                      Chờ chấm: {summary?.pendingCount || 0}
+                    </span>
+                  </div>
 
-                {/* 5 hàng học sinh */}
-                <div className="flex-1 flex flex-col divide-y divide-[#F3D9E3] overflow-hidden">
-                  {gradingStudents.map((student) => {
-                    const isSelected = student.id === selectedGradingStudentId;
-                    return (
-                      <div
-                        key={student.id}
-                        onClick={() => handleSelectGradingStudent(student)}
-                        className={`flex-1 min-h-[60px] px-3.5 py-3 flex items-center justify-between gap-2 cursor-pointer transition-colors ${
-                          isSelected
-                            ? 'bg-[#E9F3FF] border-l-4 border-l-[#2F6FA8]'
-                            : 'bg-white hover:bg-[#FFF6F9] border-l-4 border-l-transparent'
+                  {/* Bộ lọc nhanh trạng thái nộp */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[
+                      { key: 'all', label: `Tất cả (${gradingDetail.students.length})` },
+                      { key: 'pending', label: `Chờ chấm (${summary?.pendingCount || 0})` },
+                      {
+                        key: 'not_submitted',
+                        label: `Chưa nộp (${summary?.notSubmittedCount || 0})`,
+                      },
+                      { key: 'graded', label: `Đã chấm (${summary?.gradedCount || 0})` },
+                    ].map((tab) => (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        onClick={() => setGradingStatusFilter(tab.key as any)}
+                        className={`px-2.5 py-1 rounded-[8px] text-[11px] font-bold transition-colors cursor-pointer ${
+                          gradingStatusFilter === tab.key
+                            ? 'bg-[#2F6FA8] text-white'
+                            : 'bg-[#FFF6F9] text-[#6B5560] hover:bg-[#E9F3FF] hover:text-[#1F4E79]'
                         }`}
                       >
-                        {/* Ảnh đại diện chữ viết tắt 36px + Họ và tên */}
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div
-                            className={`w-[36px] h-[36px] rounded-[10px] font-bold text-[12px] flex items-center justify-center flex-shrink-0 ${
-                              student.status === 'not_submitted'
-                                ? 'bg-[#FFE0EB] text-[#A61E4D]'
-                                : 'bg-[#DCEBFA] text-[#1F4E79]'
-                            }`}
-                          >
-                            {student.initials}
-                          </div>
-                          <span className="text-[14px] font-bold text-[#3B2A35] leading-tight truncate" title={student.fullName}>
-                            {student.fullName}
-                          </span>
-                        </div>
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-                        {/* Huy hiệu trạng thái có cả biểu tượng VÀ chữ */}
-                        {renderStatusBadge(student.status, student.badgeText)}
-                      </div>
-                    );
-                  })}
+                <div className="flex-1 divide-y divide-[#F3D9E3] overflow-y-auto">
+                  {filteredGradingStudents.length === 0 ? (
+                    <div className="p-6 text-center text-[13px] font-semibold text-[#6B5560]">
+                      Không có học sinh nào trong bộ lọc này.
+                    </div>
+                  ) : (
+                    filteredGradingStudents.map((st) => {
+                      const isSelected =
+                        selectedGradingStudent?.studentId === st.studentId;
+                      return (
+                        <div
+                          key={st.studentId}
+                          onClick={() => handleSelectStudentForGrading(st.studentId)}
+                          className={`min-h-[68px] px-3.5 py-2.5 flex items-center justify-between gap-2 cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'bg-[#E9F3FF] border-l-4 border-l-[#2F6FA8]'
+                              : 'bg-white hover:bg-[#FFF6F9] border-l-4 border-l-transparent'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="w-9 h-9 rounded-full bg-[#FFE0EB] text-[#A61E4D] font-bold text-[12px] flex items-center justify-center flex-shrink-0">
+                              {st.initials}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-nunito text-[13px] font-bold text-[#3B2A35] truncate">
+                                {st.fullName}
+                              </div>
+                              <div className="text-[11px] font-semibold text-[#6B5560] truncate">
+                                {st.studentCode}
+                                {st.photos.length > 0 ? ` · ${st.photos.length} ảnh` : ''}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex-shrink-0">
+                            {renderStatusBadge(st.status, st.score, st.isLate)}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
-              {/* ========== VÙNG CHI TIẾT BÊN PHẢI ========== */}
+              {/* CỘT PHẢI: XEM ẢNH VỞ & FORM CHẤM ĐIỂM */}
               <div
                 className={`${
-                  mobileShowDetail ? 'flex' : 'hidden md:flex'
-                } md:col-span-7 lg:col-span-9 lg:h-[800px] flex-col gap-4 lg:gap-[24px] lg:justify-between overflow-hidden`}
+                  mobileAdminGradingDetail ? 'flex' : 'hidden md:flex'
+                } md:col-span-7 lg:col-span-8 flex-col gap-4`}
               >
-                {/* Nút quay lại danh sách trên di động */}
                 <button
                   type="button"
-                  onClick={() => setMobileShowDetail(false)}
-                  className="md:hidden h-[44px] px-3.5 rounded-[12px] bg-white border border-[#F3D9E3] text-[#1F4E79] font-bold text-[14px] flex items-center gap-2 w-fit cursor-pointer"
+                  onClick={() => setMobileAdminGradingDetail(false)}
+                  className="md:hidden h-[42px] px-3.5 rounded-[12px] bg-white border border-[#F3D9E3] text-[#1F4E79] font-bold text-[13px] flex items-center gap-2 w-fit cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" strokeWidth={2} />
                   <span>Danh sách học sinh</span>
                 </button>
 
-                {/* 1. THẺ THANH THÔNG TIN HỌC SINH Ở TRÊN CÙNG */}
-                <div className="min-h-[64px] lg:h-[72px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card px-4 lg:px-5 py-3 lg:py-0 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
-                  <div className="flex items-center gap-2 lg:gap-3 flex-wrap min-w-0">
-                    <h2 className="font-playfair text-[20px] lg:text-[22px] font-bold text-[#3B2A35] leading-tight">
-                      {activeStudent.fullName}
-                    </h2>
-                    <span className="px-3 py-1 rounded-[10px] bg-[#E9F3FF] text-[#1F4E79] text-[12px] font-bold">
-                      {activeStudent.submittedAt}
-                    </span>
-                    <span className="px-3 py-1 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] text-[12px] font-bold">
-                      {activeStudent.photoCount} ảnh
-                    </span>
-                  </div>
-
-                  {renderStatusBadge(activeStudent.status, activeStudent.badgeText)}
-                </div>
-
-                {/* 2. THẺ TRÌNH XEM BÀI NỘP Ở GIỮA */}
-                <div className="min-h-[340px] max-h-[70dvh] lg:max-h-none lg:h-[430px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col overflow-hidden flex-shrink-0">
-                  {/* Thanh công cụ: cho phép xuống dòng trên di động */}
-                  <div className="min-h-[48px] px-3 lg:px-5 py-2 lg:py-0 bg-[#E9F3FF] border-b border-[#F3D9E3] flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
-                    <div className="flex items-center gap-2 lg:gap-3">
-                      {/* Điều khiển thu phóng: − 100% + */}
-                      <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-[10px] border border-[#CFE8FF] text-[#1F4E79] text-[13px] font-bold">
-                        <button
-                          type="button"
-                          onClick={() => setGradingZoom((z) => Math.max(80, z - 10))}
-                          className="p-0.5 hover:bg-[#E9F3FF] rounded cursor-pointer"
-                          title="Thu nhỏ"
-                        >
-                          <Minus className="w-3.5 h-3.5 text-[#1F4E79]" strokeWidth={1.75} />
-                        </button>
-                        <span className="px-1 min-w-[44px] text-center">{gradingZoom}%</span>
-                        <button
-                          type="button"
-                          onClick={() => setGradingZoom((z) => Math.min(130, z + 10))}
-                          className="p-0.5 hover:bg-[#E9F3FF] rounded cursor-pointer"
-                          title="Phóng to"
-                        >
-                          <Plus className="w-3.5 h-3.5 text-[#1F4E79]" strokeWidth={1.75} />
-                        </button>
-                      </div>
-
-                      {/* Nút xoay trang ảnh */}
-                      <button
-                        type="button"
-                        onClick={() => setGradingRotation((r) => (r + 90) % 360)}
-                        className="w-8 h-8 rounded-[10px] bg-white border border-[#CFE8FF] text-[#1F4E79] hover:bg-[#DCEBFA] flex items-center justify-center transition-colors cursor-pointer"
-                        title="Xoay ảnh 90°"
-                      >
-                        <RotateCw className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
-                      </button>
-
-                      {/* Nút toàn màn hình */}
-                      <button
-                        type="button"
-                        onClick={() => setIsGradingFullscreen(true)}
-                        className="w-8 h-8 rounded-[10px] bg-white border border-[#CFE8FF] text-[#1F4E79] hover:bg-[#DCEBFA] flex items-center justify-center transition-colors cursor-pointer"
-                        title="Toàn màn hình"
-                      >
-                        <Maximize2 className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
-                      </button>
-                    </div>
-
-                    {/* Nút viền "Tải về" (#2F6FA8) */}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        showToast(
-                          `Đang tải về ảnh bài làm Trang ${gradingSelectedPage} của ${activeStudent.fullName}...`
-                        )
-                      }
-                      className="h-[34px] px-3.5 rounded-[10px] bg-white border border-[#2F6FA8] text-[#2F6FA8] hover:bg-[#DCEBFA] text-[13px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <Download className="w-4 h-4 text-[#2F6FA8]" strokeWidth={1.75} />
-                      <span>Tải về</span>
-                    </button>
-                  </div>
-
-                  {/* Vùng hiển thị trang vở kẻ ngang viết tay lớn ở giữa */}
-                  <div className="flex-1 bg-[#F7FBFF] flex items-center justify-center overflow-auto p-3">
-                    <div
-                      style={{
-                        transform: `scale(${gradingZoom / 100}) rotate(${gradingRotation}deg)`,
-                      }}
-                      className="transition-transform duration-200"
-                    >
-                      <GradingNotebookIllustration
-                        pageNumber={gradingSelectedPage}
-                        variant="canvas"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Dải ảnh thu nhỏ ở dưới đáy */}
-                  <div className="h-[82px] px-4 lg:px-5 bg-white border-t border-[#F3D9E3] flex items-center justify-center gap-3 lg:gap-4 overflow-x-auto flex-shrink-0">
-                    {([1, 2] as const).map((pageNum) => {
-                      const isPageSelected = gradingSelectedPage === pageNum;
-                      return (
-                        <button
-                          key={pageNum}
-                          type="button"
-                          onClick={() => setGradingSelectedPage(pageNum)}
-                          className={`h-[66px] px-3 rounded-[10px] flex items-center gap-2.5 transition-all cursor-pointer flex-shrink-0 ${
-                            isPageSelected
-                              ? 'border-2 border-[#2F6FA8] bg-[#E9F3FF]'
-                              : 'border border-[#F3D9E3] bg-white hover:bg-[#FFF6F9]'
-                          }`}
-                        >
-                          <GradingNotebookIllustration pageNumber={pageNum} variant="thumb" />
-                          <span
-                            className={`text-[13px] font-bold ${
-                              isPageSelected ? 'text-[#1F4E79]' : 'text-[#3B2A35]'
-                            }`}
-                          >
-                            Trang {pageNum}
+                {selectedGradingStudent && (
+                  <>
+                    {/* Thanh thông tin học sinh */}
+                    <div className="bg-white border border-[#F3D9E3] rounded-[16px] shadow-card px-4 lg:px-5 py-3 flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2.5 min-w-0">
+                        <span className="font-playfair text-[19px] font-bold text-[#3B2A35]">
+                          {selectedGradingStudent.fullName}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-[6px] bg-[#FFF6F9] border border-[#F3D9E3] text-[#6B5560] text-[12px] font-bold">
+                          {selectedGradingStudent.studentCode}
+                        </span>
+                        <span className="text-[13px] font-medium text-[#6B5560]">
+                          {selectedGradingStudent.submittedAt
+                            ? `Nộp lúc ${formatDateTimeVN(selectedGradingStudent.submittedAt)}`
+                            : 'Chưa nộp bài'}
+                        </span>
+                        {currentPhotos.length > 0 && (
+                          <span className="px-2.5 py-0.5 rounded-[8px] bg-[#E9F3FF] text-[#1F4E79] text-[12px] font-bold">
+                            {currentPhotos.length} ảnh
                           </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 3. THẺ CHẤM ĐIỂM VÀ NHẬN XÉT Ở DƯỚI CÙNG */}
-                <div className="lg:h-[250px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card p-4 lg:px-5 lg:py-3.5 flex flex-col justify-between gap-3 lg:gap-0 flex-shrink-0 overflow-hidden">
-                  <h3 className="font-playfair text-[18px] font-bold text-[#3B2A35] leading-tight">
-                    Điểm và nhận xét
-                  </h3>
-
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-4 lg:gap-6">
-                    {/* Cụm bên trái: Điểm */}
-                    <div className="flex-shrink-0">
-                      <label className="block text-[13px] font-bold text-[#3B2A35] mb-1.5">
-                        Điểm
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={gradingScore}
-                          onChange={(e) => setGradingScore(e.target.value)}
-                          aria-label="Điểm số"
-                          className="w-[88px] h-[56px] rounded-[12px] border border-[#9C6B84] ring-2 ring-[#2F6FA8] bg-white text-center font-playfair text-[32px] font-bold text-[#1F4E79] outline-none"
-                        />
-                        <span className="font-nunito text-[18px] font-bold text-[#6B5560]">
-                          / 10
-                        </span>
+                        )}
                       </div>
+
+                      {renderStatusBadge(
+                        selectedGradingStudent.status,
+                        selectedGradingStudent.score,
+                        selectedGradingStudent.isLate
+                      )}
                     </div>
 
-                    {/* Cụm bên phải: Nhận xét + bộ đếm */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-[13px] font-bold text-[#3B2A35]">
-                          Nhận xét
-                        </label>
-                        <span className="text-[12px] font-semibold text-[#6B5560]">
-                          {commentCharCount}/500
-                        </span>
+                    {/* Khung xem ảnh trang vở học sinh nộp */}
+                    <div className="bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col overflow-hidden">
+                      <div className="min-h-[46px] px-4 py-2 bg-[#E9F3FF] border-b border-[#F3D9E3] flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {currentPhotos.length > 0 && (
+                            <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-[10px] border border-[#CFE8FF] text-[#1F4E79] text-[12px] font-bold">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setActiveGradingPhotoIdx((i) => Math.max(0, i - 1))
+                                }
+                                disabled={activeGradingPhotoIdx === 0}
+                                className="p-0.5 hover:bg-[#E9F3FF] rounded disabled:opacity-40 cursor-pointer"
+                              >
+                                <ChevronLeft className="w-4 h-4" />
+                              </button>
+                              <span className="px-1">
+                                Ảnh {activeGradingPhotoIdx + 1} / {currentPhotos.length}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setActiveGradingPhotoIdx((i) =>
+                                    Math.min(currentPhotos.length - 1, i + 1)
+                                  )
+                                }
+                                disabled={activeGradingPhotoIdx >= currentPhotos.length - 1}
+                                className="p-0.5 hover:bg-[#E9F3FF] rounded disabled:opacity-40 cursor-pointer"
+                              >
+                                <ChevronRight className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-[10px] border border-[#CFE8FF] text-[#1F4E79] text-[12px] font-bold">
+                            <button
+                              type="button"
+                              disabled={isSelectedNotSubmitted}
+                              onClick={() => setGradingZoom((z) => Math.max(50, z - 20))}
+                              className="p-0.5 hover:bg-[#E9F3FF] rounded disabled:opacity-40 cursor-pointer"
+                            >
+                              <Minus className="w-3.5 h-3.5" />
+                            </button>
+                            <span className="px-1 min-w-[42px] text-center">
+                              {gradingZoom}%
+                            </span>
+                            <button
+                              type="button"
+                              disabled={isSelectedNotSubmitted}
+                              onClick={() => setGradingZoom((z) => Math.min(200, z + 20))}
+                              className="p-0.5 hover:bg-[#E9F3FF] rounded disabled:opacity-40 cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={isSelectedNotSubmitted}
+                            onClick={() => setGradingRotation((r) => (r + 90) % 360)}
+                            title="Xoay ảnh 90°"
+                            className="h-8 px-2.5 rounded-[10px] bg-white border border-[#CFE8FF] text-[#1F4E79] hover:bg-[#DCEBFA] flex items-center gap-1 text-[12px] font-bold disabled:opacity-40 cursor-pointer"
+                          >
+                            <RotateCw className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Xoay</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={!activePhoto}
+                            onClick={() => setIsAdminPhotoFullscreen(true)}
+                            title="Xem toàn màn hình"
+                            className="w-8 h-8 rounded-[10px] bg-white border border-[#CFE8FF] text-[#1F4E79] hover:bg-[#DCEBFA] flex items-center justify-center disabled:opacity-40 cursor-pointer"
+                          >
+                            <Maximize2 className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {activePhoto && (
+                          <a
+                            href={getFileDownloadUrl(
+                              activePhoto.url,
+                              activePhoto.originalName
+                            )}
+                            download={activePhoto.originalName}
+                            className="h-[32px] px-3 rounded-[10px] bg-white border border-[#2F6FA8] text-[#2F6FA8] hover:bg-[#DCEBFA] text-[12px] font-bold inline-flex items-center gap-1.5"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Tải ảnh về</span>
+                          </a>
+                        )}
                       </div>
-                      <textarea
-                        rows={4}
-                        maxLength={500}
-                        value={gradingComment}
-                        onChange={(e) => setGradingComment(e.target.value)}
-                        className="w-full h-[84px] px-3.5 py-2 rounded-[12px] border border-[#9C6B84] focus:ring-2 focus:ring-[#2F6FA8] bg-white font-nunito text-[14px] font-semibold text-[#3B2A35] leading-snug resize-none outline-none"
-                      />
-                    </div>
-                  </div>
 
-                  {/* Hàng chân thẻ */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-0.5">
-                    <div className="inline-flex items-center gap-1.5 text-[12px] font-bold text-[#1F4E79]">
-                      <Info className="w-4 h-4 text-[#1F4E79] flex-shrink-0" strokeWidth={1.75} />
-                      <span>Học sinh sẽ thấy điểm và nhận xét ngay sau khi gửi.</span>
+                      <div className="h-[360px] bg-[#F7FBFF] overflow-auto p-4 flex items-center justify-center">
+                        {!activePhoto ? (
+                          <div className="text-center px-4">
+                            <div className="w-12 h-12 rounded-full bg-[#FFE0EB] text-[#A61E4D] flex items-center justify-center mx-auto mb-2.5">
+                              <Clock className="w-5 h-5" />
+                            </div>
+                            <p className="font-playfair text-[18px] font-bold text-[#3B2A35]">
+                              Học sinh chưa nộp bài
+                            </p>
+                            <p className="text-[13px] text-[#6B5560] mt-1">
+                              Khi học sinh chụp và tải ảnh bài làm lên, ảnh sẽ hiển thị tại đây để thầy cô chấm điểm.
+                            </p>
+                          </div>
+                        ) : (
+                          <img
+                            src={getFileViewUrl(activePhoto.url)}
+                            alt={activePhoto.originalName}
+                            style={{
+                              transform: `scale(${gradingZoom / 100}) rotate(${gradingRotation}deg)`,
+                              transformOrigin: 'center center',
+                            }}
+                            className="max-h-full max-w-full object-contain rounded-[8px] shadow-sm transition-transform duration-150"
+                          />
+                        )}
+                      </div>
+
+                      {currentPhotos.length > 0 && (
+                        <div className="px-4 py-2.5 bg-white border-t border-[#F3D9E3] flex items-center gap-2.5 overflow-x-auto">
+                          {currentPhotos.map((photo, idx) => {
+                            const isSelectedThumb = idx === activeGradingPhotoIdx;
+                            return (
+                              <button
+                                key={photo.id}
+                                type="button"
+                                onClick={() => setActiveGradingPhotoIdx(idx)}
+                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[10px] border transition-all cursor-pointer flex-shrink-0 ${
+                                  isSelectedThumb
+                                    ? 'border-[#2F6FA8] bg-[#E9F3FF] text-[#1F4E79]'
+                                    : 'border-[#F3D9E3] bg-white text-[#6B5560] hover:border-[#8EC5FC]'
+                                }`}
+                              >
+                                <img
+                                  src={getFileViewUrl(photo.url)}
+                                  alt={`Trang ${idx + 1}`}
+                                  className="w-8 h-10 object-cover rounded-[4px] border border-[#F3D9E3]"
+                                />
+                                <span className="text-[12px] font-bold">
+                                  Trang {idx + 1}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={handleSubmitGrade}
-                      className="w-full sm:w-auto h-[48px] px-6 rounded-[12px] bg-[#D6336C] hover:opacity-95 text-white font-nunito text-[14px] font-bold shadow-xs transition-opacity cursor-pointer"
+                    {/* Khung nhập Điểm & Nhận xét */}
+                    <form
+                      onSubmit={handleSaveGrade}
+                      className="bg-white border border-[#F3D9E3] rounded-[16px] shadow-card p-4 lg:p-5 space-y-3.5"
                     >
-                      Gửi điểm và nhận xét
-                    </button>
-                  </div>
-                </div>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h3 className="font-playfair text-[18px] font-bold text-[#3B2A35]">
+                          Chấm điểm & nhận xét
+                        </h3>
+                        {selectedGradingStudent.gradedAt && (
+                          <span className="text-[12px] font-semibold text-[#1F4E79]">
+                            Đã chấm lần cuối lúc{' '}
+                            {formatDateTimeVN(selectedGradingStudent.gradedAt)} bởi{' '}
+                            {selectedGradingStudent.gradedByName || 'Chị Vân'}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                        <div className="lg:col-span-4 space-y-2">
+                          <label className="block text-[13px] font-bold text-[#3B2A35]">
+                            Điểm số (thang 10)
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              disabled={isSelectedNotSubmitted || isSavingGrade}
+                              value={gradingScoreInput}
+                              onChange={(e) => setGradingScoreInput(e.target.value)}
+                              placeholder="VD: 8,5"
+                              className="w-[104px] h-[46px] px-3 rounded-[12px] border border-[#9C6B84] bg-white text-center font-playfair text-[24px] font-bold text-[#1F4E79] outline-none focus:ring-2 focus:ring-[#2F6FA8] disabled:bg-[#F5F2F4] disabled:opacity-60"
+                            />
+                            <span className="font-nunito text-[16px] font-bold text-[#6B5560]">
+                              / 10
+                            </span>
+                          </div>
+
+                          {/* Chọn điểm nhanh */}
+                          <div className="flex flex-wrap gap-1.5 pt-0.5">
+                            {QUICK_SCORES.map((qs) => (
+                              <button
+                                key={qs}
+                                type="button"
+                                disabled={isSelectedNotSubmitted || isSavingGrade}
+                                onClick={() => setGradingScoreInput(qs)}
+                                className={`px-2 py-1 rounded-[7px] text-[11px] font-bold border transition-colors cursor-pointer disabled:opacity-40 ${
+                                  gradingScoreInput.trim() === qs
+                                    ? 'bg-[#2F6FA8] text-white border-[#2F6FA8]'
+                                    : 'bg-[#FFF6F9] text-[#3B2A35] border-[#F3D9E3] hover:bg-[#E9F3FF]'
+                                }`}
+                              >
+                                {qs}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="lg:col-span-8 flex flex-col">
+                          <label className="block text-[13px] font-bold text-[#3B2A35] mb-1.5">
+                            Lời phê / Nhận xét cho học sinh
+                          </label>
+                          <textarea
+                            rows={3}
+                            maxLength={500}
+                            disabled={isSelectedNotSubmitted || isSavingGrade}
+                            value={gradingCommentInput}
+                            onChange={(e) => setGradingCommentInput(e.target.value)}
+                            placeholder={
+                              isSelectedNotSubmitted
+                                ? 'Học sinh chưa nộp bài nên chưa thể nhập nhận xét...'
+                                : 'Nhập nhận xét chi tiết về ưu điểm, diễn đạt và phần cần lưu ý...'
+                            }
+                            className="w-full px-3.5 py-2.5 rounded-[12px] border border-[#9C6B84] bg-white text-[13px] font-medium text-[#3B2A35] outline-none focus:ring-2 focus:ring-[#2F6FA8] resize-none disabled:bg-[#F5F2F4] disabled:opacity-60"
+                          />
+                          <div className="flex flex-wrap items-center justify-between gap-2 mt-2.5">
+                            <span className="text-[11px] font-semibold text-[#6B5560]">
+                              {gradingCommentInput.length}/500 ký tự · Điểm chấm sẽ tự động cập nhật vào Điểm TB học sinh
+                            </span>
+
+                            <button
+                              type="submit"
+                              disabled={isSelectedNotSubmitted || isSavingGrade}
+                              className="h-[44px] px-5 rounded-[12px] bg-[#D6336C] hover:opacity-95 text-white text-[13px] font-bold shadow-xs inline-flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                            >
+                              {isSavingGrade && (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              )}
+                              <span>
+                                {selectedGradingStudent.status === 'graded'
+                                  ? 'Cập nhật điểm và nhận xét'
+                                  : 'Gửi điểm và nhận xét'}
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </form>
+                  </>
+                )}
               </div>
-            </div>
-
-            {/* HỘP THOẠI XEM TOÀN MÀN HÌNH ẢNH BÀI LÀM TRÊN MÀN HÌNH CHẤM BÀI */}
-            <Dialog open={isGradingFullscreen} onOpenChange={setIsGradingFullscreen}>
-              <DialogContent className="sm:max-w-[680px] p-6 rounded-[12px] bg-white border border-[#F3D9E3]">
-                <DialogHeader>
-                  <DialogTitle className="font-playfair text-[22px] font-bold text-[#3B2A35]">
-                    Bài làm của {activeStudent.fullName} – Trang {gradingSelectedPage}
-                  </DialogTitle>
-                  <DialogDescription className="font-nunito text-[13px] text-[#6B5560]">
-                    {activeStudent.submittedAt} · {gradingAssignmentTitle}
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="bg-[#F7FBFF] p-5 rounded-[12px] border border-[#F3D9E3] flex justify-center">
-                  <GradingNotebookIllustration
-                    pageNumber={gradingSelectedPage}
-                    variant="canvas"
-                  />
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </div>
-      );
-    }
-
-    // 2. MÀN HÌNH DANH SÁCH 14 BÀI TẬP CỦA ADMIN (KHI BẤM QUAY LẠI TỪ BREADCRUMB "BÀI TẬP")
-    return (
-      <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[100dvh] lg:min-h-[976px]">
-        <div className="w-full lg:w-[1200px] lg:h-[976px] p-0 lg:p-8 flex flex-col gap-4 lg:gap-0 lg:justify-between box-border select-none relative font-nunito">
-          {toastMessage && (
-            <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 bg-[#3B2A35] text-white px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-              <CheckCircle2 className="w-4 h-4 text-[#CFE8FF]" />
-              <span>{toastMessage}</span>
             </div>
           )}
 
-          {/* HÀNG 1: TIÊU ĐỀ QUẢN TRỊ VIÊN */}
-          <header className="min-h-[72px] lg:h-[88px] flex flex-col md:flex-row md:items-center justify-between gap-3 flex-shrink-0">
-            <div className="flex flex-col justify-center min-w-0">
-              <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+          {/* Hộp thoại phóng to ảnh bài làm cho Giáo viên */}
+          <Dialog
+            open={isAdminPhotoFullscreen}
+            onOpenChange={setIsAdminPhotoFullscreen}
+          >
+            <DialogContent className="sm:max-w-[860px] p-5 rounded-[14px] bg-white border border-[#F3D9E3]">
+              <DialogHeader>
+                <DialogTitle className="font-playfair text-[20px] font-bold text-[#3B2A35]">
+                  Bài làm của {selectedGradingStudent?.fullName} – Ảnh{' '}
+                  {activeGradingPhotoIdx + 1}/{currentPhotos.length}
+                </DialogTitle>
+                <DialogDescription className="text-[13px] text-[#6B5560]">
+                  {hw?.title}
+                </DialogDescription>
+              </DialogHeader>
+              {activePhoto && (
+                <div className="bg-[#F7FBFF] p-3 rounded-[10px] border border-[#F3D9E3] max-h-[75dvh] overflow-auto flex justify-center">
+                  <img
+                    src={getFileViewUrl(activePhoto.url)}
+                    alt={activePhoto.originalName}
+                    style={{ transform: `rotate(${gradingRotation}deg)` }}
+                    className="max-w-full max-h-[68dvh] object-contain rounded-[8px]"
+                  />
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* Hộp thoại xem lại đề bài cho Giáo viên ngay tại màn hình chấm */}
+          <Dialog
+            open={isAdminPromptDialogOpen}
+            onOpenChange={setIsAdminPromptDialogOpen}
+          >
+            <DialogContent className="sm:max-w-[680px] p-5 rounded-[14px] bg-white border border-[#F3D9E3]">
+              <DialogHeader>
+                <DialogTitle className="font-playfair text-[20px] font-bold text-[#3B2A35]">
+                  {hw?.title}
+                </DialogTitle>
+                <DialogDescription className="text-[13px] text-[#6B5560]">
+                  {hw?.className} · Hạn nộp {formatDateDMY(hw?.dueDate)} {hw?.dueTime}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 max-h-[70dvh] overflow-y-auto">
+                {hw?.instructions ? (
+                  <div className="p-3.5 rounded-[12px] bg-[#FFF6F9] border border-[#F3D9E3] text-[13px] text-[#3B2A35] whitespace-pre-line">
+                    <div className="font-bold mb-1 text-[#A61E4D]">
+                      Hướng dẫn cho học sinh:
+                    </div>
+                    {hw.instructions}
+                  </div>
+                ) : (
+                  <p className="text-[13px] text-[#6B5560] italic">
+                    Không có ghi chú hướng dẫn thêm.
+                  </p>
+                )}
+
+                {hw && hw.attachments.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-[13px] font-bold text-[#3B2A35]">
+                      Tệp đề bài đính kèm ({hw.attachments.length}):
+                    </div>
+                    {hw.attachments.map((att) => (
+                      <div
+                        key={att.id}
+                        className="p-3 rounded-[12px] border border-[#F3D9E3] flex items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          {renderFileTypeIcon(att.fileType)}
+                          <div className="min-w-0">
+                            <div className="text-[13px] font-bold text-[#3B2A35] truncate">
+                              {att.originalName}
+                            </div>
+                            <div className="text-[12px] text-[#6B5560]">
+                              {att.fileType} · {formatBytes(att.sizeBytes)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <a
+                            href={getFileViewUrl(att.url)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-3 py-1.5 rounded-[8px] bg-[#E9F3FF] text-[#1F4E79] text-[12px] font-bold"
+                          >
+                            Mở xem
+                          </a>
+                          <a
+                            href={getFileDownloadUrl(att.url, att.originalName)}
+                            download={att.originalName}
+                            className="px-3 py-1.5 rounded-[8px] bg-[#2F6FA8] text-white text-[12px] font-bold"
+                          >
+                            Tải về
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+    );
+  }
+
+  // ==================== GIAO DIỆN ADMIN: MÀN HÌNH 1A — DANH SÁCH BÀI TẬP ====================
+  if (isAdminMode) {
+    const startIdx =
+      adminPagination.total === 0
+        ? 0
+        : (adminPagination.page - 1) * adminPagination.limit + 1;
+    const endIdx = Math.min(
+      adminPagination.total,
+      adminPagination.page * adminPagination.limit
+    );
+
+    return (
+      <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[100dvh]">
+        <div className="w-full max-w-[1200px] p-0 lg:p-6 flex flex-col gap-4 box-border select-none relative font-nunito">
+          {renderToastBanner()}
+
+          {/* HEADER DANH SÁCH BÀI TẬP */}
+          <header className="min-h-[72px] flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-col justify-center">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <h1 className="font-playfair text-[24px] lg:text-[28px] font-bold text-[#3B2A35] leading-tight">
                   Bài tập
                 </h1>
-                <span className="px-3 py-1 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] font-nunito text-[13px] font-bold tracking-wide">
-                  14 bài tập
+                <span className="px-3 py-1 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] text-[13px] font-bold">
+                  {totalAllHomeworks} bài tập đã giao
                 </span>
               </div>
-
-              <div className="flex items-center gap-6 mt-1.5">
-                <div className="inline-block transform -rotate-1 origin-left">
-                  <span className="font-playfair italic text-[14px] lg:text-[15px] font-semibold text-[#A61E4D] squiggle-underline-note">
-                    Giao bài một lần, học sinh xem ngay trên web nhé!
-                  </span>
-                </div>
-
-                <div className="hidden md:flex items-center gap-2 pl-2">
-                  <svg
-                    className="w-6 h-6 text-[#F8A5C2] flex-shrink-0"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path d="M12 2l2.75 6.63L22 9.24l-5.45 4.73L18.18 21 12 17.27 5.82 21l1.63-7.03L2 9.24l7.25-.61L12 2z" />
-                  </svg>
-                  <svg
-                    className="w-6 h-6 text-[#2F6FA8] flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.75"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-                    />
-                  </svg>
-                </div>
+              <div className="mt-1">
+                <span className="font-playfair italic text-[14px] lg:text-[15px] font-semibold text-[#A61E4D]">
+                  Giao rõ hạn nộp để các em chủ động làm bài và chụp vở gửi đúng giờ nhé!
+                </span>
               </div>
             </div>
 
             <button
               type="button"
-              onClick={handleOpenNewAssignDrawer}
-              className="w-full md:w-auto h-[44px] px-5 rounded-[12px] bg-[#D6336C] hover:opacity-95 text-white font-nunito text-[14px] font-bold flex items-center justify-center gap-2 shadow-xs transition-opacity cursor-pointer"
+              onClick={handleOpenCreateDrawer}
+              className="h-[46px] px-5 rounded-[12px] bg-[#D6336C] hover:opacity-95 text-white text-[14px] font-bold shadow-xs inline-flex items-center gap-2 cursor-pointer transition-opacity"
             >
-              <Plus className="w-4 h-4 text-white" strokeWidth={2} />
+              <Plus className="w-4 h-4" strokeWidth={2.25} />
               <span>Giao bài tập</span>
             </button>
           </header>
 
-          {/* HÀNG 2: BỘ LỌC LỚP HỌC – Cuộn ngang trên di động/máy tính bảng */}
-          <div className="min-h-[44px] lg:h-[44px] flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 flex-shrink-0">
-            {ADMIN_CLASS_FILTERS.map((chip) => {
-              const isSelected = selectedAdminClass === chip;
+          {/* DÃY CHIP LỌC THEO LỚP THẬT */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedClassFilter('all');
+                setAdminPage(1);
+              }}
+              className={`h-[34px] px-3.5 rounded-[10px] text-[12px] font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                selectedClassFilter === 'all'
+                  ? 'bg-[#2F6FA8] text-white shadow-2xs'
+                  : 'bg-white border border-[#F3D9E3] text-[#3B2A35] hover:bg-[#E9F3FF]'
+              }`}
+            >
+              Tất cả lớp
+            </button>
+            {classes.map((cls) => {
+              const active = selectedClassFilter === cls.name;
               return (
                 <button
-                  key={chip}
+                  key={cls.id}
                   type="button"
-                  onClick={() => setSelectedAdminClass(chip)}
-                  className={`h-[44px] px-3 rounded-[10px] text-[13px] font-bold transition-colors cursor-pointer whitespace-nowrap flex-shrink-0 ${
-                    isSelected
-                      ? 'bg-[#2F6FA8] text-white'
-                      : 'bg-[#E9F3FF] text-[#1F4E79] hover:bg-[#DCEBFA]'
+                  onClick={() => {
+                    setSelectedClassFilter(cls.name);
+                    setAdminPage(1);
+                  }}
+                  className={`h-[34px] px-3.5 rounded-[10px] text-[12px] font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                    active
+                      ? 'bg-[#2F6FA8] text-white shadow-2xs'
+                      : 'bg-white border border-[#F3D9E3] text-[#3B2A35] hover:bg-[#E9F3FF]'
                   }`}
                 >
-                  {chip}
+                  {cls.name} ({cls.totalStudents ?? 0})
                 </button>
               );
             })}
           </div>
 
-          {/* HÀNG 3: THẺ BẢNG BÀI TẬP */}
-          <div className="w-full lg:w-[1136px] lg:h-[732px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col overflow-hidden flex-shrink-0">
-            <div className="hidden md:grid h-[48px] px-4 lg:px-5 bg-[#DCEBFA] text-[#1F4E79] text-[13px] font-semibold md:grid-cols-10 lg:grid-cols-12 items-center flex-shrink-0">
-              <div className="col-span-4">Bài tập</div>
-              <div className="col-span-1">Lớp</div>
-              <div className="hidden lg:block lg:col-span-2">Hạn nộp</div>
-              <div className="col-span-1">Đã nộp</div>
-              <div className="col-span-2">Đã chấm</div>
-              <div className="col-span-2 text-right">Thao tác</div>
-            </div>
-
-            {/* Bảng cho Máy tính bảng / Máy tính bàn */}
-            <div className="hidden md:block divide-y divide-[#F3D9E3] flex-1">
-              {ADMIN_ASSIGNMENTS.map((row) => {
-                const submitPercent =
-                  row.totalStudents > 0
-                    ? Math.round((row.submittedCount / row.totalStudents) * 100)
-                    : 0;
-                const gradePercent =
-                  row.submittedCount > 0
-                    ? Math.round((row.gradedCount / row.submittedCount) * 100)
-                    : 0;
-
-                return (
-                  <div
-                    key={row.id}
-                    className="h-[72px] px-4 lg:px-5 bg-white hover:bg-[#FFF6F9] grid md:grid-cols-10 lg:grid-cols-12 items-center transition-colors"
+          {/* BẢNG BÀI TẬP */}
+          <div className="w-full bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col overflow-hidden min-h-[480px]">
+            {isLoadingAdminList ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 py-20">
+                <Loader2 className="w-8 h-8 text-[#2F6FA8] animate-spin" />
+                <p className="text-[14px] font-semibold text-[#6B5560]">
+                  Đang tải danh sách bài tập...
+                </p>
+              </div>
+            ) : adminHomeworks.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-16 gap-3">
+                <div className="w-14 h-14 rounded-full bg-[#FFF0F6] text-[#D6336C] flex items-center justify-center">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <h2 className="font-playfair text-[20px] font-bold text-[#3B2A35]">
+                  {classes.length === 0
+                    ? 'Chưa có lớp học nào trên hệ thống'
+                    : selectedClassFilter === 'all'
+                    ? 'Chưa có bài tập nào được giao'
+                    : `Lớp ${selectedClassFilter} chưa có bài tập nào`}
+                </h2>
+                <p className="text-[14px] text-[#6B5560] max-w-[440px]">
+                  {classes.length === 0
+                    ? 'Hãy tạo lớp học trước tại mục Lớp học, sau đó quay lại giao bài tập kèm tệp đề bài cho học sinh.'
+                    : 'Bấm nút "Giao bài tập" ở góc trên bên phải để tải đề bài (PDF, Word, Excel, Ảnh) và giao cho một hoặc nhiều lớp cùng lúc.'}
+                </p>
+                {classes.length === 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/classes')}
+                    className="mt-2 h-[42px] px-5 rounded-[12px] bg-[#2F6FA8] text-white text-[13px] font-bold cursor-pointer"
                   >
-                    <div className="col-span-4 pr-3 flex flex-col justify-center gap-1.5 min-w-0">
-                      <span className="text-[14px] font-bold text-[#3B2A35] leading-tight truncate" title={row.title}>
-                        {row.title}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        {row.files.map((f) => renderFileTypePill(f))}
-                      </div>
-                    </div>
+                    Tạo lớp học ngay
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleOpenCreateDrawer}
+                    className="mt-2 h-[42px] px-5 rounded-[12px] bg-[#D6336C] text-white text-[13px] font-bold cursor-pointer"
+                  >
+                    + Giao bài tập đầu tiên
+                  </button>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="hidden lg:grid grid-cols-12 items-center h-[44px] px-5 bg-[#FFF9FB] border-b border-[#F3D9E3] text-[12px] font-bold text-[#6B5560] uppercase tracking-wider">
+                  <div className="col-span-4">Bài tập</div>
+                  <div className="col-span-2">Lớp</div>
+                  <div className="col-span-2">Hạn nộp</div>
+                  <div className="col-span-1 pr-2">Đã nộp</div>
+                  <div className="col-span-1 pr-2">Đã chấm</div>
+                  <div className="col-span-2 text-right">Thao tác</div>
+                </div>
 
-                    <div className="col-span-1">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-[8px] bg-[#FFE0EB] text-[#A61E4D] text-[12px] font-bold whitespace-nowrap">
-                        {row.className}
-                      </span>
-                    </div>
+                {/* Dòng máy tính */}
+                <div className="hidden lg:flex flex-1 flex-col divide-y divide-[#F3D9E3]">
+                  {adminHomeworks.map((row) => {
+                    const submitPercent =
+                      row.totalStudents > 0
+                        ? Math.round((row.submittedCount / row.totalStudents) * 100)
+                        : 0;
+                    const gradePercent =
+                      row.submittedCount > 0
+                        ? Math.round((row.gradedCount / row.submittedCount) * 100)
+                        : 0;
+                    const isAllGraded =
+                      row.submittedCount > 0 && row.gradedCount === row.submittedCount;
+                    const uniqueFileTypes = Array.from(
+                      new Set((row.attachments || []).map((a) => a.fileType))
+                    );
+                    const isPastDue = new Date(row.dueAt).getTime() < Date.now();
 
-                    <div className="hidden lg:block lg:col-span-2 text-[14px] font-semibold text-[#3B2A35]">
-                      {row.dueDate}
-                    </div>
+                    return (
+                      <div
+                        key={row.id}
+                        className="min-h-[72px] px-5 py-2.5 grid grid-cols-12 items-center hover:bg-[#FFF6F9]/60 transition-colors"
+                      >
+                        <div className="col-span-4 pr-3 min-w-0">
+                          <div className="font-nunito text-[14px] font-bold text-[#3B2A35] truncate">
+                            {row.title}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            {uniqueFileTypes.length > 0 ? (
+                              uniqueFileTypes.map((ft) => (
+                                <span
+                                  key={ft}
+                                  className="px-1.5 py-0.5 rounded-[6px] bg-[#E9F3FF] text-[#1F4E79] text-[10px] font-bold leading-none"
+                                >
+                                  {ft === 'IMAGE' ? 'ẢNH' : ft}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded-[6px] bg-[#FFF0F6] text-[#A61E4D] text-[10px] font-bold leading-none">
+                                HƯỚNG DẪN CHỮ
+                              </span>
+                            )}
+                            {row.attachments.length > 0 && (
+                              <span className="text-[11px] font-semibold text-[#6B5560]">
+                                · {row.attachments.length} tệp
+                              </span>
+                            )}
+                          </div>
+                        </div>
 
-                    <div className="col-span-1 pr-3 lg:pr-4">
-                      <div className="text-[13px] font-bold text-[#3B2A35] mb-1">
-                        {row.submittedCount}/{row.totalStudents}
-                      </div>
-                      <div className="w-full h-[6px] rounded-full bg-[#E9F3FF] overflow-hidden">
-                        <div
-                          className="h-full bg-[#8EC5FC] rounded-full"
-                          style={{ width: `${submitPercent}%` }}
-                        />
-                      </div>
-                    </div>
+                        <div className="col-span-2 pr-2">
+                          <span className="px-2.5 py-1 rounded-[8px] bg-[#E9F3FF] text-[#1F4E79] text-[12px] font-bold">
+                            {row.className}
+                          </span>
+                        </div>
 
-                    <div className="col-span-2 pr-4 lg:pr-6">
-                      {row.isAllGraded ? (
-                        <span className="inline-flex items-center gap-1.5 text-[13px] font-bold text-[#1F4E79]">
-                          <Check className="w-4 h-4 text-[#1F4E79]" strokeWidth={2.2} />
-                          <span>Đã chấm hết</span>
-                        </span>
-                      ) : (
-                        <div>
-                          <div className="text-[13px] font-bold text-[#3B2A35] mb-1">
-                            {row.gradedCount}/{row.submittedCount}
+                        <div className="col-span-2 pr-2">
+                          <div className="text-[13px] font-bold text-[#3B2A35]">
+                            {formatDateDMY(row.dueDate)}
+                          </div>
+                          <div className="text-[11px] font-semibold text-[#6B5560]">
+                            {row.dueTime}{' '}
+                            {isPastDue && (
+                              <span className="text-[#A61E4D] font-bold">· Đã qua hạn</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="col-span-1 pr-3">
+                          <div className="text-[12px] font-bold text-[#1F4E79] mb-1">
+                            {row.submittedCount}/{row.totalStudents}
                           </div>
                           <div className="w-full h-[6px] rounded-full bg-[#E9F3FF] overflow-hidden">
                             <div
-                              className="h-full bg-[#8EC5FC] rounded-full"
-                              style={{ width: `${gradePercent}%` }}
+                              className="h-full bg-[#2F6FA8] rounded-full"
+                              style={{ width: `${submitPercent}%` }}
                             />
                           </div>
                         </div>
-                      )}
-                    </div>
 
-                    <div className="col-span-2 flex items-center justify-end gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setGradingAssignmentTitle(row.title);
-                          setAdminSubView('grading');
-                        }}
-                        className="h-[36px] px-3 lg:px-3.5 rounded-[10px] bg-[#2F6FA8] hover:opacity-95 text-white text-[13px] font-bold transition-opacity cursor-pointer whitespace-nowrap"
-                      >
-                        Chấm bài
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditAssignDrawer(row)}
-                        title="Sửa"
-                        className="w-[36px] lg:w-[40px] h-[36px] lg:h-[40px] rounded-[10px] text-[#1F4E79] hover:bg-[#E9F3FF] flex items-center justify-center transition-colors cursor-pointer"
-                      >
-                        <Pencil className="w-4 h-4" strokeWidth={1.75} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => showToast(`Xóa bài tập: ${row.title}`)}
-                        title="Xóa"
-                        className="w-[36px] lg:w-[40px] h-[36px] lg:h-[40px] rounded-[10px] text-[#B02525] hover:bg-[#FFE3E3] flex items-center justify-center transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="w-4 h-4" strokeWidth={1.75} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* DANH SÁCH THẺ TRÊN DI ĐỘNG */}
-            <div className="md:hidden divide-y divide-[#F3D9E3]">
-              {ADMIN_ASSIGNMENTS.map((row) => {
-                const submitPercent =
-                  row.totalStudents > 0
-                    ? Math.round((row.submittedCount / row.totalStudents) * 100)
-                    : 0;
-                const gradePercent =
-                  row.submittedCount > 0
-                    ? Math.round((row.gradedCount / row.submittedCount) * 100)
-                    : 0;
-
-                return (
-                  <div key={row.id} className="p-4 flex flex-col gap-3 bg-white">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="text-[15px] font-bold text-[#3B2A35] leading-snug">
-                          {row.title}
+                        <div className="col-span-1 pr-3">
+                          {isAllGraded ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[8px] bg-[#DCEBFA] text-[#1F4E79] text-[11px] font-bold">
+                              <Check className="w-3 h-3" strokeWidth={2.5} />
+                              <span>Xong</span>
+                            </span>
+                          ) : (
+                            <>
+                              <div className="text-[12px] font-bold text-[#3B2A35] mb-1">
+                                {row.gradedCount}/{row.submittedCount}
+                              </div>
+                              <div className="w-full h-[6px] rounded-full bg-[#E9F3FF] overflow-hidden">
+                                <div
+                                  className="h-full bg-[#8EC5FC] rounded-full"
+                                  style={{ width: `${gradePercent}%` }}
+                                />
+                              </div>
+                            </>
+                          )}
                         </div>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                          {row.files.map((f) => renderFileTypePill(f))}
+
+                        <div className="col-span-2 flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openGradingWorkspace(row.id)}
+                            className="h-[34px] px-3 rounded-[9px] bg-[#2F6FA8] hover:opacity-95 text-white text-[12px] font-bold cursor-pointer"
+                          >
+                            Chấm bài
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditDrawer(row)}
+                            title="Chỉnh sửa bài tập"
+                            className="w-8 h-8 rounded-[8px] text-[#1F4E79] hover:bg-[#E9F3FF] flex items-center justify-center cursor-pointer"
+                          >
+                            <Pencil className="w-4 h-4" strokeWidth={1.75} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(row)}
+                            title="Xóa bài tập"
+                            className="w-8 h-8 rounded-[8px] text-[#B02525] hover:bg-[#FFE3E3] flex items-center justify-center cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" strokeWidth={1.75} />
+                          </button>
                         </div>
                       </div>
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-[8px] bg-[#FFE0EB] text-[#A61E4D] text-[12px] font-bold whitespace-nowrap flex-shrink-0">
-                        {row.className}
-                      </span>
-                    </div>
+                    );
+                  })}
+                </div>
 
-                    <div className="text-[13px] font-semibold text-[#6B5560]">
-                      Hạn nộp: <span className="text-[#3B2A35]">{row.dueDate}</span>
-                    </div>
+                {/* Dạng thẻ trên di động / tablet */}
+                <div className="flex lg:hidden flex-1 flex-col divide-y divide-[#F3D9E3]">
+                  {adminHomeworks.map((row) => {
+                    const submitPercent =
+                      row.totalStudents > 0
+                        ? Math.round((row.submittedCount / row.totalStudents) * 100)
+                        : 0;
+                    const gradePercent =
+                      row.submittedCount > 0
+                        ? Math.round((row.gradedCount / row.submittedCount) * 100)
+                        : 0;
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <div className="text-[12px] font-bold text-[#3B2A35] mb-1">
-                          Đã nộp: {row.submittedCount}/{row.totalStudents}
-                        </div>
-                        <div className="w-full h-[6px] rounded-full bg-[#E9F3FF] overflow-hidden">
-                          <div
-                            className="h-full bg-[#8EC5FC] rounded-full"
-                            style={{ width: `${submitPercent}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        {row.isAllGraded ? (
-                          <span className="inline-flex items-center gap-1 text-[12px] font-bold text-[#1F4E79] pt-1">
-                            <Check className="w-4 h-4 text-[#1F4E79]" strokeWidth={2.2} />
-                            <span>Đã chấm hết</span>
+                    return (
+                      <div key={row.id} className="p-4 flex flex-col gap-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="font-bold text-[15px] text-[#3B2A35]">
+                            {row.title}
+                          </div>
+                          <span className="px-2.5 py-0.5 rounded-[8px] bg-[#E9F3FF] text-[#1F4E79] text-[12px] font-bold flex-shrink-0">
+                            {row.className}
                           </span>
-                        ) : (
-                          <>
+                        </div>
+
+                        <div className="text-[12px] font-semibold text-[#6B5560]">
+                          Hạn nộp: {formatDateDMY(row.dueDate)} · {row.dueTime}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <div className="text-[12px] font-bold text-[#1F4E79] mb-1">
+                              Đã nộp: {row.submittedCount}/{row.totalStudents}
+                            </div>
+                            <div className="w-full h-[6px] rounded-full bg-[#E9F3FF] overflow-hidden">
+                              <div
+                                className="h-full bg-[#2F6FA8] rounded-full"
+                                style={{ width: `${submitPercent}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          <div>
                             <div className="text-[12px] font-bold text-[#3B2A35] mb-1">
                               Đã chấm: {row.gradedCount}/{row.submittedCount}
                             </div>
@@ -1596,223 +1674,252 @@ export const HomeworkPage: React.FC = () => {
                                 style={{ width: `${gradePercent}%` }}
                               />
                             </div>
-                          </>
-                        )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => openGradingWorkspace(row.id)}
+                            className="flex-1 h-[40px] rounded-[10px] bg-[#2F6FA8] text-white text-[13px] font-bold cursor-pointer"
+                          >
+                            Chấm bài
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditDrawer(row)}
+                            className="w-[40px] h-[40px] rounded-[10px] bg-[#E9F3FF] text-[#1F4E79] flex items-center justify-center cursor-pointer"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(row)}
+                            className="w-[40px] h-[40px] rounded-[10px] bg-[#FFE3E3] text-[#B02525] flex items-center justify-center cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    );
+                  })}
+                </div>
 
-                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#F3D9E3]/60">
+                {/* THANH PHÂN TRANG THẬT */}
+                <div className="min-h-[44px] px-5 py-2 border-t border-[#F3D9E3] bg-white flex flex-wrap items-center justify-between gap-2 text-[12px] font-semibold text-[#6B5560]">
+                  <span>
+                    Hiển thị {startIdx}–{endIdx} trên {adminPagination.total} bài tập
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={adminPagination.page <= 1}
+                      onClick={() => setAdminPage((p) => Math.max(1, p - 1))}
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-[#1F4E79] hover:bg-[#E9F3FF] disabled:opacity-40 cursor-pointer"
+                    >
+                      ‹
+                    </button>
+                    {Array.from(
+                      { length: adminPagination.totalPages },
+                      (_, idx) => idx + 1
+                    ).map((p) => (
                       <button
+                        key={p}
                         type="button"
-                        onClick={() => {
-                          setGradingAssignmentTitle(row.title);
-                          setAdminSubView('grading');
-                        }}
-                        className="flex-1 h-[44px] px-4 rounded-[10px] bg-[#2F6FA8] text-white text-[14px] font-bold cursor-pointer"
+                        onClick={() => setAdminPage(p)}
+                        className={`w-7 h-7 rounded-full text-[12px] font-bold flex items-center justify-center cursor-pointer ${
+                          adminPagination.page === p
+                            ? 'bg-[#2F6FA8] text-white'
+                            : 'text-[#1F4E79] hover:bg-[#E9F3FF]'
+                        }`}
                       >
-                        Chấm bài
+                        {p}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditAssignDrawer(row)}
-                        title="Sửa"
-                        className="w-[44px] h-[44px] rounded-[10px] text-[#1F4E79] bg-[#E9F3FF] flex items-center justify-center cursor-pointer"
-                      >
-                        <Pencil className="w-4 h-4" strokeWidth={1.75} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => showToast(`Xóa bài tập: ${row.title}`)}
-                        title="Xóa"
-                        className="w-[44px] h-[44px] rounded-[10px] text-[#B02525] bg-[#FFE3E3] flex items-center justify-center cursor-pointer"
-                      >
-                        <Trash2 className="w-4 h-4" strokeWidth={1.75} />
-                      </button>
-                    </div>
+                    ))}
+                    <button
+                      type="button"
+                      disabled={adminPagination.page >= adminPagination.totalPages}
+                      onClick={() =>
+                        setAdminPage((p) =>
+                          Math.min(adminPagination.totalPages, p + 1)
+                        )
+                      }
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-[#1F4E79] hover:bg-[#E9F3FF] disabled:opacity-40 cursor-pointer"
+                    >
+                      ›
+                    </button>
                   </div>
-                );
-              })}
-            </div>
-
-            <div className="min-h-[44px] lg:h-[36px] px-4 lg:px-5 py-2 lg:py-0 border-t border-[#F3D9E3] bg-white flex flex-wrap items-center justify-between gap-2 text-[12px] font-semibold text-[#6B5560] flex-shrink-0">
-              <span>Hiển thị 1–9 trên 14 bài tập</span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setAdminPage(1)}
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-[#1F4E79] hover:bg-[#E9F3FF] cursor-pointer"
-                >
-                  ‹
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAdminPage(1)}
-                  className={`w-6 h-6 rounded-full text-[12px] font-bold flex items-center justify-center cursor-pointer ${
-                    adminPage === 1
-                      ? 'bg-[#2F6FA8] text-white'
-                      : 'text-[#1F4E79] hover:bg-[#E9F3FF]'
-                  }`}
-                >
-                  1
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAdminPage(2)}
-                  className={`w-6 h-6 rounded-full text-[12px] font-bold flex items-center justify-center cursor-pointer ${
-                    adminPage === 2
-                      ? 'bg-[#2F6FA8] text-white'
-                      : 'text-[#1F4E79] hover:bg-[#E9F3FF]'
-                  }`}
-                >
-                  2
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAdminPage(2)}
-                  className="w-6 h-6 rounded-full flex items-center justify-center text-[#1F4E79] hover:bg-[#E9F3FF] cursor-pointer"
-                >
-                  ›
-                </button>
-              </div>
-            </div>
+                </div>
+              </>
+            )}
           </div>
 
-          {/* NGĂN KÉO BÊN PHẢI: "GIAO BÀI TẬP" */}
+          {/* NGĂN KÉO GIAO / CHỈNH SỬA BÀI TẬP */}
           {isAssignDrawerOpen && (
             <div
               className="fixed inset-0 z-50 flex items-end md:items-stretch justify-center md:justify-end"
               style={{ backgroundColor: 'rgba(59, 42, 53, 0.35)' }}
-              onClick={handleCloseAssignDrawer}
+              onClick={handleCloseDrawer}
             >
               <div
-                className="w-full md:w-[min(520px,90vw)] lg:w-[520px] max-h-[90dvh] md:max-h-none md:h-full bg-white rounded-t-[20px] md:rounded-t-none md:rounded-l-[16px] shadow-[-12px_0_36px_rgba(59,42,53,0.16)] flex flex-col justify-between overflow-hidden select-none"
+                className="w-full md:w-[min(540px,92vw)] max-h-[92dvh] md:max-h-none md:h-full bg-white rounded-t-[20px] md:rounded-t-none md:rounded-l-[16px] shadow-[-12px_0_36px_rgba(59,42,53,0.16)] flex flex-col justify-between overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Thanh kéo nhỏ trên di động */}
-                <div className="md:hidden pt-2.5 pb-1 flex justify-center flex-shrink-0">
-                  <span className="w-10 h-1 rounded-full bg-[#E5D3DC]" />
-                </div>
-                <div className="px-5 md:px-6 py-4 border-b border-[#F3D9E3] flex items-start justify-between gap-4 flex-shrink-0">
+                <div className="px-6 py-4 border-b border-[#F3D9E3] flex items-start justify-between gap-4">
                   <div>
-                    <h2 className="font-playfair text-[22px] font-bold text-[#3B2A35] leading-tight">
-                      Giao bài tập
+                    <h2 className="font-playfair text-[22px] font-bold text-[#3B2A35]">
+                      {drawerMode === 'create' ? 'Giao bài tập mới' : 'Chỉnh sửa bài tập'}
                     </h2>
-                    <p className="font-nunito text-[14px] font-medium text-[#6B5560] mt-1 leading-snug">
-                      Học sinh sẽ xem file ngay trên web và vẫn có thể tải về
+                    <p className="text-[13px] font-medium text-[#6B5560] mt-0.5">
+                      Học sinh sẽ xem trực tiếp đề bài ngay trên web và tải tệp gốc về máy
                     </p>
                   </div>
-
                   <button
                     type="button"
-                    onClick={handleCloseAssignDrawer}
-                    aria-label="Đóng ngăn kéo Giao bài tập"
-                    className="w-9 h-9 rounded-[10px] text-[#6B5560] hover:text-[#3B2A35] hover:bg-[#FFF6F9] flex items-center justify-center transition-colors cursor-pointer flex-shrink-0"
+                    onClick={handleCloseDrawer}
+                    className="w-9 h-9 rounded-[10px] text-[#6B5560] hover:bg-[#FFF6F9] flex items-center justify-center cursor-pointer"
                   >
-                    <X className="w-5 h-5" strokeWidth={1.75} />
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
 
                 <form
-                  onSubmit={handleSubmitAssignDrawer}
-                  className="flex-1 overflow-y-auto px-6 py-4 space-y-[20px]"
+                  onSubmit={handleSubmitDrawer}
+                  className="flex-1 overflow-y-auto px-6 py-4 space-y-4"
                 >
                   <div>
-                    <label className="block font-nunito text-[14px] font-bold text-[#3B2A35] mb-1.5">
-                      Tiêu đề
+                    <label className="block text-[13px] font-bold text-[#3B2A35] mb-1.5">
+                      Tiêu đề bài tập <span className="text-[#D6336C]">*</span>
                     </label>
                     <input
                       type="text"
                       value={drawerTitle}
                       onChange={(e) => setDrawerTitle(e.target.value)}
-                      className="w-full h-[48px] px-4 rounded-[12px] border border-[#9C6B84] ring-2 ring-[#2F6FA8] text-[14px] font-semibold text-[#3B2A35] bg-white outline-none"
+                      placeholder='VD: Phân tích đoạn trích "Kiều ở lầu Ngưng Bích"'
+                      className="w-full h-[46px] px-4 rounded-[12px] border border-[#9C6B84] text-[14px] font-semibold text-[#3B2A35] bg-white outline-none focus:ring-2 focus:ring-[#2F6FA8]"
                     />
                   </div>
 
+                  {/* Chọn Lớp: hỗ trợ chọn 1 hoặc nhiều lớp khi tạo mới */}
                   <div>
-                    <label className="block font-nunito text-[14px] font-bold text-[#3B2A35] mb-1.5">
-                      Lớp
-                    </label>
-                    <div className="relative">
-                      <select
-                        value={drawerClass}
-                        onChange={(e) => setDrawerClass(e.target.value)}
-                        className="w-full h-[48px] px-4 pr-10 rounded-[12px] border border-[#9C6B84] text-[14px] font-semibold text-[#3B2A35] bg-white outline-none focus:ring-2 focus:ring-[#2F6FA8] appearance-none cursor-pointer"
-                      >
-                        <option value="Lớp 1">Lớp 1</option>
-                        <option value="Lớp 2">Lớp 2</option>
-                        <option value="Lớp 3">Lớp 3</option>
-                        <option value="Lớp 4">Lớp 4</option>
-                        <option value="Lớp 5">Lớp 5</option>
-                        <option value="Lớp 6">Lớp 6</option>
-                        <option value="Lớp 7">Lớp 7</option>
-                        <option value="Lớp 8">Lớp 8</option>
-                        <option value="Lớp 9">Lớp 9</option>
-                        <option value="Lớp 10">Lớp 10</option>
-                        <option value="Lớp 11">Lớp 11</option>
-                        <option value="Lớp 12">Lớp 12</option>
-                      </select>
-                      <ChevronDown
-                        className="w-4 h-4 text-[#6B5560] absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"
-                        strokeWidth={1.75}
-                      />
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-[13px] font-bold text-[#3B2A35]">
+                        {drawerMode === 'create'
+                          ? `Chọn lớp giao bài (${drawerSelectedClassIds.length} lớp đã chọn)`
+                          : 'Lớp nhận bài tập'}{' '}
+                        <span className="text-[#D6336C]">*</span>
+                      </label>
+                      {drawerMode === 'create' && classes.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (drawerSelectedClassIds.length === classes.length) {
+                              setDrawerSelectedClassIds([]);
+                            } else {
+                              setDrawerSelectedClassIds(classes.map((c) => c.id));
+                            }
+                          }}
+                          className="text-[12px] font-bold text-[#2F6FA8] hover:underline cursor-pointer"
+                        >
+                          {drawerSelectedClassIds.length === classes.length
+                            ? 'Bỏ chọn tất cả'
+                            : 'Chọn tất cả lớp'}
+                        </button>
+                      )}
                     </div>
+
+                    {drawerMode === 'create' ? (
+                      <div className="flex flex-wrap gap-2 p-3 rounded-[12px] border border-[#F3D9E3] bg-[#FFF9FB] max-h-[140px] overflow-y-auto">
+                        {classes.map((cls) => {
+                          const checked = drawerSelectedClassIds.includes(cls.id);
+                          return (
+                            <button
+                              key={cls.id}
+                              type="button"
+                              onClick={() => toggleClassInCreateDrawer(cls.id)}
+                              className={`px-3 py-1.5 rounded-[10px] text-[12px] font-bold border inline-flex items-center gap-1.5 transition-all cursor-pointer ${
+                                checked
+                                  ? 'bg-[#2F6FA8] text-white border-[#2F6FA8]'
+                                  : 'bg-white text-[#3B2A35] border-[#E5D3DC] hover:border-[#2F6FA8]'
+                              }`}
+                            >
+                              {checked && <Check className="w-3.5 h-3.5" strokeWidth={2.5} />}
+                              <span>
+                                {cls.name} ({cls.totalStudents ?? 0} HS)
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <select
+                          value={drawerSingleClassId}
+                          onChange={(e) => setDrawerSingleClassId(e.target.value)}
+                          className="w-full h-[46px] px-4 pr-10 rounded-[12px] border border-[#9C6B84] text-[14px] font-semibold text-[#3B2A35] bg-white outline-none focus:ring-2 focus:ring-[#2F6FA8] appearance-none cursor-pointer"
+                        >
+                          {classes.map((cls) => (
+                            <option key={cls.id} value={cls.id}>
+                              {cls.name} ({cls.totalStudents ?? 0} học sinh)
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-[#6B5560] absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    )}
                   </div>
 
+                  {/* Ngày & Giờ hạn nộp */}
                   <div>
-                    <label className="block font-nunito text-[14px] font-bold text-[#3B2A35] mb-1.5">
-                      Hạn nộp
+                    <label className="block text-[13px] font-bold text-[#3B2A35] mb-1.5">
+                      Hạn nộp bài <span className="text-[#D6336C]">*</span>
                     </label>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="relative">
-                        <CalendarIcon
-                          className="w-4 h-4 text-[#6B5560] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                          strokeWidth={1.75}
-                        />
+                        <CalendarIcon className="w-4 h-4 text-[#6B5560] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                         <input
-                          type="text"
+                          type="date"
                           value={drawerDueDate}
                           onChange={(e) => setDrawerDueDate(e.target.value)}
-                          className="w-full h-[48px] pl-10 pr-3 rounded-[12px] border border-[#9C6B84] text-[14px] font-semibold text-[#3B2A35] bg-white outline-none focus:ring-2 focus:ring-[#2F6FA8]"
+                          className="w-full h-[46px] pl-10 pr-3 rounded-[12px] border border-[#9C6B84] text-[13px] font-semibold text-[#3B2A35] bg-white outline-none focus:ring-2 focus:ring-[#2F6FA8]"
                         />
                       </div>
-
                       <div className="relative">
-                        <Clock
-                          className="w-4 h-4 text-[#6B5560] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                          strokeWidth={1.75}
-                        />
+                        <Clock className="w-4 h-4 text-[#6B5560] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                         <input
-                          type="text"
+                          type="time"
                           value={drawerDueTime}
                           onChange={(e) => setDrawerDueTime(e.target.value)}
-                          className="w-full h-[48px] pl-10 pr-3 rounded-[12px] border border-[#9C6B84] text-[14px] font-semibold text-[#3B2A35] bg-white outline-none focus:ring-2 focus:ring-[#2F6FA8]"
+                          className="w-full h-[46px] pl-10 pr-3 rounded-[12px] border border-[#9C6B84] text-[13px] font-semibold text-[#3B2A35] bg-white outline-none focus:ring-2 focus:ring-[#2F6FA8]"
                         />
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block font-nunito text-[14px] font-bold text-[#3B2A35] mb-1.5">
-                      Hướng dẫn cho học sinh
+                    <label className="block text-[13px] font-bold text-[#3B2A35] mb-1.5">
+                      Hướng dẫn làm bài cho học sinh
                     </label>
                     <textarea
                       rows={3}
                       value={drawerInstructions}
                       onChange={(e) => setDrawerInstructions(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-[12px] border border-[#9C6B84] text-[14px] font-semibold text-[#3B2A35] bg-white outline-none focus:ring-2 focus:ring-[#2F6FA8] resize-none leading-snug"
+                      placeholder="VD: Các em viết tay ra giấy đôi, trình bày rõ mở bài - thân bài - kết bài rồi chụp rõ nét nộp lên nhé..."
+                      className="w-full px-4 py-2.5 rounded-[12px] border border-[#9C6B84] text-[13px] font-medium text-[#3B2A35] bg-white outline-none focus:ring-2 focus:ring-[#2F6FA8] resize-none"
                     />
                   </div>
 
+                  {/* Khu vực đính kèm Tệp đề bài */}
                   <div>
-                    <label className="block font-nunito text-[14px] font-bold text-[#3B2A35] mb-1.5">
-                      File đề bài
+                    <label className="block text-[13px] font-bold text-[#3B2A35] mb-1.5">
+                      Tệp đề bài đính kèm (PDF, Word, Excel, Ảnh — tối đa 20 MB/tệp)
                     </label>
 
                     <input
                       ref={drawerFileInputRef}
                       type="file"
                       multiple
-                      accept=".jpg,.jpeg,.png,.pdf,.doc,.docx,.xls,.xlsx"
+                      accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx,.xls,.xlsx"
                       className="hidden"
                       onChange={(e) => {
                         handleSelectDrawerFiles(e.target.files);
@@ -1827,662 +1934,958 @@ export const HomeworkPage: React.FC = () => {
                         e.preventDefault();
                         handleSelectDrawerFiles(e.dataTransfer.files);
                       }}
-                      className="h-[120px] rounded-[16px] border-2 border-dashed border-[#8EC5FC] bg-[#F7FBFF] hover:bg-[#E9F3FF]/60 px-4 py-2.5 flex flex-col items-center justify-between text-center transition-colors cursor-pointer"
+                      className="rounded-[16px] border-2 border-dashed border-[#8EC5FC] bg-[#F7FBFF] hover:bg-[#E9F3FF]/60 p-4 flex flex-col items-center justify-center gap-2 text-center transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-2">
-                        <Upload className="w-4 h-4 text-[#2F6FA8]" strokeWidth={1.75} />
+                        <Upload className="w-4 h-4 text-[#2F6FA8]" />
                         <span className="text-[13px] font-bold text-[#3B2A35]">
-                          Kéo thả file vào đây hoặc bấm để chọn
+                          Kéo thả tệp đề bài vào đây hoặc bấm để chọn tệp từ máy
                         </span>
                       </div>
-
                       <div className="flex items-center justify-center gap-1.5 flex-wrap">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[8px] bg-[#E9F3FF] text-[#1F4E79] text-[12px] font-bold leading-none">
-                          <ImageIcon className="w-3.5 h-3.5 text-[#1F4E79]" strokeWidth={1.75} />
-                          <span>Ảnh JPG, PNG</span>
+                        <span className="px-2 py-0.5 rounded-[6px] bg-[#E9F3FF] text-[#1F4E79] text-[11px] font-bold">
+                          PDF (Xem trực tiếp)
                         </span>
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[8px] bg-[#E9F3FF] text-[#1F4E79] text-[12px] font-bold leading-none">
-                          <FileText className="w-3.5 h-3.5 text-[#1F4E79]" strokeWidth={1.75} />
-                          <span>PDF</span>
+                        <span className="px-2 py-0.5 rounded-[6px] bg-[#E9F3FF] text-[#1F4E79] text-[11px] font-bold">
+                          Ảnh JPG/PNG (Xem trực tiếp)
                         </span>
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[8px] bg-[#E9F3FF] text-[#1F4E79] text-[12px] font-bold leading-none">
-                          <FileCode2 className="w-3.5 h-3.5 text-[#1F4E79]" strokeWidth={1.75} />
-                          <span>Word DOCX</span>
-                        </span>
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[8px] bg-[#E9F3FF] text-[#1F4E79] text-[12px] font-bold leading-none">
-                          <FileSpreadsheet
-                            className="w-3.5 h-3.5 text-[#1F4E79]"
-                            strokeWidth={1.75}
-                          />
-                          <span>Excel XLSX</span>
+                        <span className="px-2 py-0.5 rounded-[6px] bg-[#E9F3FF] text-[#1F4E79] text-[11px] font-bold">
+                          Word / Excel
                         </span>
                       </div>
-
-                      <span className="text-[12px] font-medium text-[#6B5560] leading-none">
-                        Tối đa 20 MB mỗi file
-                      </span>
                     </div>
 
-                    <div className="mt-2.5 space-y-2">
-                      {drawerFiles.map((file) => (
-                        <div
-                          key={file.id}
-                          className="h-[64px] px-3.5 rounded-[12px] border border-[#F3D9E3] bg-white flex items-center justify-between gap-3"
-                        >
-                          <div className="flex items-center gap-3 min-w-0 flex-1">
-                            {renderDrawerFileIcon(file.type)}
-                            <div className="min-w-0 flex-1">
-                              <div className="text-[13px] font-bold text-[#3B2A35] truncate">
-                                {file.name} ·{' '}
-                                <span className="font-semibold text-[#6B5560]">{file.size}</span>
-                              </div>
-
-                              {file.status === 'uploading' && (
-                                <div className="mt-1.5 flex items-center gap-2.5">
-                                  <div className="flex-1 h-[6px] rounded-full bg-[#E9F3FF] overflow-hidden">
-                                    <div
-                                      className="h-full bg-[#2F6FA8] rounded-full"
-                                      style={{ width: `${file.progress || 70}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-[12px] font-bold text-[#1F4E79] flex-shrink-0 leading-none">
-                                    Đang tải lên {file.progress || 70}%
-                                  </span>
+                    {(drawerKeptAttachments.length > 0 || drawerNewFiles.length > 0) && (
+                      <div className="mt-3 space-y-2">
+                        {drawerKeptAttachments.map((att) => (
+                          <div
+                            key={att.id}
+                            className="h-[56px] px-3 rounded-[12px] border border-[#F3D9E3] bg-white flex items-center justify-between gap-2"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              {renderFileTypeIcon(att.fileType)}
+                              <div className="min-w-0">
+                                <div className="text-[13px] font-bold text-[#3B2A35] truncate">
+                                  {att.originalName}
                                 </div>
-                              )}
+                                <div className="text-[11px] font-semibold text-[#1F4E79]">
+                                  Đã lưu trên máy chủ · {formatBytes(att.sizeBytes)}
+                                </div>
+                              </div>
                             </div>
-                          </div>
-
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            {file.status === 'uploaded' && (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[8px] bg-[#DCEBFA] text-[#1F4E79] text-[12px] font-bold leading-none">
-                                <Check className="w-3.5 h-3.5 text-[#1F4E79]" strokeWidth={2} />
-                                <span>Đã tải lên</span>
-                              </span>
-                            )}
                             <button
                               type="button"
-                              onClick={() => handleRemoveDrawerFile(file.id, file.name)}
-                              aria-label={`Xóa tệp ${file.name}`}
-                              className="w-7 h-7 rounded-[8px] text-[#6B5560] hover:text-[#3B2A35] hover:bg-[#FFF6F9] flex items-center justify-center transition-colors cursor-pointer"
+                              onClick={() =>
+                                setDrawerKeptAttachments((prev) =>
+                                  prev.filter((x) => x.id !== att.id)
+                                )
+                              }
+                              className="w-7 h-7 rounded-[8px] text-[#6B5560] hover:bg-[#FFE3E3] hover:text-[#B02525] flex items-center justify-center cursor-pointer"
                             >
-                              <X className="w-4 h-4" strokeWidth={1.75} />
+                              <X className="w-4 h-4" />
                             </button>
                           </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+
+                        {drawerNewFiles.map((file, idx) => (
+                          <div
+                            key={`${file.name}-${idx}`}
+                            className="h-[56px] px-3 rounded-[12px] border border-[#CFE8FF] bg-[#F7FBFF] flex items-center justify-between gap-2"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              {renderFileTypeIcon(detectLocalFileType(file.name))}
+                              <div className="min-w-0">
+                                <div className="text-[13px] font-bold text-[#3B2A35] truncate">
+                                  {file.name}
+                                </div>
+                                <div className="text-[11px] font-semibold text-[#2F6FA8]">
+                                  Tệp mới · {formatBytes(file.size)}
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDrawerNewFiles((prev) =>
+                                  prev.filter((_, i) => i !== idx)
+                                )
+                              }
+                              className="w-7 h-7 rounded-[8px] text-[#6B5560] hover:bg-[#FFE3E3] hover:text-[#B02525] flex items-center justify-center cursor-pointer"
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </form>
 
-                <div className="px-6 py-3.5 border-t border-[#F3D9E3] bg-white flex items-center justify-between flex-shrink-0">
+                <div className="px-6 py-3.5 border-t border-[#F3D9E3] bg-white flex items-center justify-between">
                   <button
                     type="button"
-                    onClick={handleCloseAssignDrawer}
-                    className="h-[48px] px-4 rounded-[12px] text-[#6B5560] hover:text-[#3B2A35] text-[14px] font-bold transition-colors cursor-pointer"
+                    disabled={isSubmittingDrawer}
+                    onClick={handleCloseDrawer}
+                    className="h-[46px] px-4 rounded-[12px] text-[#6B5560] hover:text-[#3B2A35] text-[14px] font-bold cursor-pointer"
                   >
                     Hủy
                   </button>
                   <button
                     type="button"
-                    onClick={handleSubmitAssignDrawer}
-                    className="h-[48px] px-6 rounded-[12px] bg-[#D6336C] hover:opacity-95 text-white text-[14px] font-bold shadow-xs transition-opacity cursor-pointer"
+                    disabled={isSubmittingDrawer}
+                    onClick={() => handleSubmitDrawer()}
+                    className="h-[46px] px-6 rounded-[12px] bg-[#D6336C] hover:opacity-95 text-white text-[14px] font-bold shadow-xs inline-flex items-center gap-2 disabled:opacity-60 cursor-pointer"
                   >
-                    Giao bài tập
+                    {isSubmittingDrawer && <Loader2 className="w-4 h-4 animate-spin" />}
+                    <span>
+                      {drawerMode === 'create' ? 'Giao bài tập' : 'Lưu thay đổi'}
+                    </span>
                   </button>
                 </div>
               </div>
             </div>
           )}
+
+          {/* HỘP THOẠI XÁC NHẬN XÓA BÀI TẬP */}
+          <Dialog
+            open={Boolean(deleteTarget)}
+            onOpenChange={(open) => !open && !isDeletingHomework && setDeleteTarget(null)}
+          >
+            <DialogContent className="sm:max-w-[440px] p-6 rounded-[16px] bg-white border border-[#F3D9E3]">
+              <DialogHeader>
+                <DialogTitle className="font-playfair text-[20px] font-bold text-[#3B2A35]">
+                  Xác nhận xóa bài tập
+                </DialogTitle>
+                <DialogDescription className="text-[13px] text-[#6B5560] pt-1">
+                  Bạn có chắc chắn muốn xóa bài tập{' '}
+                  <strong className="text-[#3B2A35]">"{deleteTarget?.title}"</strong> của lớp{' '}
+                  <strong className="text-[#1F4E79]">{deleteTarget?.className}</strong>? Toàn bộ
+                  bài nộp của bài tập này sẽ bị xóa và Điểm TB của học sinh sẽ được tự động tính
+                  lại.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex items-center justify-end gap-2.5 pt-3">
+                <button
+                  type="button"
+                  disabled={isDeletingHomework}
+                  onClick={() => setDeleteTarget(null)}
+                  className="h-[40px] px-4 rounded-[10px] bg-[#EFE9ED] text-[#3B2A35] text-[13px] font-bold cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeletingHomework}
+                  onClick={handleConfirmDeleteHomework}
+                  className="h-[40px] px-4 rounded-[10px] bg-[#B02525] text-white text-[13px] font-bold inline-flex items-center gap-2 disabled:opacity-60 cursor-pointer"
+                >
+                  {isDeletingHomework && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>Xóa bài tập</span>
+                </button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     );
   }
 
-  // ==================== GIAO DIỆN HỌC SINH (KHI TRUY CẬP ?role=student) ====================
-  const isNotSubmittedState = currentAssignment.status === 'not_submitted';
+  // ==================== GIAO DIỆN HỌC SINH ====================
+  const notSubmittedCount = myHomeworks.filter(
+    (h) => h.status === 'not_submitted'
+  ).length;
+  const activeAttachments = currentStudentAssignment?.attachments || [];
+  const activeAttachment =
+    activeAttachments[activeAttachmentIdx] || activeAttachments[0] || null;
+
+  const isUploadFormVisible =
+    currentStudentAssignment?.status === 'not_submitted' ||
+    (currentStudentAssignment?.status === 'pending' && isEditingSubmission);
+
+  const isDeadlinePassed = currentStudentAssignment
+    ? Date.now() > new Date(currentStudentAssignment.dueAt).getTime()
+    : false;
+
+  const getStudentRemainingBadge = (hw: StudentHomeworkItem) => {
+    if (hw.status !== 'not_submitted') return null;
+    const diffMs = new Date(hw.dueAt).getTime() - Date.now();
+    if (diffMs < 0) {
+      return {
+        text: 'Đã quá hạn · Nộp bây giờ sẽ tính Nộp muộn',
+        overdue: true,
+      };
+    }
+    const diffHours = diffMs / (1000 * 60 * 60);
+    if (diffHours < 24) {
+      return {
+        text: `Còn ${Math.max(1, Math.ceil(diffHours))} giờ`,
+        overdue: false,
+      };
+    }
+    return {
+      text: `Còn ${Math.ceil(diffHours / 24)} ngày`,
+      overdue: false,
+    };
+  };
+
+  // Danh sách ảnh xem phóng to trong Modal phía Học sinh
+  const modalPreviewUrls: Array<{ label: string; url: string; downloadName?: string }> =
+    isUploadFormVisible
+      ? [
+          ...keptSubmissionPhotos.map((p, i) => ({
+            label: `Trang ${i + 1}`,
+            url: getFileViewUrl(p.url),
+            downloadName: p.originalName,
+          })),
+          ...draftNewPhotos.map((p, i) => ({
+            label: `Trang ${keptSubmissionPhotos.length + i + 1}`,
+            url: p.previewUrl,
+            downloadName: p.file.name,
+          })),
+        ]
+      : (currentStudentAssignment?.submission?.photos || []).map((p, i) => ({
+          label: `Trang ${i + 1}`,
+          url: getFileViewUrl(p.url),
+          downloadName: p.originalName,
+        }));
 
   return (
-    <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[100dvh] lg:min-h-[976px]">
-      <div className="w-full lg:w-[1200px] lg:h-[976px] p-0 lg:p-8 flex flex-col gap-4 lg:gap-0 lg:justify-between box-border select-none relative font-nunito">
-        {toastMessage && (
-          <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 bg-[#3B2A35] text-white px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-            <CheckCircle2 className="w-4 h-4 text-[#CFE8FF]" />
-            <span>{toastMessage}</span>
-          </div>
-        )}
+    <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[100dvh]">
+      <div className="w-full max-w-[1200px] p-0 lg:p-6 flex flex-col gap-4 box-border select-none relative font-nunito">
+        {renderToastBanner()}
 
-        <header className="min-h-[72px] lg:h-[88px] flex items-center justify-between flex-shrink-0">
-          <div className="flex flex-col justify-center min-w-0">
-            <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+        {/* HEADER HỌC SINH */}
+        <header className="min-h-[68px] flex items-center justify-between">
+          <div className="flex flex-col justify-center">
+            <div className="flex flex-wrap items-center gap-2.5">
               <h1 className="font-playfair text-[24px] lg:text-[28px] font-bold text-[#3B2A35] leading-tight">
                 Bài tập
               </h1>
-              <span className="px-3 py-1 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] font-nunito text-[13px] font-bold tracking-wide">
-                5 bài · 2 chưa nộp
+              <span className="px-3 py-1 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] text-[13px] font-bold">
+                {myHomeworks.length} bài · {notSubmittedCount} chưa nộp
               </span>
             </div>
-
-            <div className="flex items-center gap-3 mt-1.5">
-              <div className="inline-block transform -rotate-1 origin-left">
-                <span className="font-playfair italic text-[14px] lg:text-[15px] font-semibold text-[#A61E4D] squiggle-underline-note">
-                  Chụp rõ chữ, đủ sáng rồi bấm Nộp bài nhé!
-                </span>
-              </div>
-
-              <div className="hidden md:flex items-center gap-2 pl-3">
-                <svg
-                  className="w-6 h-6 text-[#F8A5C2] flex-shrink-0"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path d="M12 2l2.75 6.63L22 9.24l-5.45 4.73L18.18 21 12 17.27 5.82 21l1.63-7.03L2 9.24l7.25-.61L12 2z" />
-                </svg>
-
-                <svg
-                  className="w-6 h-6 text-[#2F6FA8] flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.75"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-                  />
-                </svg>
-              </div>
+            <div className="mt-1">
+              <span className="font-playfair italic text-[14px] lg:text-[15px] font-semibold text-[#A61E4D]">
+                Chụp rõ chữ, đủ sáng rồi bấm Nộp bài nhé!
+              </span>
             </div>
           </div>
         </header>
 
-        <div className="w-full lg:w-[1136px] lg:h-[800px] grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-[24px] flex-shrink-0">
-          <div
-            className={`${
-              mobileShowDetail ? 'hidden md:flex' : 'flex'
-            } md:col-span-5 lg:col-span-3 lg:h-[800px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex-col overflow-hidden`}
-          >
-            <div className="h-[56px] px-4 border-b border-[#F3D9E3] flex items-center justify-between flex-shrink-0">
-              <h2 className="font-playfair text-[18px] font-bold text-[#3B2A35]">
-                Bài tập của em
-              </h2>
-              <span className="text-[12px] font-bold text-[#6B5560]">5 bài</span>
-            </div>
-
-            <div className="flex-1 flex flex-col divide-y divide-[#F3D9E3] overflow-hidden">
-              {STUDENT_ASSIGNMENTS.map((assignment) => {
-                const isSelected = assignment.id === selectedId;
-                return (
-                  <div
-                    key={assignment.id}
-                    onClick={() => {
-                      setSelectedId(assignment.id);
-                      setActiveFileTab('pdf');
-                      setCurrentPage(1);
-                      setMobileShowDetail(true);
-                    }}
-                    className={`flex-1 min-h-[76px] p-4 flex flex-col justify-between cursor-pointer transition-colors ${
-                      isSelected
-                        ? 'bg-[#E9F3FF] border-l-4 border-l-[#2F6FA8]'
-                        : 'bg-white hover:bg-[#FFF6F9] border-l-4 border-l-transparent'
-                    }`}
-                  >
-                    <h3 className="font-nunito text-[14px] font-bold text-[#3B2A35] leading-snug line-clamp-2">
-                      {assignment.title}
-                    </h3>
-
-                    <div className="flex items-center justify-between gap-2 pt-1">
-                      <span className="text-[12px] font-medium text-[#6B5560] truncate">
-                        {assignment.dueDate}
-                      </span>
-                      {renderStatusBadge(assignment.status)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        {isLoadingStudentView ? (
+          <div className="min-h-[480px] bg-white border border-[#F3D9E3] rounded-[16px] flex flex-col items-center justify-center gap-3">
+            <Loader2 className="w-8 h-8 text-[#2F6FA8] animate-spin" />
+            <p className="text-[14px] font-semibold text-[#6B5560]">
+              Đang tải bài tập của em...
+            </p>
           </div>
-
-          <div
-            className={`${
-              mobileShowDetail ? 'flex' : 'hidden md:flex'
-            } md:col-span-7 lg:col-span-9 lg:h-[800px] flex-col gap-4 lg:gap-[24px] lg:justify-between overflow-hidden`}
-          >
-            {/* Nút quay lại danh sách bài tập trên di động */}
-            <button
-              type="button"
-              onClick={() => setMobileShowDetail(false)}
-              className="md:hidden h-[44px] px-3.5 rounded-[12px] bg-white border border-[#F3D9E3] text-[#1F4E79] font-bold text-[14px] flex items-center gap-2 w-fit cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4" strokeWidth={2} />
-              <span>Danh sách bài tập</span>
-            </button>
-
-            <div className="lg:h-[84px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card px-4 lg:px-5 py-3 flex flex-col justify-between gap-2 lg:gap-0 flex-shrink-0">
-              <div className="flex flex-wrap items-center justify-between gap-2 lg:gap-4">
-                <h2 className="font-playfair text-[19px] lg:text-[22px] font-bold text-[#3B2A35] leading-tight">
-                  {currentAssignment.fullTitle}
-                </h2>
-                {renderStatusBadge(currentAssignment.status)}
-              </div>
-
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="px-2.5 py-0.5 rounded-[8px] bg-[#E9F3FF] text-[#1F4E79] text-[12px] font-bold">
-                  {currentAssignment.className}
-                </span>
-                <span className="px-2.5 py-0.5 rounded-[8px] bg-[#EFE9ED] text-[#3B2A35] text-[12px] font-semibold">
-                  {currentAssignment.dueDateTime}
-                </span>
-                {currentAssignment.remainingText && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-[8px] bg-[#FFE0EB] text-[#A61E4D] text-[12px] font-bold">
-                    <Clock className="w-3.5 h-3.5 text-[#A61E4D]" strokeWidth={1.75} />
-                    <span>{currentAssignment.remainingText}</span>
-                  </span>
-                )}
-                <span className="px-2.5 py-0.5 rounded-[8px] bg-[#E9F3FF] text-[#1F4E79] text-[12px] font-semibold">
-                  {currentAssignment.assignedBy}
-                </span>
-              </div>
+        ) : myHomeworks.length === 0 ? (
+          <div className="min-h-[460px] bg-white border border-[#F3D9E3] rounded-[16px] p-8 flex flex-col items-center justify-center text-center gap-3">
+            <div className="w-14 h-14 rounded-full bg-[#DCEBFA] text-[#1F4E79] flex items-center justify-center">
+              <BookOpen className="w-6 h-6" />
             </div>
-
+            <h2 className="font-playfair text-[20px] font-bold text-[#3B2A35]">
+              Hiện chưa có bài tập nào được giao
+            </h2>
+            <p className="text-[14px] text-[#6B5560] max-w-[440px]">
+              {!studentInfo
+                ? 'Tài khoản hiện tại chưa được liên kết với hồ sơ học sinh nào.'
+                : studentInfo.classes.length === 0
+                ? 'Hồ sơ của em hiện chưa được xếp vào lớp học nào.'
+                : `Khi thầy cô giao bài tập mới cho lớp (${studentInfo.classes.join(', ')}), đề bài sẽ xuất hiện tại đây.`}
+            </p>
+          </div>
+        ) : (
+          <div className="w-full grid grid-cols-1 md:grid-cols-12 gap-4 lg:gap-[20px] items-start">
+            {/* CỘT TRÁI: DANH SÁCH BÀI TẬP CỦA EM */}
             <div
-              className={`max-h-[70dvh] lg:max-h-none ${
-                isNotSubmittedState ? 'lg:h-[316px]' : 'lg:h-[418px]'
-              } bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col overflow-hidden flex-shrink-0`}
+              className={`${
+                mobileShowDetail ? 'hidden md:flex' : 'flex'
+              } md:col-span-5 lg:col-span-4 bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex-col overflow-hidden max-h-[820px]`}
             >
-              <div className="h-[42px] px-4 lg:px-5 border-b border-[#F3D9E3] flex items-center gap-6 bg-white flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveFileTab('pdf');
-                    setCurrentPage(1);
-                  }}
-                  className={`h-full flex items-center gap-2 text-[13px] font-bold border-b-2 transition-colors cursor-pointer ${
-                    activeFileTab === 'pdf'
-                      ? 'border-[#2F6FA8] text-[#1F4E79]'
-                      : 'border-transparent text-[#6B5560] hover:text-[#3B2A35]'
-                  }`}
-                >
-                  <FileText
-                    className={`w-4 h-4 ${
-                      activeFileTab === 'pdf' ? 'text-[#2F6FA8]' : 'text-[#6B5560]'
-                    }`}
-                    strokeWidth={1.75}
-                  />
-                  <span>Đề bài.pdf</span>
-                </button>
+              <div className="h-[52px] px-4 border-b border-[#F3D9E3] flex items-center justify-between flex-shrink-0">
+                <h2 className="font-playfair text-[18px] font-bold text-[#3B2A35]">
+                  Bài tập của em
+                </h2>
+                <span className="text-[12px] font-bold text-[#6B5560]">
+                  {myHomeworks.length} bài
+                </span>
               </div>
 
-              <div className="min-h-[48px] px-3 lg:px-5 py-2 lg:py-0 bg-[#E9F3FF] border-b border-[#F3D9E3] flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
-                <div className="flex items-center gap-2 lg:gap-4">
-                  <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-[10px] border border-[#CFE8FF] text-[#1F4E79] text-[13px] font-bold">
-                    <button
-                      type="button"
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      className="p-0.5 hover:bg-[#E9F3FF] rounded cursor-pointer"
+              <div className="flex-1 divide-y divide-[#F3D9E3] overflow-y-auto">
+                {myHomeworks.map((hw) => {
+                  const isSelected = currentStudentAssignment?.id === hw.id;
+                  return (
+                    <div
+                      key={hw.id}
+                      onClick={() => handleSelectStudentHomework(hw)}
+                      className={`p-4 flex flex-col gap-2 cursor-pointer transition-colors ${
+                        isSelected
+                          ? 'bg-[#E9F3FF] border-l-4 border-l-[#2F6FA8]'
+                          : 'bg-white hover:bg-[#FFF6F9] border-l-4 border-l-transparent'
+                      }`}
                     >
-                      <ChevronLeft className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
-                    </button>
-                    <span className="px-1">{currentPage} / 2</span>
-                    <button
-                      type="button"
-                      onClick={() => setCurrentPage((p) => Math.min(2, p + 1))}
-                      className="p-0.5 hover:bg-[#E9F3FF] rounded cursor-pointer"
-                    >
-                      <ChevronRight className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
-                    </button>
-                  </div>
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-nunito text-[14px] font-bold text-[#3B2A35] leading-snug line-clamp-2">
+                          {hw.title}
+                        </h3>
+                      </div>
 
-                  <div className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-[10px] border border-[#CFE8FF] text-[#1F4E79] text-[13px] font-bold">
-                    <button
-                      type="button"
-                      onClick={() => setZoomLevel((z) => Math.max(80, z - 10))}
-                      className="p-0.5 hover:bg-[#E9F3FF] rounded cursor-pointer"
-                    >
-                      <Minus className="w-3.5 h-3.5 text-[#1F4E79]" strokeWidth={1.75} />
-                    </button>
-                    <span className="px-1 min-w-[44px] text-center">{zoomLevel}%</span>
-                    <button
-                      type="button"
-                      onClick={() => setZoomLevel((z) => Math.min(130, z + 10))}
-                      className="p-0.5 hover:bg-[#E9F3FF] rounded cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5 text-[#1F4E79]" strokeWidth={1.75} />
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsFullscreenViewer(true)}
-                    className="w-8 h-8 rounded-[10px] bg-white border border-[#CFE8FF] text-[#1F4E79] hover:bg-[#DCEBFA] flex items-center justify-center transition-colors cursor-pointer"
-                  >
-                    <Maximize2 className="w-4 h-4" strokeWidth={1.75} />
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => showToast('Đang tải xuống tệp Đề bài.pdf...')}
-                  className="h-[34px] px-3.5 rounded-[10px] bg-white border border-[#2F6FA8] text-[#2F6FA8] hover:bg-[#DCEBFA] text-[13px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <Download className="w-4 h-4 text-[#2F6FA8]" strokeWidth={1.75} />
-                  <span>Tải về</span>
-                </button>
-              </div>
-
-              <div className="flex-1 bg-[#F7FBFF] overflow-y-auto p-3.5 flex justify-center">
-                <div
-                  style={{
-                    transform: `scale(${zoomLevel / 100})`,
-                    transformOrigin: 'top center',
-                  }}
-                  className="w-full max-w-[680px] bg-white border border-[#F3D9E3] shadow-[0_2px_10px_rgba(59,42,53,0.08)] rounded-[10px] p-4 transition-transform"
-                >
-                  {renderDocumentContent()}
-                </div>
+                      <div className="flex items-center justify-between gap-2 pt-0.5 flex-wrap">
+                        <span className="text-[12px] font-medium text-[#6B5560]">
+                          {hw.className} · Hạn {formatDateDMY(hw.dueDate)}
+                        </span>
+                        {renderStatusBadge(
+                          hw.status,
+                          hw.submission?.score,
+                          hw.submission?.isLate
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {isNotSubmittedState ? (
-              <div className="lg:h-[352px] grid grid-cols-1 lg:grid-cols-9 gap-4 lg:gap-[24px] flex-shrink-0">
-                <div className="lg:col-span-6 lg:h-[352px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card p-4 lg:px-4 lg:py-3 flex flex-col justify-between gap-3 lg:gap-0 overflow-hidden">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-playfair text-[17px] font-bold text-[#3B2A35] leading-tight">
-                      Bài làm của em
-                    </h3>
+            {/* CỘT PHẢI: CHI TIẾT ĐỀ BÀI & NỘP BÀI / ĐIỂM SỐ */}
+            {currentStudentAssignment && (
+              <div
+                className={`${
+                  mobileShowDetail ? 'flex' : 'hidden md:flex'
+                } md:col-span-7 lg:col-span-8 flex-col gap-4`}
+              >
+                <button
+                  type="button"
+                  onClick={() => setMobileShowDetail(false)}
+                  className="md:hidden h-[42px] px-3.5 rounded-[12px] bg-white border border-[#F3D9E3] text-[#1F4E79] font-bold text-[13px] flex items-center gap-2 w-fit cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" strokeWidth={2} />
+                  <span>Danh sách bài tập</span>
+                </button>
+
+                {/* Thẻ tiêu đề & hạn nộp */}
+                <div className="bg-white border border-[#F3D9E3] rounded-[16px] shadow-card px-4 lg:px-5 py-3.5 flex flex-col gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h2 className="font-playfair text-[20px] lg:text-[22px] font-bold text-[#3B2A35] leading-tight">
+                      {currentStudentAssignment.title}
+                    </h2>
+                    {renderStatusBadge(
+                      currentStudentAssignment.status,
+                      currentStudentAssignment.submission?.score,
+                      currentStudentAssignment.submission?.isLate
+                    )}
                   </div>
 
-                  <input
-                    ref={studentFileInputRef}
-                    type="file"
-                    multiple
-                    accept=".jpg,.jpeg,.png,image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const files = e.target.files;
-                      if (files && files.length > 0) {
-                        for (let i = 0; i < files.length; i++) {
-                          handleAddPage();
-                        }
-                      }
-                      e.target.value = '';
-                    }}
-                  />
-
-                  <div
-                    onClick={() => studentFileInputRef.current?.click()}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                        for (let i = 0; i < e.dataTransfer.files.length; i++) {
-                          handleAddPage();
-                        }
-                      }
-                    }}
-                    className="border-2 border-dashed border-[#8EC5FC] rounded-[16px] bg-[#F7FBFF] px-3 lg:px-4 py-2.5 lg:py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-[10px] bg-[#E9F3FF] text-[#2F6FA8] flex items-center justify-center flex-shrink-0">
-                        <Camera className="w-4 h-4 text-[#2F6FA8]" strokeWidth={1.75} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-[13px] font-bold text-[#3B2A35] leading-tight truncate">
-                          Chụp ảnh hoặc chọn ảnh bài làm
-                        </div>
-                        <div className="text-[12px] font-medium text-[#6B5560] leading-tight mt-0.5">
-                          JPG, PNG · tối đa 10 ảnh · mỗi ảnh dưới 10 MB
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          studentFileInputRef.current?.click();
-                        }}
-                        className="w-full sm:w-auto h-[36px] lg:h-[34px] px-3 rounded-[10px] bg-white border border-[#2F6FA8] text-[#2F6FA8] hover:bg-[#E9F3FF] text-[12px] font-bold transition-colors cursor-pointer"
-                      >
-                        Chọn từ thư viện
-                      </button>
-                    </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2.5 py-0.5 rounded-[8px] bg-[#E9F3FF] text-[#1F4E79] text-[12px] font-bold">
+                      {currentStudentAssignment.className}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-[8px] bg-[#EFE9ED] text-[#3B2A35] text-[12px] font-semibold">
+                      Hạn nộp {currentStudentAssignment.dueTime},{' '}
+                      {formatDateDMY(currentStudentAssignment.dueDate)}
+                    </span>
+                    {(() => {
+                      const rem = getStudentRemainingBadge(currentStudentAssignment);
+                      if (!rem) return null;
+                      return (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-[8px] text-[12px] font-bold ${
+                            rem.overdue
+                              ? 'bg-[#FFE3E3] text-[#B02525]'
+                              : 'bg-[#FFE0EB] text-[#A61E4D]'
+                          }`}
+                        >
+                          <Clock className="w-3.5 h-3.5" strokeWidth={1.75} />
+                          <span>{rem.text}</span>
+                        </span>
+                      );
+                    })()}
+                    <span className="px-2.5 py-0.5 rounded-[8px] bg-[#E9F3FF] text-[#1F4E79] text-[12px] font-semibold">
+                      Giao bởi {currentStudentAssignment.assignedByName} ·{' '}
+                      {formatDateOnlyFromIso(currentStudentAssignment.createdAt)}
+                    </span>
                   </div>
+                </div>
 
-                  <div className="flex items-start gap-3.5 overflow-x-auto pb-1">
-                    {uploadedPages.map((pageNum, idx) => (
-                      <div key={pageNum} className="flex flex-col items-center flex-shrink-0">
-                        <div className="relative group">
-                          <div
-                            onClick={() => setPreviewNotebookPage(idx + 1)}
-                            className="cursor-pointer"
-                          >
-                            <NotebookThumbnailSvg pageNumber={idx + 1} size="96x128" />
+                {/* Khung xem Đề bài & Tệp đính kèm thực tế */}
+                <div className="bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col overflow-hidden">
+                  {currentStudentAssignment.instructions && (
+                    <div className="px-4 lg:px-5 py-3 bg-[#FFF9FB] border-b border-[#F3D9E3] text-[13px] text-[#3B2A35] whitespace-pre-line">
+                      <span className="font-bold text-[#A61E4D]">
+                        Hướng dẫn của giáo viên:{' '}
+                      </span>
+                      {currentStudentAssignment.instructions}
+                    </div>
+                  )}
+
+                  {activeAttachments.length > 0 ? (
+                    <>
+                      {/* Thanh tab chọn tệp đề bài */}
+                      <div className="min-h-[42px] px-4 border-b border-[#F3D9E3] flex items-center gap-4 overflow-x-auto bg-white">
+                        {activeAttachments.map((att, idx) => {
+                          const isTabActive = idx === activeAttachmentIdx;
+                          return (
+                            <button
+                              key={att.id}
+                              type="button"
+                              onClick={() => {
+                                setActiveAttachmentIdx(idx);
+                                setPromptZoomLevel(100);
+                              }}
+                              className={`h-[42px] flex items-center gap-1.5 text-[13px] font-bold border-b-2 whitespace-nowrap transition-colors cursor-pointer ${
+                                isTabActive
+                                  ? 'border-[#2F6FA8] text-[#1F4E79]'
+                                  : 'border-transparent text-[#6B5560] hover:text-[#3B2A35]'
+                              }`}
+                            >
+                              <FileText className="w-4 h-4" />
+                              <span>{att.originalName}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Thanh công cụ xem / tải đề bài */}
+                      {activeAttachment && (
+                        <div className="min-h-[46px] px-4 py-1.5 bg-[#E9F3FF] border-b border-[#F3D9E3] flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            {activeAttachment.fileType === 'IMAGE' && (
+                              <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-[10px] border border-[#CFE8FF] text-[#1F4E79] text-[12px] font-bold">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setPromptZoomLevel((z) => Math.max(60, z - 15))
+                                  }
+                                  className="p-0.5 hover:bg-[#E9F3FF] rounded cursor-pointer"
+                                >
+                                  <Minus className="w-3.5 h-3.5" />
+                                </button>
+                                <span className="px-1 min-w-[42px] text-center">
+                                  {promptZoomLevel}%
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setPromptZoomLevel((z) => Math.min(180, z + 15))
+                                  }
+                                  className="p-0.5 hover:bg-[#E9F3FF] rounded cursor-pointer"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+
+                            {(activeAttachment.fileType === 'PDF' ||
+                              activeAttachment.fileType === 'IMAGE') && (
+                              <button
+                                type="button"
+                                onClick={() => setIsFullscreenPrompt(true)}
+                                className="h-8 px-2.5 rounded-[10px] bg-white border border-[#CFE8FF] text-[#1F4E79] hover:bg-[#DCEBFA] inline-flex items-center gap-1.5 text-[12px] font-bold cursor-pointer"
+                              >
+                                <Maximize2 className="w-3.5 h-3.5" />
+                                <span>Xem rộng</span>
+                              </button>
+                            )}
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemovePage(pageNum)}
-                            aria-label={`Xóa Trang ${idx + 1}`}
-                            className="absolute -top-1.5 -right-1.5 w-6 h-6 lg:w-5 lg:h-5 rounded-full bg-white border border-[#F3D9E3] text-[#3B2A35] hover:bg-[#FFE0EB] hover:text-[#A61E4D] shadow-2xs flex items-center justify-center transition-colors cursor-pointer z-20"
+
+                          <a
+                            href={getFileDownloadUrl(
+                              activeAttachment.url,
+                              activeAttachment.originalName
+                            )}
+                            download={activeAttachment.originalName}
+                            className="h-[34px] px-3.5 rounded-[10px] bg-white border border-[#2F6FA8] text-[#2F6FA8] hover:bg-[#DCEBFA] text-[12px] font-bold inline-flex items-center gap-1.5"
                           >
-                            <X className="w-3 h-3" strokeWidth={2} />
-                          </button>
+                            <Download className="w-3.5 h-3.5" />
+                            <span>Tải về ({formatBytes(activeAttachment.sizeBytes)})</span>
+                          </a>
                         </div>
-                        <span className="text-[12px] font-bold text-[#3B2A35] mt-1 leading-none">
-                          Trang {idx + 1}
+                      )}
+
+                      {/* Nội dung xem trực tiếp Đề bài */}
+                      {activeAttachment && (
+                        <div className="h-[320px] bg-[#F7FBFF] overflow-auto p-3 flex items-center justify-center">
+                          {activeAttachment.fileType === 'PDF' ? (
+                            <iframe
+                              src={getFileViewUrl(activeAttachment.url)}
+                              title={activeAttachment.originalName}
+                              className="w-full h-full rounded-[8px] border border-[#F3D9E3] bg-white"
+                            />
+                          ) : activeAttachment.fileType === 'IMAGE' ? (
+                            <img
+                              src={getFileViewUrl(activeAttachment.url)}
+                              alt={activeAttachment.originalName}
+                              style={{
+                                transform: `scale(${promptZoomLevel / 100})`,
+                                transformOrigin: 'top center',
+                              }}
+                              className="max-w-full max-h-full object-contain rounded-[8px] shadow-xs transition-transform"
+                            />
+                          ) : (
+                            <div className="bg-white border border-[#F3D9E3] rounded-[14px] p-6 max-w-[420px] text-center space-y-3 shadow-2xs">
+                              <div className="flex justify-center">
+                                {renderFileTypeIcon(activeAttachment.fileType)}
+                              </div>
+                              <div>
+                                <div className="font-bold text-[15px] text-[#3B2A35] break-words">
+                                  {activeAttachment.originalName}
+                                </div>
+                                <div className="text-[12px] text-[#6B5560] mt-0.5">
+                                  Tệp {activeAttachment.fileType} ·{' '}
+                                  {formatBytes(activeAttachment.sizeBytes)}
+                                </div>
+                              </div>
+                              <a
+                                href={getFileDownloadUrl(
+                                  activeAttachment.url,
+                                  activeAttachment.originalName
+                                )}
+                                download={activeAttachment.originalName}
+                                className="inline-flex items-center gap-2 h-[40px] px-5 rounded-[10px] bg-[#2F6FA8] text-white text-[13px] font-bold"
+                              >
+                                <Download className="w-4 h-4" />
+                                <span>Tải tệp đề bài về máy</span>
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    !currentStudentAssignment.instructions && (
+                      <div className="p-6 text-center text-[13px] text-[#6B5560]">
+                        Bài tập này không đính kèm tệp đề bài. Em hãy đọc tiêu đề và nộp ảnh vở bài làm bên dưới nhé!
+                      </div>
+                    )
+                  )}
+                </div>
+
+                {/* KHU VỰC NỘP BÀI / SỬA BÀI LÀM HOẶC XEM ĐIỂM */}
+                {isUploadFormVisible ? (
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <div className="lg:col-span-8 bg-white border border-[#F3D9E3] rounded-[16px] shadow-card p-4 flex flex-col gap-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-playfair text-[17px] font-bold text-[#3B2A35]">
+                          {isEditingSubmission
+                            ? 'Chỉnh sửa ảnh bài làm'
+                            : 'Bài làm của em'}
+                        </h3>
+                        <span className="text-[12px] font-bold text-[#1F4E79]">
+                          {keptSubmissionPhotos.length + draftNewPhotos.length}/10 ảnh
                         </span>
                       </div>
-                    ))}
 
-                    <div className="flex flex-col items-center flex-shrink-0">
-                      <button
-                        type="button"
+                      <input
+                        ref={studentFileInputRef}
+                        type="file"
+                        multiple
+                        accept=".jpg,.jpeg,.png,.webp,image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          handleStudentPickPhotos(e.target.files);
+                          e.target.value = '';
+                        }}
+                      />
+
+                      <div
                         onClick={() => studentFileInputRef.current?.click()}
-                        className="w-[96px] h-[128px] rounded-[10px] border-2 border-dashed border-[#8EC5FC] bg-[#F7FBFF] hover:bg-[#E9F3FF] text-[#2F6FA8] flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer"
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          handleStudentPickPhotos(e.dataTransfer.files);
+                        }}
+                        className="border-2 border-dashed border-[#8EC5FC] rounded-[14px] bg-[#F7FBFF] hover:bg-[#E9F3FF]/60 px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer transition-colors"
                       >
-                        <Plus className="w-5 h-5 text-[#2F6FA8]" strokeWidth={1.75} />
-                        <span className="text-[12px] font-bold text-[#2F6FA8]">+ Thêm ảnh</span>
-                      </button>
-                    </div>
-                  </div>
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-[10px] bg-[#E9F3FF] text-[#2F6FA8] flex items-center justify-center flex-shrink-0">
+                            <Camera className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-[13px] font-bold text-[#3B2A35]">
+                              Chụp ảnh hoặc chọn ảnh vở bài làm
+                            </div>
+                            <div className="text-[12px] text-[#6B5560]">
+                              JPG, PNG, WEBP · Tối đa 10 ảnh · Mỗi ảnh dưới 10 MB
+                            </div>
+                          </div>
+                        </div>
 
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-0.5">
-                    <span className="text-[12px] font-semibold text-[#6B5560]">
-                      Có thể sửa bài nộp trước hạn
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        showToast(
-                          `Đã nộp thành công ${uploadedPages.length} trang ảnh bài làm cho Chị Vân!`
-                        )
-                      }
-                      className="w-full sm:w-auto h-[48px] px-6 rounded-[12px] bg-[#D6336C] hover:opacity-95 text-white text-[14px] font-bold shadow-xs transition-opacity cursor-pointer"
-                    >
-                      Nộp bài
-                    </button>
-                  </div>
-                </div>
-
-                <div className="lg:col-span-3 lg:h-[352px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card p-4 flex flex-col justify-between gap-3 lg:gap-0 overflow-hidden">
-                  <h3 className="font-playfair text-[17px] font-bold text-[#3B2A35] leading-tight">
-                    Nhận xét và điểm
-                  </h3>
-
-                  <div className="my-auto flex flex-col items-center text-center px-2 py-2">
-                    <div className="w-[48px] h-[48px] rounded-full bg-[#EFE9ED] flex items-center justify-center mb-3">
-                      <Hourglass className="w-5 h-5 text-[#6B5560]" strokeWidth={1.75} />
-                    </div>
-                    <div className="font-playfair text-[18px] font-bold text-[#3B2A35] leading-snug">
-                      Chưa có điểm
-                    </div>
-                    <p className="font-nunito text-[14px] font-medium text-[#6B5560] mt-1 leading-relaxed">
-                      Thầy cô sẽ chấm sau khi em nộp bài.
-                    </p>
-                  </div>
-
-                  <div className="h-2" />
-                </div>
-              </div>
-            ) : (
-              <div className="lg:h-[250px] grid grid-cols-1 lg:grid-cols-9 gap-4 lg:gap-[24px] flex-shrink-0">
-                <div className="lg:col-span-5 lg:h-[250px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card p-4 flex flex-col justify-between gap-3 lg:gap-0 overflow-hidden">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="font-playfair text-[17px] font-bold text-[#3B2A35]">
-                      Bài làm của em
-                    </h3>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] text-[12px] font-bold">
-                      <Check className="w-3.5 h-3.5 text-[#1F4E79]" strokeWidth={2.2} />
-                      <span>Đã nộp 20:14, 11/11/2026</span>
-                    </span>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-4 lg:gap-5 my-auto">
-                    <div
-                      onClick={() => setPreviewNotebookPage(1)}
-                      className="group flex flex-col items-center cursor-pointer"
-                    >
-                      <div className="relative transition-transform group-hover:-translate-y-0.5 shadow-2xs rounded-[10px]">
-                        <NotebookThumbnailSvg pageNumber={1} size="104x140" />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            studentFileInputRef.current?.click();
+                          }}
+                          className="h-[34px] px-3 rounded-[10px] bg-white border border-[#2F6FA8] text-[#2F6FA8] text-[12px] font-bold cursor-pointer"
+                        >
+                          Chọn từ máy
+                        </button>
                       </div>
-                      <span className="text-[12px] font-bold text-[#3B2A35] mt-1">
-                        Trang 1
-                      </span>
-                    </div>
 
-                    <div
-                      onClick={() => setPreviewNotebookPage(2)}
-                      className="group flex flex-col items-center cursor-pointer"
-                    >
-                      <div className="relative transition-transform group-hover:-translate-y-0.5 shadow-2xs rounded-[10px]">
-                        <NotebookThumbnailSvg pageNumber={2} size="104x140" />
+                      {/* Dải thumbnail ảnh thật */}
+                      <div className="flex items-start gap-3 overflow-x-auto py-1">
+                        {keptSubmissionPhotos.map((photo, idx) => (
+                          <div
+                            key={photo.id}
+                            className="flex flex-col items-center flex-shrink-0"
+                          >
+                            <div className="relative">
+                              <img
+                                src={getFileViewUrl(photo.url)}
+                                alt={`Trang ${idx + 1}`}
+                                onClick={() => setPreviewPhotoModalIndex(idx)}
+                                className="w-[92px] h-[122px] object-cover rounded-[10px] border border-[#F3D9E3] cursor-pointer shadow-2xs"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveKeptPhoto(photo.id)}
+                                className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-white border border-[#F3D9E3] text-[#B02525] hover:bg-[#FFE3E3] flex items-center justify-center shadow-2xs cursor-pointer"
+                              >
+                                <X className="w-3.5 h-3.5" strokeWidth={2} />
+                              </button>
+                            </div>
+                            <span className="text-[11px] font-bold text-[#3B2A35] mt-1">
+                              Trang {idx + 1}
+                            </span>
+                          </div>
+                        ))}
+
+                        {draftNewPhotos.map((draft, idx) => {
+                          const displayIdx = keptSubmissionPhotos.length + idx;
+                          return (
+                            <div
+                              key={draft.tempId}
+                              className="flex flex-col items-center flex-shrink-0"
+                            >
+                              <div className="relative">
+                                <img
+                                  src={draft.previewUrl}
+                                  alt={`Trang ${displayIdx + 1}`}
+                                  onClick={() => setPreviewPhotoModalIndex(displayIdx)}
+                                  className="w-[92px] h-[122px] object-cover rounded-[10px] border-2 border-[#8EC5FC] cursor-pointer shadow-2xs"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveDraftNewPhoto(draft.tempId)}
+                                  className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-white border border-[#F3D9E3] text-[#B02525] hover:bg-[#FFE3E3] flex items-center justify-center shadow-2xs cursor-pointer"
+                                >
+                                  <X className="w-3.5 h-3.5" strokeWidth={2} />
+                                </button>
+                              </div>
+                              <span className="text-[11px] font-bold text-[#2F6FA8] mt-1">
+                                Trang {displayIdx + 1} (Mới)
+                              </span>
+                            </div>
+                          );
+                        })}
+
+                        {keptSubmissionPhotos.length + draftNewPhotos.length < 10 && (
+                          <button
+                            type="button"
+                            onClick={() => studentFileInputRef.current?.click()}
+                            className="w-[92px] h-[122px] rounded-[10px] border-2 border-dashed border-[#8EC5FC] bg-[#F7FBFF] hover:bg-[#E9F3FF] text-[#2F6FA8] flex flex-col items-center justify-center gap-1 flex-shrink-0 cursor-pointer"
+                          >
+                            <Plus className="w-5 h-5" />
+                            <span className="text-[11px] font-bold">Thêm ảnh</span>
+                          </button>
+                        )}
                       </div>
-                      <span className="text-[12px] font-bold text-[#3B2A35] mt-1">
-                        Trang 2
-                      </span>
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                        <span
+                          className={`text-[12px] font-semibold ${
+                            isDeadlinePassed ? 'text-[#A61E4D]' : 'text-[#6B5560]'
+                          }`}
+                        >
+                          {isDeadlinePassed
+                            ? 'Đã qua hạn nộp — bài gửi sẽ được gắn nhãn Nộp muộn'
+                            : 'Em có thể sửa lại ảnh bài nộp khi thầy cô chưa chấm'}
+                        </span>
+
+                        <div className="flex items-center gap-2">
+                          {isEditingSubmission && (
+                            <button
+                              type="button"
+                              disabled={isSubmittingWork}
+                              onClick={handleCancelEditPendingSubmission}
+                              className="h-[42px] px-4 rounded-[12px] bg-[#EFE9ED] text-[#3B2A35] text-[13px] font-bold cursor-pointer"
+                            >
+                              Hủy sửa
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            disabled={isSubmittingWork}
+                            onClick={handleStudentSubmitWork}
+                            className="h-[44px] px-6 rounded-[12px] bg-[#D6336C] hover:opacity-95 text-white text-[13px] font-bold shadow-xs inline-flex items-center gap-2 disabled:opacity-60 cursor-pointer"
+                          >
+                            {isSubmittingWork && (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            )}
+                            <span>
+                              {isEditingSubmission ? 'Lưu cập nhật bài nộp' : 'Nộp bài'}
+                            </span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="flex flex-col justify-center gap-1.5 pl-1">
-                      <button
-                        type="button"
-                        onClick={() => setPreviewNotebookPage(1)}
-                        className="inline-flex items-center gap-1.5 text-[13px] font-bold text-[#2F6FA8] hover:underline cursor-pointer"
-                      >
-                        <ZoomIn className="w-4 h-4 text-[#2F6FA8]" strokeWidth={1.75} />
-                        <span>Xem lớn</span>
-                      </button>
-                      <span className="text-[12px] text-[#6B5560]">
-                        2 ảnh trang vở đã nộp
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="text-[12px] font-medium text-[#6B5560] leading-none">
-                    Bài đã chấm nên không thể sửa.
-                  </div>
-                </div>
-
-                <div className="lg:col-span-4 lg:h-[250px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card p-4 flex flex-col justify-between gap-3 lg:gap-0 overflow-hidden">
-                  <div className="flex items-start justify-between">
-                    <div>
+                    <div className="lg:col-span-4 bg-white border border-[#F3D9E3] rounded-[16px] shadow-card p-4 flex flex-col justify-between">
                       <h3 className="font-playfair text-[17px] font-bold text-[#3B2A35]">
                         Nhận xét và điểm
                       </h3>
-                      <div className="flex items-center gap-2 mt-2">
-                        <div className="w-9 h-9 rounded-[10px] bg-[#FFE0EB] text-[#A61E4D] font-bold text-[13px] flex items-center justify-center flex-shrink-0">
-                          CV
+                      <div className="my-auto py-6 flex flex-col items-center text-center">
+                        <div className="w-12 h-12 rounded-full bg-[#EFE9ED] flex items-center justify-center mb-2.5">
+                          <Hourglass className="w-5 h-5 text-[#6B5560]" />
                         </div>
-                        <span className="text-[12px] font-semibold text-[#6B5560] leading-tight">
-                          <strong className="text-[#3B2A35]">Chị Vân</strong> · chấm 08:30, 12/11/2026
-                        </span>
+                        <div className="font-playfair text-[18px] font-bold text-[#3B2A35]">
+                          Chưa có điểm
+                        </div>
+                        <p className="text-[13px] text-[#6B5560] mt-1">
+                          Thầy cô sẽ chấm điểm và gửi nhận xét sau khi em nộp bài.
+                        </p>
+                      </div>
+                      <div />
+                    </div>
+                  </div>
+                ) : (
+                  /* TRẠNG THÁI ĐÃ NỘP (CHỜ CHẤM HOẶC ĐÃ CHẤM) */
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <div className="lg:col-span-6 bg-white border border-[#F3D9E3] rounded-[16px] shadow-card p-4 flex flex-col justify-between gap-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h3 className="font-playfair text-[17px] font-bold text-[#3B2A35]">
+                          Bài làm của em
+                        </h3>
+                        {currentStudentAssignment.submission && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] text-[12px] font-bold">
+                            <Check className="w-3.5 h-3.5" strokeWidth={2.2} />
+                            <span>
+                              Đã nộp{' '}
+                              {formatDateTimeVN(
+                                currentStudentAssignment.submission.submittedAt
+                              )}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3 overflow-x-auto py-1">
+                        {(currentStudentAssignment.submission?.photos || []).map(
+                          (photo, idx) => (
+                            <div
+                              key={photo.id}
+                              onClick={() => setPreviewPhotoModalIndex(idx)}
+                              className="flex flex-col items-center flex-shrink-0 cursor-pointer group"
+                            >
+                              <img
+                                src={getFileViewUrl(photo.url)}
+                                alt={`Trang ${idx + 1}`}
+                                className="w-[92px] h-[122px] object-cover rounded-[10px] border border-[#F3D9E3] group-hover:border-[#2F6FA8] transition-colors shadow-2xs"
+                              />
+                              <span className="text-[11px] font-bold text-[#3B2A35] mt-1">
+                                Trang {idx + 1}
+                              </span>
+                            </div>
+                          )
+                        )}
+
+                        {modalPreviewUrls.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setPreviewPhotoModalIndex(0)}
+                            className="px-3 py-2 rounded-[10px] bg-[#E9F3FF] text-[#2F6FA8] text-[12px] font-bold inline-flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
+                          >
+                            <ZoomIn className="w-4 h-4" />
+                            <span>Xem lớn</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        {currentStudentAssignment.status === 'pending' ? (
+                          <>
+                            <span className="text-[12px] font-medium text-[#6B5560]">
+                              Bài đang chờ chấm, em vẫn có thể cập nhật lại ảnh.
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleStartEditPendingSubmission}
+                              className="h-[36px] px-3.5 rounded-[10px] bg-[#E9F3FF] text-[#1F4E79] hover:bg-[#DCEBFA] text-[12px] font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              <span>Sửa bài nộp</span>
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-[12px] font-medium text-[#6B5560]">
+                            Bài đã được giáo viên chấm điểm nên không thể chỉnh sửa.
+                          </span>
+                        )}
                       </div>
                     </div>
 
-                    <div className="flex items-baseline flex-shrink-0">
-                      <span className="font-playfair text-[44px] lg:text-[56px] font-bold text-[#1F4E79] leading-none">
-                        8,5
-                      </span>
-                      <span className="font-nunito text-[18px] lg:text-[20px] font-bold text-[#6B5560] ml-0.5">
-                        /10
-                      </span>
+                    <div className="lg:col-span-6 bg-white border border-[#F3D9E3] rounded-[16px] shadow-card p-4 flex flex-col justify-between gap-3">
+                      {currentStudentAssignment.status === 'graded' &&
+                      currentStudentAssignment.submission ? (
+                        <>
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <h3 className="font-playfair text-[17px] font-bold text-[#3B2A35]">
+                                Nhận xét và điểm
+                              </h3>
+                              <div className="flex items-center gap-2 mt-2">
+                                <div className="w-8 h-8 rounded-[10px] bg-[#FFE0EB] text-[#A61E4D] font-bold text-[12px] flex items-center justify-center">
+                                  {getInitialsFromName(
+                                    currentStudentAssignment.submission.gradedByName
+                                  )}
+                                </div>
+                                <span className="text-[12px] font-semibold text-[#6B5560]">
+                                  <strong className="text-[#3B2A35]">
+                                    {currentStudentAssignment.submission.gradedByName ||
+                                      'Chị Vân'}
+                                  </strong>{' '}
+                                  · chấm{' '}
+                                  {formatDateTimeVN(
+                                    currentStudentAssignment.submission.gradedAt
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-baseline flex-shrink-0">
+                              <span className="font-playfair text-[44px] lg:text-[52px] font-bold text-[#1F4E79] leading-none">
+                                {formatScoreVN(currentStudentAssignment.submission.score)}
+                              </span>
+                              <span className="text-[18px] font-bold text-[#6B5560] ml-0.5">
+                                /10
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="text-[13px] text-[#3B2A35] leading-relaxed bg-[#FFF6F9] p-3.5 rounded-[12px] border border-[#F3D9E3]">
+                            {currentStudentAssignment.submission.comment ? (
+                              <>&ldquo;{currentStudentAssignment.submission.comment}&rdquo;</>
+                            ) : (
+                              <span className="italic text-[#6B5560]">
+                                Giáo viên đã chấm điểm (không có lời phê đính kèm).
+                              </span>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <h3 className="font-playfair text-[17px] font-bold text-[#3B2A35]">
+                            Nhận xét và điểm
+                          </h3>
+                          <div className="my-auto py-5 flex flex-col items-center text-center">
+                            <div className="w-12 h-12 rounded-full bg-[#EFE9ED] flex items-center justify-center mb-2.5">
+                              <Hourglass className="w-5 h-5 text-[#6B5560]" />
+                            </div>
+                            <div className="font-playfair text-[18px] font-bold text-[#3B2A35]">
+                              Đang chờ thầy cô chấm bài
+                            </div>
+                            <p className="text-[13px] text-[#6B5560] mt-1">
+                              Điểm và lời phê chi tiết sẽ xuất hiện ngay khi thầy cô chấm xong nhé!
+                            </p>
+                          </div>
+                          <div />
+                        </>
+                      )}
                     </div>
                   </div>
-
-                  <p className="font-nunito text-[14px] text-[#3B2A35] leading-snug bg-[#FFF6F9] p-3 rounded-[12px] border border-[#F3D9E3]">
-                    &ldquo;Em hiểu đúng tâm trạng cô đơn và nỗi nhớ của Kiều. Phần phân tích hình ảnh &ldquo;cửa bể chiều hôm&rdquo; rất tốt, cần thêm dẫn chứng ở câu 1. Chữ viết đẹp, trình bày sạch sẽ.&rdquo;
-                  </p>
-                </div>
+                )}
               </div>
             )}
           </div>
-        </div>
+        )}
 
+        {/* Hộp thoại xem lớn ảnh trang vở của Học sinh */}
         <Dialog
-          open={previewNotebookPage !== null}
-          onOpenChange={(open) => !open && setPreviewNotebookPage(null)}
+          open={previewPhotoModalIndex !== null}
+          onOpenChange={(open) => !open && setPreviewPhotoModalIndex(null)}
         >
-          <DialogContent className="sm:max-w-[680px] p-6 rounded-[12px] bg-white border border-[#F3D9E3]">
+          <DialogContent className="sm:max-w-[720px] p-5 rounded-[14px] bg-white border border-[#F3D9E3]">
             <DialogHeader>
-              <DialogTitle className="font-playfair text-[22px] font-bold text-[#3B2A35]">
-                Bài làm của em – Trang {previewNotebookPage}
+              <DialogTitle className="font-playfair text-[20px] font-bold text-[#3B2A35]">
+                Bài làm của em –{' '}
+                {previewPhotoModalIndex !== null
+                  ? modalPreviewUrls[previewPhotoModalIndex]?.label
+                  : ''}
               </DialogTitle>
-              <DialogDescription className="font-nunito text-[13px] text-[#6B5560]">
-                {currentAssignment.fullTitle}
+              <DialogDescription className="text-[13px] text-[#6B5560]">
+                {currentStudentAssignment?.title}
               </DialogDescription>
             </DialogHeader>
 
-            {previewNotebookPage && (
-              <div className="space-y-4">
-                <NotebookThumbnailSvg pageNumber={previewNotebookPage} size="large" />
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {[1, 2, 3].map((p) => (
-                      <button
-                        key={p}
-                        type="button"
-                        onClick={() => setPreviewNotebookPage(p)}
-                        className={`px-3 py-1.5 rounded-[10px] text-[13px] font-bold cursor-pointer ${
-                          previewNotebookPage === p
-                            ? 'bg-[#2F6FA8] text-white'
-                            : 'bg-[#E9F3FF] text-[#1F4E79]'
-                        }`}
-                      >
-                        Trang {p}
-                      </button>
-                    ))}
+            {previewPhotoModalIndex !== null &&
+              modalPreviewUrls[previewPhotoModalIndex] && (
+                <div className="space-y-3">
+                  <div className="bg-[#F7FBFF] p-3 rounded-[10px] border border-[#F3D9E3] max-h-[68dvh] overflow-auto flex justify-center">
+                    <img
+                      src={modalPreviewUrls[previewPhotoModalIndex].url}
+                      alt={modalPreviewUrls[previewPhotoModalIndex].label}
+                      className="max-w-full max-h-[62dvh] object-contain rounded-[8px]"
+                    />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewNotebookPage(null)}
-                    className="px-4 py-1.5 rounded-[10px] bg-[#EFE9ED] text-[#3B2A35] text-[13px] font-bold cursor-pointer"
-                  >
-                    Đóng
-                  </button>
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {modalPreviewUrls.map((item, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setPreviewPhotoModalIndex(idx)}
+                          className={`px-3 py-1.5 rounded-[9px] text-[12px] font-bold cursor-pointer ${
+                            previewPhotoModalIndex === idx
+                              ? 'bg-[#2F6FA8] text-white'
+                              : 'bg-[#E9F3FF] text-[#1F4E79]'
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewPhotoModalIndex(null)}
+                      className="px-4 py-1.5 rounded-[9px] bg-[#EFE9ED] text-[#3B2A35] text-[12px] font-bold cursor-pointer"
+                    >
+                      Đóng
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isFullscreenViewer} onOpenChange={setIsFullscreenViewer}>
-          <DialogContent className="sm:max-w-[760px] p-6 rounded-[12px] bg-white border border-[#F3D9E3]">
+        {/* Hộp thoại xem rộng Tệp đề bài (PDF / Ảnh) của Học sinh */}
+        <Dialog open={isFullscreenPrompt} onOpenChange={setIsFullscreenPrompt}>
+          <DialogContent className="sm:max-w-[880px] p-5 rounded-[14px] bg-white border border-[#F3D9E3]">
             <DialogHeader>
-              <DialogTitle className="font-playfair text-[22px] font-bold text-[#3B2A35]">
-                Đề bài.pdf
+              <DialogTitle className="font-playfair text-[20px] font-bold text-[#3B2A35]">
+                {activeAttachment?.originalName || 'Đề bài'}
               </DialogTitle>
-              <DialogDescription className="font-nunito text-[13px] text-[#6B5560]">
-                {currentAssignment.fullTitle} · Trang {currentPage} / 2
+              <DialogDescription className="text-[13px] text-[#6B5560]">
+                {currentStudentAssignment?.title}
               </DialogDescription>
             </DialogHeader>
-            <div className="bg-[#F7FBFF] p-5 rounded-[10px] border border-[#F3D9E3]">
-              <div className="bg-white p-6 rounded-[10px] border border-[#F3D9E3] shadow-xs">
-                {renderDocumentContent()}
+            {activeAttachment && (
+              <div className="h-[72dvh] bg-[#F7FBFF] rounded-[10px] border border-[#F3D9E3] overflow-auto flex items-center justify-center p-2">
+                {activeAttachment.fileType === 'PDF' ? (
+                  <iframe
+                    src={getFileViewUrl(activeAttachment.url)}
+                    title={activeAttachment.originalName}
+                    className="w-full h-full rounded-[8px] border-0 bg-white"
+                  />
+                ) : (
+                  <img
+                    src={getFileViewUrl(activeAttachment.url)}
+                    alt={activeAttachment.originalName}
+                    className="max-w-full max-h-full object-contain rounded-[8px]"
+                  />
+                )}
               </div>
-            </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

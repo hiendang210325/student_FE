@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus,
   Bell,
@@ -14,243 +15,22 @@ import {
   Check,
   Shuffle,
   Info,
+  Loader2,
+  AlertCircle,
+  RotateCw,
+  UserCheck,
+  CalendarOff,
+  Pencil,
+  MapPin,
+  ArrowRight,
 } from 'lucide-react';
-
-// Kiểu dữ liệu cấu hình một lịch học cố định hàng tuần
-interface FixedSchedule {
-  id: number;
-  className: string;
-  weekdays: string;
-  timeRange: string;
-  bgColor: string;
-  textColor: string;
-  isToday?: boolean;
-}
-
-// Kiểu dữ liệu tiết học hiển thị trên lưới thời khóa biểu
-interface ScheduleSession {
-  id: string;
-  dayIndex: number; // 0: T2, 1: T3, 2: T4, 3: T5, 4: T6, 5: T7, 6: CN
-  className: string;
-  timeRange: string;
-  startHour: number; // Ví dụ: 15.5 tương đương 15:30
-  durationHours: number; // Ví dụ: 1.5 tiếng (90 phút)
-  bgColor: string;
-  textColor: string;
-  hasPopover?: boolean;
-}
-
-// Danh sách 6 ô lịch cố định bên cột trái
-const INITIAL_FIXED_SCHEDULES: FixedSchedule[] = [
-  {
-    id: 1,
-    className: 'Lớp 6',
-    weekdays: 'Thứ 4 · 6',
-    timeRange: '19:00–20:30',
-    bgColor: '#C4ECF7',
-    textColor: '#0E5470',
-  },
-  {
-    id: 2,
-    className: 'Lớp 7',
-    weekdays: 'Thứ 3 · 5',
-    timeRange: '15:30–17:00',
-    bgColor: '#F2CFF0',
-    textColor: '#7A1F7A',
-    isToday: true,
-  },
-  {
-    id: 3,
-    className: 'Lớp 8',
-    weekdays: 'Thứ 2 · 4',
-    timeRange: '15:30–17:00',
-    bgColor: '#DADDFB',
-    textColor: '#3B3F9B',
-  },
-  {
-    id: 4,
-    className: 'Lớp 9',
-    weekdays: 'Thứ 2 · 4 · 6',
-    timeRange: '17:30–19:00',
-    bgColor: '#FFD1E3',
-    textColor: '#9C1F4B',
-  },
-  {
-    id: 5,
-    className: 'Lớp 10',
-    weekdays: 'Thứ 3 · 5 · 7',
-    timeRange: '18:00–19:30',
-    bgColor: '#CFE3FF',
-    textColor: '#1F4E79',
-    isToday: true,
-  },
-  {
-    id: 6,
-    className: 'Lớp 12',
-    weekdays: 'Thứ 7 · CN',
-    timeRange: '08:00–10:00',
-    bgColor: '#FFC9D0',
-    textColor: '#A3243B',
-  },
-];
-
-// Danh sách đúng 14 buổi học trong tuần theo mô hình lịch cố định
-const WEEK_SESSIONS: ScheduleSession[] = [
-  // Thứ 2 (T2 09)
-  {
-    id: 's-t2-8',
-    dayIndex: 0,
-    className: 'Lớp 8',
-    timeRange: '15:30–17:00',
-    startHour: 15.5,
-    durationHours: 1.5,
-    bgColor: '#DADDFB',
-    textColor: '#3B3F9B',
-  },
-  {
-    id: 's-t2-9',
-    dayIndex: 0,
-    className: 'Lớp 9',
-    timeRange: '17:30–19:00',
-    startHour: 17.5,
-    durationHours: 1.5,
-    bgColor: '#FFD1E3',
-    textColor: '#9C1F4B',
-  },
-
-  // Thứ 3 (T3 10 - Hôm nay)
-  {
-    id: 's-t3-7',
-    dayIndex: 1,
-    className: 'Lớp 7',
-    timeRange: '15:30–17:00',
-    startHour: 15.5,
-    durationHours: 1.5,
-    bgColor: '#F2CFF0',
-    textColor: '#7A1F7A',
-  },
-  {
-    id: 's-t3-10',
-    dayIndex: 1,
-    className: 'Lớp 10',
-    timeRange: '18:00–19:30',
-    startHour: 18.0,
-    durationHours: 1.5,
-    bgColor: '#CFE3FF',
-    textColor: '#1F4E79',
-    hasPopover: true, // Có đính kèm cửa sổ popover tương tác mẫu
-  },
-
-  // Thứ 4 (T4 11)
-  {
-    id: 's-t4-8',
-    dayIndex: 2,
-    className: 'Lớp 8',
-    timeRange: '15:30–17:00',
-    startHour: 15.5,
-    durationHours: 1.5,
-    bgColor: '#DADDFB',
-    textColor: '#3B3F9B',
-  },
-  {
-    id: 's-t4-9',
-    dayIndex: 2,
-    className: 'Lớp 9',
-    timeRange: '17:30–19:00',
-    startHour: 17.5,
-    durationHours: 1.5,
-    bgColor: '#FFD1E3',
-    textColor: '#9C1F4B',
-  },
-  {
-    id: 's-t4-6',
-    dayIndex: 2,
-    className: 'Lớp 6',
-    timeRange: '19:00–20:30',
-    startHour: 19.0,
-    durationHours: 1.5,
-    bgColor: '#C4ECF7',
-    textColor: '#0E5470',
-  },
-
-  // Thứ 5 (T5 12)
-  {
-    id: 's-t5-7',
-    dayIndex: 3,
-    className: 'Lớp 7',
-    timeRange: '15:30–17:00',
-    startHour: 15.5,
-    durationHours: 1.5,
-    bgColor: '#F2CFF0',
-    textColor: '#7A1F7A',
-  },
-  {
-    id: 's-t5-10',
-    dayIndex: 3,
-    className: 'Lớp 10',
-    timeRange: '18:00–19:30',
-    startHour: 18.0,
-    durationHours: 1.5,
-    bgColor: '#CFE3FF',
-    textColor: '#1F4E79',
-  },
-
-  // Thứ 6 (T6 13)
-  {
-    id: 's-t6-9',
-    dayIndex: 4,
-    className: 'Lớp 9',
-    timeRange: '17:30–19:00',
-    startHour: 17.5,
-    durationHours: 1.5,
-    bgColor: '#FFD1E3',
-    textColor: '#9C1F4B',
-  },
-  {
-    id: 's-t6-6',
-    dayIndex: 4,
-    className: 'Lớp 6',
-    timeRange: '19:00–20:30',
-    startHour: 19.0,
-    durationHours: 1.5,
-    bgColor: '#C4ECF7',
-    textColor: '#0E5470',
-  },
-
-  // Thứ 7 (T7 14)
-  {
-    id: 's-t7-12',
-    dayIndex: 5,
-    className: 'Lớp 12',
-    timeRange: '08:00–10:00',
-    startHour: 8.0,
-    durationHours: 2.0,
-    bgColor: '#FFC9D0',
-    textColor: '#A3243B',
-  },
-  {
-    id: 's-t7-10',
-    dayIndex: 5,
-    className: 'Lớp 10',
-    timeRange: '18:00–19:30',
-    startHour: 18.0,
-    durationHours: 1.5,
-    bgColor: '#CFE3FF',
-    textColor: '#1F4E79',
-  },
-
-  // Chủ Nhật (CN 15)
-  {
-    id: 's-cn-12',
-    dayIndex: 6,
-    className: 'Lớp 12',
-    timeRange: '08:00–10:00',
-    startHour: 8.0,
-    durationHours: 2.0,
-    bgColor: '#FFC9D0',
-    textColor: '#A3243B',
-  },
-];
+import { useAuthStore } from '@/store/useAuthStore';
+import { ROUTES } from '@/routes/paths';
+import { scheduleApi } from '../api/scheduleApi';
+import { ScheduleItem, WeekdayCode } from '../types/schedule.types';
+import { classApi } from '@/features/classes/api/classApi';
+import { ClassRoom } from '@/features/classes/types/class.types';
+import { ApiError } from '@/services/api/apiError';
 
 // Trục thời gian từ 07:00 đến 21:00 (14 khoảng giờ)
 const TIME_SLOTS = [
@@ -271,93 +51,13 @@ const TIME_SLOTS = [
   '21:00',
 ];
 
-// Cấu trúc một chip buổi dạy hiển thị trong ô lịch tháng
-interface MonthSessionChip {
-  time: string;
-  className: string;
+const WEEKDAY_ORDER: WeekdayCode[] = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+
+const DRAWER_WEEKDAY_OPTIONS: Array<{
+  key: WeekdayCode;
   label: string;
-  bgColor: string;
-  textColor: string;
-}
-
-// Cấu trúc dữ liệu cho một ô ngày trong bảng lịch tháng (42 ô: 26/10 -> 06/12)
-interface MonthDayCell {
-  id: string;
-  dayNumber: number;
-  isCurrentMonth: boolean;
-  isToday?: boolean;
-  chips: MonthSessionChip[];
-}
-
-// Định nghĩa mẫu chip của từng lớp theo đúng màu sắc và giờ học quy định
-const CHIP_LOP_8: MonthSessionChip = {
-  time: '15:30',
-  className: 'Lớp 8',
-  label: '15:30 Lớp 8',
-  bgColor: '#DADDFB',
-  textColor: '#3B3F9B',
-};
-
-const CHIP_LOP_9: MonthSessionChip = {
-  time: '17:30',
-  className: 'Lớp 9',
-  label: '17:30 Lớp 9',
-  bgColor: '#FFD1E3',
-  textColor: '#9C1F4B',
-};
-
-const CHIP_LOP_7: MonthSessionChip = {
-  time: '15:30',
-  className: 'Lớp 7',
-  label: '15:30 Lớp 7',
-  bgColor: '#F2CFF0',
-  textColor: '#7A1F7A',
-};
-
-const CHIP_LOP_10: MonthSessionChip = {
-  time: '18:00',
-  className: 'Lớp 10',
-  label: '18:00 Lớp 10',
-  bgColor: '#CFE3FF',
-  textColor: '#1F4E79',
-};
-
-const CHIP_LOP_6: MonthSessionChip = {
-  time: '19:00',
-  className: 'Lớp 6',
-  label: '19:00 Lớp 6',
-  bgColor: '#C4ECF7',
-  textColor: '#0E5470',
-};
-
-const CHIP_LOP_12: MonthSessionChip = {
-  time: '08:00',
-  className: 'Lớp 12',
-  label: '08:00 Lớp 12',
-  bgColor: '#FFC9D0',
-  textColor: '#A3243B',
-};
-
-// Danh sách các chip theo ngày trong tuần theo quy luật từ ngày 02/11 trở đi
-const WEEKLY_CHIPS: MonthSessionChip[][] = [
-  // 0: Thứ 2
-  [CHIP_LOP_8, CHIP_LOP_9],
-  // 1: Thứ 3
-  [CHIP_LOP_7, CHIP_LOP_10],
-  // 2: Thứ 4
-  [CHIP_LOP_8, CHIP_LOP_9, CHIP_LOP_6],
-  // 3: Thứ 5
-  [CHIP_LOP_7, CHIP_LOP_10],
-  // 4: Thứ 6
-  [CHIP_LOP_9, CHIP_LOP_6],
-  // 5: Thứ 7
-  [CHIP_LOP_12, CHIP_LOP_10],
-  // 6: Chủ Nhật
-  [CHIP_LOP_12],
-];
-
-// Các tùy chọn thứ trong tuần cho Side Drawer Thêm lịch dạy
-const DRAWER_WEEKDAY_OPTIONS = [
+  fullName: string;
+}> = [
   { key: 'T2', label: 'T2', fullName: 'Thứ 2' },
   { key: 'T3', label: 'T3', fullName: 'Thứ 3' },
   { key: 'T4', label: 'T4', fullName: 'Thứ 4' },
@@ -367,7 +67,6 @@ const DRAWER_WEEKDAY_OPTIONS = [
   { key: 'CN', label: 'CN', fullName: 'Chủ Nhật' },
 ];
 
-// 6 ô màu hình tròn chuẩn 32px cho Side Drawer
 const DRAWER_SWATCH_COLORS = [
   '#C4ECF7',
   '#F2CFF0',
@@ -377,58 +76,278 @@ const DRAWER_SWATCH_COLORS = [
   '#FFC9D0',
 ];
 
-export const SchedulePage: React.FC = () => {
-  // Trạng thái chế độ xem Tuần hoặc Tháng (mặc định là Tháng theo yêu cầu)
-  const [viewMode, setViewMode] = useState<'week' | 'month'>('month');
-  // Trạng thái hiển thị Popover nhỏ đính kèm vào Lớp 10
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  // Trạng thái mở Side Drawer Thêm lịch dạy
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  // Trạng thái mở Hộp thoại xác nhận Xóa lịch dạy (mặc định đóng, chỉ mở khi bấm nút Xóa lịch)
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  // Đối tượng lịch đang được chọn để xóa
-  const [deleteTarget, setDeleteTarget] = useState({
-    className: 'Lớp 10',
-    summary: 'Lớp 10 · Thứ 3, 5, 7 · 18:00–19:30',
-  });
-  // Trạng thái mở menu ba chấm của ô lịch cố định
-  const [activeTileMenuId, setActiveTileMenuId] = useState<number | null>(null);
-  // Thông báo phản hồi Toast
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
+const SWATCH_TEXT_MAP: Record<string, string> = {
+  '#c4ecf7': '#0E5470',
+  '#f2cff0': '#7A1F7A',
+  '#daddfb': '#3B3F9B',
+  '#ffd1e3': '#9C1F4B',
+  '#cfe3ff': '#1F4E79',
+  '#ffc9d0': '#A3243B',
+};
 
-  // Ngày/tháng/năm đang hiển thị trên lịch (mặc định 10/11/2026)
-  const [activeDate, setActiveDate] = useState<Date>(() => new Date(2026, 10, 10));
+const VIETNAMESE_DAY_NAMES = [
+  'Chủ Nhật',
+  'Thứ Hai',
+  'Thứ Ba',
+  'Thứ Tư',
+  'Thứ Năm',
+  'Thứ Sáu',
+  'Thứ Bảy',
+];
+
+// Định dạng Date -> YYYY-MM-DD theo múi giờ máy khách
+const formatYMD = (d: Date): string => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+// Định dạng YYYY-MM-DD -> DD/MM/YYYY
+const formatDMYFromYMD = (ymd: string): string => {
+  const [y, m, d] = ymd.split('-');
+  if (!y || !m || !d) return ymd;
+  return `${d}/${m}/${y}`;
+};
+
+// Lấy mã thứ ('T2'..'CN') từ đối tượng Date
+const getWeekdayCodeFromDate = (d: Date): WeekdayCode => {
+  const jsDay = d.getDay(); // 0 = CN, 1 = T2 ... 6 = T7
+  return jsDay === 0 ? 'CN' : (WEEKDAY_ORDER[jsDay - 1] as WeekdayCode);
+};
+
+// Chuyển chuỗi HH:mm thành số giờ thập phân (ví dụ "15:30" -> 15.5)
+const parseTimeDecimal = (timeStr: string): number => {
+  const [h, m] = timeStr.split(':').map(Number);
+  return (h || 0) + (m || 0) / 60;
+};
+
+// Định dạng danh sách thứ ngắn gọn trên thẻ Lịch cố định (VD: "Thứ 3 · 5 · 7")
+const formatShortWeekdays = (days: WeekdayCode[]): string => {
+  const sorted = [...days].sort(
+    (a, b) => WEEKDAY_ORDER.indexOf(a) - WEEKDAY_ORDER.indexOf(b)
+  );
+  if (sorted.length === 0) return '';
+  const parts = sorted.map((d, idx) => {
+    if (d === 'CN') return 'CN';
+    const num = d.replace('T', '');
+    return idx === 0 ? `Thứ ${num}` : num;
+  });
+  return parts.join(' · ');
+};
+
+// Định dạng danh sách thứ đầy đủ (VD: "Thứ 3, Thứ 5, Thứ 7")
+const formatFullWeekdays = (days: WeekdayCode[]): string => {
+  const sorted = [...days].sort(
+    (a, b) => WEEKDAY_ORDER.indexOf(a) - WEEKDAY_ORDER.indexOf(b)
+  );
+  return sorted
+    .map((k) => DRAWER_WEEKDAY_OPTIONS.find((opt) => opt.key === k)?.fullName || k)
+    .join(', ');
+};
+
+interface CalendarSessionInstance {
+  instanceId: string;
+  schedule: ScheduleItem;
+  dateStr: string; // YYYY-MM-DD
+  dayIndex: number; // 0: T2 .. 6: CN
+  startHour: number;
+  durationHours: number;
+  isCancelled: boolean;
+}
+
+interface MonthDayCell {
+  id: string;
+  dateStr: string;
+  dayNumber: number;
+  monthNumber: number;
+  yearNumber: number;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  sessions: CalendarSessionInstance[];
+}
+
+export const SchedulePage: React.FC = () => {
+  const navigate = useNavigate();
+  const { user, activeRole } = useAuthStore();
+  const isStudentView = user?.role === 'user' || activeRole === 'student';
+
+  // Thời gian thực hiện tại
+  const todayDate = useMemo(() => new Date(), []);
+  const todayYMD = useMemo(() => formatYMD(todayDate), [todayDate]);
+  const todayWeekdayCode = useMemo(() => getWeekdayCodeFromDate(todayDate), [todayDate]);
+
+  // Chế độ xem: Tháng hoặc Tuần
+  const [viewMode, setViewMode] = useState<'week' | 'month'>('month');
+
+  // Dữ liệu thực từ Backend
+  const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
+  const [classes, setClasses] = useState<ClassRoom[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Điều hướng lịch
+  const [activeDate, setActiveDate] = useState<Date>(() => new Date());
   const [isCalendarPickerOpen, setIsCalendarPickerOpen] = useState<boolean>(false);
-  const [pickerMonth, setPickerMonth] = useState<number>(11);
-  const [pickerYear, setPickerYear] = useState<number>(2026);
+  const [pickerMonth, setPickerMonth] = useState<number>(new Date().getMonth() + 1);
+  const [pickerYear, setPickerYear] = useState<number>(new Date().getFullYear());
   const [pickerMode, setPickerMode] = useState<'day' | 'month'>('day');
   const calendarPickerRef = useRef<HTMLDivElement>(null);
 
-  // Đóng popover lịch khi bấm ra ngoài
+  // Tương tác Menu 3 chấm, Popover chi tiết buổi học & Danh sách buổi học trong ngày (+N nữa)
+  const [activeTileMenuId, setActiveTileMenuId] = useState<string | null>(null);
+  const [selectedSession, setSelectedSession] = useState<CalendarSessionInstance | null>(null);
+  const [dayModalCell, setDayModalCell] = useState<MonthDayCell | null>(null);
+  const [isTogglingCancel, setIsTogglingCancel] = useState<boolean>(false);
+
+  // Side Drawer Thêm / Sửa lịch cố định
+  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
+  const [editingSchedule, setEditingSchedule] = useState<ScheduleItem | null>(null);
+  const [drawerClassId, setDrawerClassId] = useState<string>('');
+  const [drawerWeekdays, setDrawerWeekdays] = useState<WeekdayCode[]>(['T3', 'T5']);
+  const [drawerStartTime, setDrawerStartTime] = useState<string>('18:00');
+  const [drawerEndTime, setDrawerEndTime] = useState<string>('19:30');
+  const [drawerStartDate, setDrawerStartDate] = useState<string>(todayYMD);
+  const [drawerColor, setDrawerColor] = useState<string>('#CFE3FF');
+  const [drawerNote, setDrawerNote] = useState<string>('');
+  const [isSavingSchedule, setIsSavingSchedule] = useState<boolean>(false);
+  const [drawerError, setDrawerError] = useState<string | null>(null);
+
+  // Hộp thoại Xóa lịch cố định
+  const [deleteTarget, setDeleteTarget] = useState<ScheduleItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
+  // Toast phản hồi
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // Tải danh sách lịch học & danh sách lớp học thật
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const [schedRes, clsRes] = await Promise.all([
+        scheduleApi.getSchedules(),
+        classApi.getClasses().catch(() => ({ data: [] as ClassRoom[] })),
+      ]);
+      setSchedules(schedRes.data || []);
+      setClasses(clsRes.data || []);
+    } catch (err) {
+      console.error('Lỗi khi tải dữ liệu lịch học:', err);
+      setLoadError(
+        err instanceof ApiError
+          ? err.message
+          : 'Không thể kết nối máy chủ để tải dữ liệu lịch học.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    if (!isCalendarPickerOpen) return;
-    const handleClickOutside = (event: MouseEvent) => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchData();
+      showToast('Đã cập nhật lịch học mới nhất!');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Đóng menu / date picker khi click ra ngoài
+  useEffect(() => {
+    const handleGlobalClick = (event: MouseEvent) => {
+      setActiveTileMenuId(null);
       if (
+        isCalendarPickerOpen &&
         calendarPickerRef.current &&
         !calendarPickerRef.current.contains(event.target as Node)
       ) {
         setIsCalendarPickerOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('mousedown', handleGlobalClick);
+    return () => document.removeEventListener('mousedown', handleGlobalClick);
   }, [isCalendarPickerOpen]);
+
+  // Danh sách các lịch cố định ĐANG HOẠT ĐỘNG (isActive: true)
+  const activeSchedules = useMemo(
+    () => schedules.filter((s) => s.isActive),
+    [schedules]
+  );
+
+  // Tổng số buổi/tuần của các lịch cố định đang hoạt động
+  const totalSessionsPerWeek = useMemo(
+    () => activeSchedules.reduce((sum, s) => sum + (s.weekdays?.length || 0), 0),
+    [activeSchedules]
+  );
+
+  // Hàm kiểm tra và sinh danh sách buổi học diễn ra vào 1 ngày cụ thể (bao gồm lịch sử các lịch đã xóa trước endDate)
+  const getSessionsForDate = useCallback(
+    (dateObj: Date): CalendarSessionInstance[] => {
+      const dateStr = formatYMD(dateObj);
+      const weekdayCode = getWeekdayCodeFromDate(dateObj);
+      const dayIndex = WEEKDAY_ORDER.indexOf(weekdayCode);
+
+      const matched = schedules
+        .filter((s) => {
+          if (!s.weekdays?.includes(weekdayCode)) return false;
+          if (dateStr < s.startDate) return false;
+          if (s.endDate && dateStr > s.endDate) return false;
+          return true;
+        })
+        .map((s) => {
+          const startHour = parseTimeDecimal(s.startTime);
+          const endHour = parseTimeDecimal(s.endTime);
+          const durationHours = Math.max(0.5, endHour - startHour);
+          const isCancelled = Boolean(s.cancelledDates?.includes(dateStr));
+
+          return {
+            instanceId: `${s.id}_${dateStr}`,
+            schedule: s,
+            dateStr,
+            dayIndex,
+            startHour,
+            durationHours,
+            isCancelled,
+          };
+        })
+        .sort((a, b) => a.startHour - b.startHour);
+
+      return matched;
+    },
+    [schedules]
+  );
+
+  // Các buổi học của ngày HÔM NAY thật
+  const todaySessions = useMemo(
+    () => getSessionsForDate(todayDate),
+    [getSessionsForDate, todayDate]
+  );
+
+  const todayActiveCount = useMemo(
+    () => todaySessions.filter((s) => !s.isCancelled).length,
+    [todaySessions]
+  );
 
   const activeYear = activeDate.getFullYear();
   const activeMonth = activeDate.getMonth() + 1;
 
-  // Tạo 42 ô ngày (6 hàng × 7 cột từ T2 -> CN) động theo tháng/năm đang chọn
+  // Lưới 42 ô ngày cho chế độ Tháng
   const dynamicMonthCells = useMemo<MonthDayCell[]>(() => {
     const firstOfMonth = new Date(activeYear, activeMonth - 1, 1);
-    const jsDay = firstOfMonth.getDay(); // CN=0, T2=1...
+    const jsDay = firstOfMonth.getDay();
     const startOffset = jsDay === 0 ? 6 : jsDay - 1;
     const startDate = new Date(activeYear, activeMonth - 1, 1 - startOffset);
-    const scheduleStart = new Date(2026, 10, 2); // 02/11/2026
 
     const cells: MonthDayCell[] = [];
     for (let i = 0; i < 42; i++) {
@@ -437,27 +356,27 @@ export const SchedulePage: React.FC = () => {
         startDate.getMonth(),
         startDate.getDate() + i
       );
+      const dateStr = formatYMD(cellDate);
       const cellDay = cellDate.getDate();
       const cellMonth = cellDate.getMonth() + 1;
       const cellYear = cellDate.getFullYear();
       const inCurrentMonth = cellMonth === activeMonth && cellYear === activeYear;
-      const isToday =
-        cellDay === 10 && cellMonth === 11 && cellYear === 2026;
-      const mondayIdx = (cellDate.getDay() + 6) % 7; // 0: T2 .. 6: CN
-      const hasRecurringChips = inCurrentMonth && cellDate >= scheduleStart;
 
       cells.push({
-        id: `${cellYear}-${cellMonth}-${cellDay}`,
+        id: dateStr,
+        dateStr,
         dayNumber: cellDay,
+        monthNumber: cellMonth,
+        yearNumber: cellYear,
         isCurrentMonth: inCurrentMonth,
-        isToday,
-        chips: hasRecurringChips ? WEEKLY_CHIPS[mondayIdx] || [] : [],
+        isToday: dateStr === todayYMD,
+        sessions: getSessionsForDate(cellDate),
       });
     }
     return cells;
-  }, [activeYear, activeMonth]);
+  }, [activeYear, activeMonth, todayYMD, getSessionsForDate]);
 
-  // Tạo danh sách 7 ngày (T2..CN) động cho chế độ xem Tuần
+  // 7 ngày (T2..CN) cho chế độ Tuần
   const dynamicWeekDays = useMemo(() => {
     const jsDay = activeDate.getDay();
     const mondayOffset = jsDay === 0 ? -6 : 1 - jsDay;
@@ -474,19 +393,18 @@ export const SchedulePage: React.FC = () => {
         monday.getMonth(),
         monday.getDate() + idx
       );
+      const dateStr = formatYMD(d);
       return {
         shortName,
         dateNumber: String(d.getDate()).padStart(2, '0'),
+        dateStr,
         fullDate: d,
-        isToday:
-          d.getDate() === 10 &&
-          d.getMonth() === 10 &&
-          d.getFullYear() === 2026,
+        isToday: dateStr === todayYMD,
+        sessions: getSessionsForDate(d),
       };
     });
-  }, [activeDate]);
+  }, [activeDate, todayYMD, getSessionsForDate]);
 
-  // Nhãn thời gian hiển thị trên thanh công cụ
   const toolbarTimeLabel = useMemo(() => {
     if (viewMode === 'month') {
       return `Tháng ${String(activeMonth).padStart(2, '0')}/${activeYear}`;
@@ -506,9 +424,7 @@ export const SchedulePage: React.FC = () => {
     if (viewMode === 'month') {
       setActiveDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
     } else {
-      setActiveDate(
-        (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7)
-      );
+      setActiveDate((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7));
     }
   };
 
@@ -516,17 +432,16 @@ export const SchedulePage: React.FC = () => {
     if (viewMode === 'month') {
       setActiveDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
     } else {
-      setActiveDate(
-        (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7)
-      );
+      setActiveDate((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7));
     }
   };
 
   const handleGoToday = () => {
-    setActiveDate(new Date(2026, 10, 10));
+    const now = new Date();
+    setActiveDate(now);
     showToast(
       viewMode === 'month'
-        ? 'Đang ở Tháng 11/2026 (Tháng hiện tại)'
+        ? `Đang ở Tháng ${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`
         : 'Đang ở tuần hiện tại'
     );
   };
@@ -538,34 +453,44 @@ export const SchedulePage: React.FC = () => {
     setIsCalendarPickerOpen((prev) => !prev);
   };
 
-  const getDaysInMonth = (month: number, year: number): number => {
-    return new Date(year, month, 0).getDate();
-  };
+  const getDaysInMonth = (month: number, year: number): number =>
+    new Date(year, month, 0).getDate();
 
   const getMondayStartOffset = (month: number, year: number): number => {
     const jsDay = new Date(year, month - 1, 1).getDay();
     return jsDay === 0 ? 6 : jsDay - 1;
   };
 
-  // Biểu mẫu Side Drawer Thêm lịch dạy
-  const [drawerClass, setDrawerClass] = useState('Lớp 10');
-  const [drawerWeekdays, setDrawerWeekdays] = useState<string[]>(['T3', 'T5', 'T7']);
-  const [drawerStartTime, setDrawerStartTime] = useState('18:00');
-  const [drawerEndTime, setDrawerEndTime] = useState('19:30');
-  const [drawerStartDate, setDrawerStartDate] = useState('10/11/2026');
-  const [drawerColor, setDrawerColor] = useState('#CFE3FF');
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+  // ==================== MỞ DRAWER THÊM / SỬA ====================
+  const handleOpenCreateDrawer = () => {
+    setEditingSchedule(null);
+    setDrawerClassId(classes[0]?.id || '');
+    setDrawerWeekdays(['T3', 'T5']);
+    setDrawerStartTime('18:00');
+    setDrawerEndTime('19:30');
+    setDrawerStartDate(todayYMD);
+    setDrawerColor(classes[0]?.colorTheme?.bg || '#CFE3FF');
+    setDrawerNote('');
+    setDrawerError(null);
+    setIsDrawerOpen(true);
   };
 
-  // Chiều cao cho mỗi giờ học trên trục lịch (tính bằng pixel)
-  const HOUR_HEIGHT = 48;
-  const START_HOUR = 7; // Bắt đầu từ 07:00
+  const handleOpenEditDrawer = (item: ScheduleItem) => {
+    setEditingSchedule(item);
+    setDrawerClassId(item.classId);
+    setDrawerWeekdays(item.weekdays);
+    setDrawerStartTime(item.startTime);
+    setDrawerEndTime(item.endTime);
+    setDrawerStartDate(item.startDate);
+    setDrawerColor(item.bgColor || '#CFE3FF');
+    setDrawerNote(item.note || '');
+    setDrawerError(null);
+    setSelectedSession(null);
+    setDayModalCell(null);
+    setIsDrawerOpen(true);
+  };
 
-  // Bật/tắt chọn thứ trong tuần trong Side Drawer
-  const handleToggleDrawerWeekday = (key: string) => {
+  const handleToggleDrawerWeekday = (key: WeekdayCode) => {
     if (drawerWeekdays.includes(key)) {
       if (drawerWeekdays.length > 1) {
         setDrawerWeekdays(drawerWeekdays.filter((d) => d !== key));
@@ -573,48 +498,151 @@ export const SchedulePage: React.FC = () => {
         showToast('Vui lòng chọn ít nhất một thứ trong tuần');
       }
     } else {
-      setDrawerWeekdays([...drawerWeekdays, key]);
+      const next = [...drawerWeekdays, key].sort(
+        (a, b) => WEEKDAY_ORDER.indexOf(a) - WEEKDAY_ORDER.indexOf(b)
+      );
+      setDrawerWeekdays(next);
     }
   };
 
-  // Chọn màu ngẫu nhiên từ bảng màu
   const handleRandomColor = () => {
     const remaining = DRAWER_SWATCH_COLORS.filter((c) => c !== drawerColor);
     const randomIndex = Math.floor(Math.random() * remaining.length);
     setDrawerColor(remaining[randomIndex]);
-    showToast('Đã chọn màu ngẫu nhiên');
   };
 
-  // Định dạng danh sách thứ hiển thị trong hộp tóm tắt
-  const formattedWeekdays = DRAWER_WEEKDAY_OPTIONS
-    .filter((d) => drawerWeekdays.includes(d.key))
-    .map((d) => d.fullName)
-    .join(', ');
+  const selectedClassName = useMemo(() => {
+    const found = classes.find((c) => c.id === drawerClassId);
+    return found?.name || editingSchedule?.className || 'Chưa chọn lớp';
+  }, [classes, drawerClassId, editingSchedule]);
 
-  // Câu tóm tắt quy luật lặp lại của lịch dạy
-  const summaryText = `${drawerClass} · ${formattedWeekdays || 'Thứ 3, Thứ 5, Thứ 7'} · ${drawerStartTime}–${drawerEndTime} · lặp mỗi tuần từ ${drawerStartDate} cho đến khi Admin xóa lịch.`;
+  const summaryText = `${selectedClassName} · ${
+    formatFullWeekdays(drawerWeekdays) || 'Chưa chọn thứ'
+  } · ${drawerStartTime}–${drawerEndTime} · lặp mỗi tuần từ ${formatDMYFromYMD(
+    drawerStartDate
+  )} cho đến khi Admin xóa lịch.`;
 
-  // Xử lý lưu lịch dạy từ Side Drawer
-  const handleSaveDrawerSchedule = (e: React.FormEvent) => {
+  const handleSaveDrawerSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsDrawerOpen(false);
-    showToast(`Đã lưu lịch dạy cố định cho ${drawerClass} (${drawerStartTime}–${drawerEndTime})!`);
+    setDrawerError(null);
+
+    if (!drawerClassId) {
+      setDrawerError('Vui lòng chọn lớp học trước khi lưu lịch.');
+      return;
+    }
+
+    if (drawerEndTime <= drawerStartTime) {
+      setDrawerError('Giờ kết thúc phải lớn hơn giờ bắt đầu.');
+      return;
+    }
+
+    const textColor = SWATCH_TEXT_MAP[drawerColor.toLowerCase()] || '#1F4E79';
+
+    setIsSavingSchedule(true);
+    try {
+      if (editingSchedule) {
+        await scheduleApi.updateSchedule(editingSchedule.id, {
+          classId: drawerClassId,
+          weekdays: drawerWeekdays,
+          startTime: drawerStartTime,
+          endTime: drawerEndTime,
+          startDate: drawerStartDate,
+          bgColor: drawerColor,
+          textColor,
+          note: drawerNote.trim(),
+        });
+        showToast(`Đã cập nhật lịch dạy cho ${selectedClassName}!`);
+      } else {
+        await scheduleApi.createSchedule({
+          classId: drawerClassId,
+          weekdays: drawerWeekdays,
+          startTime: drawerStartTime,
+          endTime: drawerEndTime,
+          startDate: drawerStartDate,
+          bgColor: drawerColor,
+          textColor,
+          note: drawerNote.trim(),
+        });
+        showToast(`Đã thêm lịch dạy cố định cho ${selectedClassName}!`);
+      }
+      setIsDrawerOpen(false);
+      await fetchData();
+    } catch (err) {
+      setDrawerError(
+        err instanceof ApiError
+          ? err.message
+          : 'Không thể lưu lịch dạy. Vui lòng kiểm tra lại thông tin.'
+      );
+    } finally {
+      setIsSavingSchedule(false);
+    }
   };
 
-  // Xử lý xác nhận xóa lịch dạy
-  const handleConfirmDeleteSchedule = () => {
-    setIsDeleteDialogOpen(false);
-    showToast(`Đã xóa lịch dạy của ${deleteTarget.className} thành công`);
+  // ==================== XỬ LÝ XÓA LỊCH CỐ ĐỊNH ====================
+  const handleConfirmDeleteSchedule = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      const name = deleteTarget.className;
+      await scheduleApi.deleteSchedule(deleteTarget.id);
+      setDeleteTarget(null);
+      setSelectedSession(null);
+      await fetchData();
+      showToast(`Đã kết thúc lịch dạy của ${name} từ hôm nay.`);
+    } catch (err) {
+      showToast(
+        err instanceof ApiError ? err.message : 'Không thể xóa lịch dạy lúc này.'
+      );
+    } finally {
+      setIsDeleting(false);
+    }
   };
+
+  // ==================== BÁO NGHỈ / MỞ LẠI 1 BUỔI HỌC LẺ ====================
+  const handleToggleSessionCancel = async (instance: CalendarSessionInstance) => {
+    setIsTogglingCancel(true);
+    try {
+      const targetCancelled = !instance.isCancelled;
+      const res = await scheduleApi.toggleCancelDate(
+        instance.schedule.id,
+        instance.dateStr,
+        targetCancelled
+      );
+      await fetchData();
+      setSelectedSession({
+        ...instance,
+        schedule: res.data,
+        isCancelled: targetCancelled,
+      });
+      showToast(
+        targetCancelled
+          ? `Đã báo nghỉ buổi ${instance.schedule.className} ngày ${formatDMYFromYMD(
+              instance.dateStr
+            )}.`
+          : `Đã mở lại buổi học ${instance.schedule.className} ngày ${formatDMYFromYMD(
+              instance.dateStr
+            )}.`
+      );
+    } catch (err) {
+      showToast(
+        err instanceof ApiError ? err.message : 'Không thể cập nhật trạng thái buổi học.'
+      );
+    } finally {
+      setIsTogglingCancel(false);
+    }
+  };
+
+  // Chiều cao cho mỗi giờ học trên trục lịch tuần
+  const HOUR_HEIGHT = 48;
+  const START_HOUR = 7;
 
   return (
     <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[100dvh] lg:min-h-[976px]">
-      {/* Khung nội dung chuẩn 1200px trên máy tính bàn, co giãn theo khung nhìn trên di động/máy tính bảng */}
-      <div className="w-full lg:w-[1200px] lg:h-[976px] p-0 lg:p-8 flex flex-col gap-4 lg:gap-0 lg:justify-between box-border select-none relative font-nunito">
-        {/* Thông báo nổi hiển thị phản hồi tức thì */}
+      <div className="w-full lg:w-[1200px] lg:min-h-[976px] p-0 lg:p-8 flex flex-col gap-4 lg:gap-6 box-border select-none relative font-nunito">
+        {/* Thông báo nổi */}
         {toastMessage && (
           <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 bg-[#3B2A35] text-white px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-            <CheckCircle2 className="w-4 h-4 text-[#CFE8FF]" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
             <span>{toastMessage}</span>
           </div>
         )}
@@ -622,27 +650,25 @@ export const SchedulePage: React.FC = () => {
         {/* ==================== HÀNG 1: TIÊU ĐỀ ĐẦU TRANG ==================== */}
         <header className="min-h-[72px] lg:h-[88px] flex flex-col md:flex-row md:items-center justify-between gap-3 flex-shrink-0">
           <div className="flex flex-col justify-center min-w-0">
-            {/* Tiêu đề trang và huy hiệu lịch cố định */}
             <div className="flex flex-wrap items-center gap-2 lg:gap-3">
               <h1 className="font-playfair text-[24px] lg:text-[28px] font-bold text-[#3B2A35] leading-tight">
-                Lịch học
+                {isStudentView ? 'Lịch học của em' : 'Lịch học'}
               </h1>
               <span className="px-3 py-1 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] font-nunito text-[13px] font-bold tracking-wide">
-                6 lịch cố định · 14 buổi/tuần
+                {activeSchedules.length} lịch cố định · {totalSessionsPerWeek} buổi/tuần
               </span>
             </div>
 
-            {/* Dòng ghi chú viết tay của giáo viên và 2 hình dán pastel */}
             <div className="flex items-center gap-3 mt-1.5">
               <div className="inline-block transform -rotate-1 origin-left">
                 <span className="font-playfair italic text-[14px] lg:text-[15px] font-semibold text-[#A61E4D] squiggle-underline-note">
-                  Tạo lịch một lần, tuần nào cũng tự hiện đến khi xóa nhé!
+                  {isStudentView
+                    ? 'Theo dõi lịch học hàng tuần và thông báo nghỉ học của lớp nhé!'
+                    : 'Tạo lịch một lần, tuần nào cũng tự hiện đến khi xóa nhé!'}
                 </span>
               </div>
 
-              {/* 2 hình dán vector phẳng pastel (ẩn trên di động) */}
               <div className="hidden md:flex items-center gap-2 pl-3">
-                {/* Hình dán 1: Ngôi sao pastel #F8A5C2 */}
                 <svg
                   className="w-6 h-6 text-[#F8A5C2] flex-shrink-0"
                   viewBox="0 0 24 24"
@@ -651,8 +677,6 @@ export const SchedulePage: React.FC = () => {
                 >
                   <path d="M12 2l2.75 6.63L22 9.24l-5.45 4.73L18.18 21 12 17.27 5.82 21l1.63-7.03L2 9.24l7.25-.61L12 2z" />
                 </svg>
-
-                {/* Hình dán 2: Ngòi bút nhỏ pastel #2F6FA8 */}
                 <svg
                   className="w-6 h-6 text-[#2F6FA8] flex-shrink-0"
                   fill="none"
@@ -671,181 +695,304 @@ export const SchedulePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Phía bên phải: Nút chính Thêm lịch dạy */}
-          <div className="flex items-center w-full md:w-auto">
+          {/* Phía bên phải: Nút Làm mới & Thêm lịch dạy (Chỉ hiện Thêm lịch dạy cho Admin) */}
+          <div className="flex items-center gap-2.5 w-full md:w-auto">
             <button
-              onClick={() => setIsDrawerOpen(true)}
-              className="w-full md:w-auto h-[44px] px-5 rounded-[10px] bg-[#D6336C] hover:bg-[#C2255C] text-white font-bold text-[14px] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
+              type="button"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="h-[44px] px-4 rounded-[10px] border border-[#9C6B84] bg-white hover:bg-[#FFE0EB]/40 text-[#3B2A35] font-bold text-[14px] flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-60"
             >
-              <Plus className="w-4 h-4 text-white" strokeWidth={2} />
-              <span>Thêm lịch dạy</span>
+              <RotateCw
+                className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`}
+                strokeWidth={1.75}
+              />
+              <span className="hidden sm:inline">Làm mới</span>
             </button>
+
+            {!isStudentView && (
+              <button
+                type="button"
+                onClick={handleOpenCreateDrawer}
+                className="flex-1 md:flex-none h-[44px] px-5 rounded-[10px] bg-[#D6336C] hover:bg-[#C2255C] text-white font-bold text-[14px] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
+              >
+                <Plus className="w-4 h-4 text-white" strokeWidth={2} />
+                <span>Thêm lịch dạy</span>
+              </button>
+            )}
           </div>
         </header>
 
-        {/* ==================== HÀNG 2: BỐ CỤC 2 CỘT (800px trên máy tính bàn) ==================== */}
+        {loadError && (
+          <div className="p-4 rounded-[12px] bg-amber-50 border border-amber-200 text-amber-800 text-[13px] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <span>{loadError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={fetchData}
+              className="underline font-bold hover:text-amber-900 cursor-pointer"
+            >
+              Thử lại
+            </button>
+          </div>
+        )}
+
+        {/* ==================== HÀNG 2: BỐ CỤC 2 CỘT ==================== */}
         <div className="w-full lg:w-[1136px] lg:h-[800px] flex flex-col lg:flex-row gap-4 lg:gap-[24px] flex-shrink-0">
-          {/* ========== CỘT BÊN TRÁI (4/12 chiều rộng trên lg, 366px): 2 THẺ ========== */}
+          {/* ========== CỘT BÊN TRÁI (366px): 2 THẺ ========== */}
           <div className="w-full lg:w-[366px] lg:h-[800px] flex flex-col gap-4 lg:gap-0 lg:justify-between flex-shrink-0">
-            {/* THẺ TRÊN: THẺ THÔNG BÁO "HÔM NAY" */}
-            <div className="min-h-[140px] lg:h-[180px] p-4 lg:p-5 rounded-[16px] bg-[#DCEBFA] border border-[#CFE8FF] shadow-card flex flex-col justify-between gap-2 flex-shrink-0">
-              {/* Nhãn HÔM NAY và ngày Thứ Ba 10/11/2026 */}
+            {/* THẺ TRÊN: THẺ THÔNG BÁO "HÔM NAY" (Thời gian thực) */}
+            <div className="min-h-[150px] lg:h-[188px] p-4 lg:p-5 rounded-[16px] bg-[#DCEBFA] border border-[#CFE8FF] shadow-card flex flex-col justify-between gap-2 flex-shrink-0">
               <div>
                 <span className="font-nunito text-[12px] font-bold tracking-widest text-[#1F4E79] uppercase block mb-1">
                   HÔM NAY
                 </span>
-                <div className="flex items-baseline gap-2">
-                  <span className="font-playfair text-[32px] font-bold text-[#1F4E79] leading-none">
-                    Thứ Ba
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  <span className="font-playfair text-[28px] lg:text-[30px] font-bold text-[#1F4E79] leading-none">
+                    {VIETNAMESE_DAY_NAMES[todayDate.getDay()]}
                   </span>
-                  <span className="font-nunito text-[16px] font-semibold text-[#1F4E79]">
-                    10/11/2026
+                  <span className="font-nunito text-[15px] font-semibold text-[#1F4E79]">
+                    {formatDMYFromYMD(todayYMD)}
                   </span>
                 </div>
               </div>
 
-              {/* Huy hiệu thông báo có 2 buổi dạy kèm biểu tượng chuông */}
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[8px] bg-white text-[#1F4E79] text-[13px] font-bold shadow-2xs w-fit">
                 <Bell className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
-                <span>Hôm nay có 2 buổi dạy</span>
+                <span>
+                  {todayActiveCount > 0
+                    ? isStudentView
+                      ? `Hôm nay em có ${todayActiveCount} buổi học`
+                      : `Hôm nay có ${todayActiveCount} buổi dạy`
+                    : isStudentView
+                    ? 'Hôm nay em không có lịch học'
+                    : 'Hôm nay không có lịch dạy'}
+                </span>
               </div>
 
-              {/* 2 dòng lịch dạy trong ngày kèm chấm tròn màu của lớp */}
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 text-[13px] font-semibold text-[#1F4E79]">
-                  <span
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: '#7A1F7A' }}
-                  />
-                  <span>15:30–17:00 · Lớp 7</span>
-                </div>
-                <div className="flex items-center gap-2 text-[13px] font-semibold text-[#1F4E79]">
-                  <span
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: '#1F4E79' }}
-                  />
-                  <span>18:00–19:30 · Lớp 10</span>
-                </div>
+              <div className="space-y-1 max-h-[54px] overflow-y-auto pr-1">
+                {todaySessions.length === 0 ? (
+                  <p className="text-[12px] text-[#1F4E79]/80 font-medium">
+                    Chúc {isStudentView ? 'em' : 'cô'} một ngày thật vui và hiệu quả!
+                  </p>
+                ) : (
+                  todaySessions.map((sess) => (
+                    <button
+                      key={sess.instanceId}
+                      type="button"
+                      onClick={() => setSelectedSession(sess)}
+                      className="w-full flex items-center justify-between gap-2 text-[13px] font-semibold text-[#1F4E79] hover:underline text-left cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span
+                          className="w-2 h-2 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: sess.schedule.textColor }}
+                        />
+                        <span
+                          className={`truncate ${
+                            sess.isCancelled ? 'line-through opacity-70' : ''
+                          }`}
+                        >
+                          {sess.schedule.startTime}–{sess.schedule.endTime} ·{' '}
+                          {sess.schedule.className}
+                        </span>
+                      </div>
+                      {sess.isCancelled && (
+                        <span className="px-1.5 py-0.2 rounded bg-rose-100 text-rose-700 text-[10px] font-bold flex-shrink-0">
+                          Nghỉ
+                        </span>
+                      )}
+                    </button>
+                  ))
+                )}
               </div>
             </div>
 
-            {/* THẺ DƯỚI: THẺ "LỊCH CỐ ĐỊNH" (596px trên máy tính bàn) */}
-            <div className="lg:h-[596px] p-4 lg:p-5 bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col justify-between gap-3 lg:gap-0 flex-shrink-0">
-              {/* Tiêu đề thẻ Lịch cố định */}
-              <div className="flex items-center justify-between lg:mb-2">
+            {/* THẺ DƯỚI: THẺ "LỊCH CỐ ĐỊNH" */}
+            <div className="lg:h-[588px] p-4 lg:p-5 bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col gap-3 flex-shrink-0 overflow-hidden">
+              <div className="flex items-center justify-between flex-shrink-0">
                 <span className="font-nunito text-[12px] font-bold tracking-widest text-[#6B5560] uppercase">
                   LỊCH CỐ ĐỊNH
                 </span>
                 <span className="px-2.5 py-0.5 rounded-[8px] bg-[#FFE0EB] text-[#A61E4D] font-nunito text-[12px] font-bold">
-                  6 lớp
+                  {activeSchedules.length} khung lịch
                 </span>
               </div>
 
-              {/* Lưới 6 ô vuông lịch học (2 cột di động, 3 cột máy tính bảng, 2 cột máy tính bàn) */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-3 lg:flex-1">
-                {INITIAL_FIXED_SCHEDULES.map((item) => (
-                  <div
-                    key={item.id}
-                    style={{
-                      backgroundColor: item.bgColor,
-                    }}
-                    className="aspect-square lg:aspect-auto rounded-[16px] p-3.5 flex flex-col justify-between shadow-2xs relative select-none"
-                  >
-                    {/* Hàng trên: Tên lớp và nút ba chấm ⋮ */}
-                    <div className="flex items-start justify-between">
-                      <span
-                        className="font-playfair text-[24px] font-bold leading-none"
-                        style={{ color: item.textColor }}
-                      >
-                        {item.className}
-                      </span>
-                      {/* Nút ba chấm ⋮ và menu thao tác Sửa / Xóa */}
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveTileMenuId(activeTileMenuId === item.id ? null : item.id);
-                          }}
-                          className="text-inherit opacity-70 hover:opacity-100 p-0.5 rounded cursor-pointer"
-                          title="Tùy chọn"
-                        >
-                          <MoreVertical className="w-4 h-4" strokeWidth={1.75} />
-                        </button>
-
-                        {/* Menu thao tác thả xuống khi bấm ba chấm */}
-                        {activeTileMenuId === item.id && (
-                          <div
-                            onClick={(e) => e.stopPropagation()}
-                            className="absolute right-0 top-6 w-[120px] bg-white rounded-[10px] border border-[#F3D9E3] shadow-md py-1 z-30 animate-in fade-in zoom-in-95"
-                          >
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setActiveTileMenuId(null);
-                                setDrawerClass(item.className);
-                                setDrawerColor(item.bgColor);
-                                setIsDrawerOpen(true);
-                              }}
-                              className="w-full px-3 py-1.5 text-left text-[12px] font-bold text-[#1F4E79] hover:bg-[#E9F3FF] flex items-center gap-1.5 cursor-pointer"
-                            >
-                              <span>Sửa lịch</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setActiveTileMenuId(null);
-                                setDeleteTarget({
-                                  className: item.className,
-                                  summary: `${item.className} · ${item.weekdays} · ${item.timeRange}`,
-                                });
-                                setIsDeleteDialogOpen(true);
-                              }}
-                              className="w-full px-3 py-1.5 text-left text-[12px] font-bold text-[#B02525] hover:bg-[#FFE3E3] flex items-center gap-1.5 cursor-pointer"
-                            >
-                              <span>Xóa lịch</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Hàng giữa: Các ngày trong tuần và khung giờ học */}
-                    <div>
-                      <div
-                        className="font-nunito text-[14px] font-bold leading-tight mb-1"
-                        style={{ color: item.textColor }}
-                      >
-                        {item.weekdays}
-                      </div>
-                      <div className="flex items-center gap-1 text-[13px] text-[#3B2A35] font-semibold leading-tight">
-                        <Clock className="w-3.5 h-3.5 text-[#3B2A35] flex-shrink-0" strokeWidth={1.75} />
-                        <span>{item.timeRange}</span>
-                      </div>
-                    </div>
-
-                    {/* Hàng dưới: Huy hiệu "Hôm nay" nếu lớp có lịch dạy trong ngày */}
-                    <div className="h-5 flex items-center">
-                      {item.isToday ? (
-                        <span className="px-2 py-0.5 rounded-[6px] bg-white text-[#1F4E79] text-[11px] font-bold shadow-2xs">
-                          Hôm nay
-                        </span>
-                      ) : (
-                        <span className="text-[11px] opacity-0">Lịch thường</span>
-                      )}
-                    </div>
+              {isLoading ? (
+                <div className="flex-1 min-h-[240px] flex flex-col items-center justify-center gap-2 text-[#6B5560]">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#2F6FA8]" />
+                  <span className="text-xs font-semibold">Đang tải lịch cố định...</span>
+                </div>
+              ) : activeSchedules.length === 0 ? (
+                <div className="flex-1 min-h-[240px] flex flex-col items-center justify-center text-center px-3 gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-[#FFE0EB] text-[#A61E4D] flex items-center justify-center">
+                    <CalendarIcon className="w-6 h-6" strokeWidth={1.75} />
                   </div>
-                ))}
-              </div>
+                  <div className="space-y-1">
+                    <p className="font-bold text-[14px] text-[#3B2A35]">
+                      {isStudentView
+                        ? 'Chưa có lịch học cố định'
+                        : 'Chưa tạo lịch dạy cố định nào'}
+                    </p>
+                    <p className="text-[12px] text-[#6B5560]">
+                      {isStudentView
+                        ? 'Khi giáo viên xếp lịch cho lớp của em, lịch học sẽ tự động hiển thị tại đây.'
+                        : 'Bấm nút "Thêm lịch dạy" để gán thứ & khung giờ học hàng tuần cho lớp.'}
+                    </p>
+                  </div>
+                  {!isStudentView && (
+                    <button
+                      type="button"
+                      onClick={handleOpenCreateDrawer}
+                      className="h-9 px-4 rounded-[10px] bg-[#D6336C] hover:bg-[#C2255C] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Thêm lịch ngay</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 gap-3 overflow-y-auto pr-0.5 content-start flex-1">
+                  {activeSchedules.map((item) => {
+                    const hasToday =
+                      item.weekdays.includes(todayWeekdayCode) &&
+                      todayYMD >= item.startDate &&
+                      (!item.endDate || todayYMD <= item.endDate);
+
+                    return (
+                      <div
+                        key={item.id}
+                        style={{ backgroundColor: item.bgColor }}
+                        className="min-h-[136px] rounded-[16px] p-3.5 flex flex-col justify-between shadow-2xs relative select-none"
+                      >
+                        {/* Hàng trên: Tên lớp và nút ba chấm ⋮ (chỉ Admin) */}
+                        <div className="flex items-start justify-between gap-1">
+                          <span
+                            className="font-playfair text-[20px] font-bold leading-tight truncate"
+                            style={{ color: item.textColor }}
+                            title={item.className}
+                          >
+                            {item.className}
+                          </span>
+
+                          {!isStudentView && (
+                            <div
+                              className="relative flex-shrink-0"
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveTileMenuId(
+                                    activeTileMenuId === item.id ? null : item.id
+                                  );
+                                }}
+                                className="text-inherit opacity-70 hover:opacity-100 p-0.5 rounded cursor-pointer"
+                                title="Tùy chọn"
+                              >
+                                <MoreVertical className="w-4 h-4" strokeWidth={1.75} />
+                              </button>
+
+                              {activeTileMenuId === item.id && (
+                                <div
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="absolute right-0 top-6 w-[132px] bg-white rounded-[10px] border border-[#F3D9E3] shadow-md py-1 z-30 animate-in fade-in zoom-in-95"
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveTileMenuId(null);
+                                      navigate(
+                                        `${ROUTES.CLASS_DETAIL.replace(
+                                          ':id',
+                                          item.classId
+                                        )}?date=${todayYMD}`
+                                      );
+                                    }}
+                                    className="w-full px-3 py-1.5 text-left text-[12px] font-bold text-[#1F4E79] hover:bg-[#E9F3FF] flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    <UserCheck className="w-3.5 h-3.5" />
+                                    <span>Điểm danh</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveTileMenuId(null);
+                                      handleOpenEditDrawer(item);
+                                    }}
+                                    className="w-full px-3 py-1.5 text-left text-[12px] font-bold text-[#1F4E79] hover:bg-[#E9F3FF] flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                    <span>Sửa lịch</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveTileMenuId(null);
+                                      setDeleteTarget(item);
+                                    }}
+                                    className="w-full px-3 py-1.5 text-left text-[12px] font-bold text-[#B02525] hover:bg-[#FFE3E3] flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Xóa lịch</span>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Hàng giữa: Các ngày trong tuần và khung giờ học */}
+                        <div className="my-1.5">
+                          <div
+                            className="font-nunito text-[13px] font-bold leading-tight mb-1 truncate"
+                            style={{ color: item.textColor }}
+                          >
+                            {formatShortWeekdays(item.weekdays)}
+                          </div>
+                          <div className="flex items-center gap-1 text-[12px] text-[#3B2A35] font-semibold leading-tight">
+                            <Clock
+                              className="w-3.5 h-3.5 text-[#3B2A35] flex-shrink-0"
+                              strokeWidth={1.75}
+                            />
+                            <span>
+                              {item.startTime}–{item.endTime}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Hàng dưới: Huy hiệu "Hôm nay" */}
+                        <div className="h-5 flex items-center justify-between">
+                          {hasToday ? (
+                            <span className="px-2 py-0.5 rounded-[6px] bg-white text-[#1F4E79] text-[11px] font-bold shadow-2xs">
+                              Hôm nay
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-[#3B2A35]/70 font-medium truncate">
+                              {item.roomNumber || ''}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* ========== CỘT BÊN PHẢI (8/12 chiều rộng trên lg, 746px): THẺ THỜI KHÓA BIỂU CALENDAR ========== */}
+          {/* ========== CỘT BÊN PHẢI (746px): THẺ THỜI KHÓA BIỂU CALENDAR ========== */}
           <div className="w-full lg:w-[746px] lg:h-[800px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-card flex flex-col justify-between overflow-hidden relative flex-shrink-0">
             {/* 1. THANH CÔNG CỤ */}
             <div className="min-h-[64px] lg:h-[64px] px-4 lg:px-6 py-3 lg:py-0 border-b border-[#F3D9E3] flex flex-wrap items-center justify-between gap-2.5 flex-shrink-0">
-              {/* Bên trái: Nút điều hướng, nhãn thời gian và biểu tượng xem lịch / chuyển tháng, năm */}
-              <div ref={calendarPickerRef} className="relative flex flex-wrap items-center gap-1.5 lg:gap-2">
+              <div
+                ref={calendarPickerRef}
+                className="relative flex flex-wrap items-center gap-1.5 lg:gap-2"
+              >
                 <button
                   type="button"
                   onClick={handlePrevPeriod}
@@ -871,13 +1018,14 @@ export const SchedulePage: React.FC = () => {
                 </button>
                 <span
                   className={`font-playfair font-bold text-[#3B2A35] ml-1 lg:ml-3 ${
-                    viewMode === 'month' ? 'text-[17px] lg:text-[20px]' : 'text-[16px] lg:text-[18px]'
+                    viewMode === 'month'
+                      ? 'text-[17px] lg:text-[20px]'
+                      : 'text-[16px] lg:text-[18px]'
                   }`}
                 >
                   {toolbarTimeLabel}
                 </span>
 
-                {/* Biểu tượng xem lịch và chuyển nhanh ngày, tháng, năm */}
                 <button
                   type="button"
                   onClick={handleToggleCalendarPicker}
@@ -892,10 +1040,9 @@ export const SchedulePage: React.FC = () => {
                   <CalendarIcon className="w-4 h-4" strokeWidth={1.75} />
                 </button>
 
-                {/* Popover xem lịch chọn Ngày / Tháng / Năm */}
+                {/* Popover chọn nhanh Ngày / Tháng / Năm */}
                 {isCalendarPickerOpen && (
                   <div className="absolute left-0 top-[44px] z-50 w-[300px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-[0_12px_32px_rgba(59,42,53,0.16)] p-4">
-                    {/* Thanh điều hướng tháng/năm */}
                     <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#F3D9E3]">
                       <button
                         type="button"
@@ -910,7 +1057,6 @@ export const SchedulePage: React.FC = () => {
                           }
                         }}
                         className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[#1F4E79] hover:bg-[#DCEBFA] transition-colors cursor-pointer"
-                        aria-label={pickerMode === 'month' ? 'Năm trước' : 'Tháng trước'}
                       >
                         <ChevronLeft className="w-4 h-4" strokeWidth={1.75} />
                       </button>
@@ -921,7 +1067,6 @@ export const SchedulePage: React.FC = () => {
                           setPickerMode((prev) => (prev === 'day' ? 'month' : 'day'))
                         }
                         className="px-2.5 py-1 rounded-[8px] font-playfair text-[16px] font-bold text-[#3B2A35] hover:bg-[#FFF6F9] transition-colors cursor-pointer"
-                        title="Bấm để chuyển nhanh Tháng và Năm"
                       >
                         {pickerMode === 'month'
                           ? `Năm ${pickerYear}`
@@ -941,7 +1086,6 @@ export const SchedulePage: React.FC = () => {
                           }
                         }}
                         className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[#1F4E79] hover:bg-[#DCEBFA] transition-colors cursor-pointer"
-                        aria-label={pickerMode === 'month' ? 'Năm sau' : 'Tháng sau'}
                       >
                         <ChevronRight className="w-4 h-4" strokeWidth={1.75} />
                       </button>
@@ -1024,9 +1168,10 @@ export const SchedulePage: React.FC = () => {
                 )}
               </div>
 
-              {/* Bên phải: Nút chuyển đổi Tuần | Tháng (chiều rộng 100% trên di động) */}
+              {/* Chuyển đổi Tuần | Tháng */}
               <div className="w-full md:w-auto h-9 p-1 rounded-[10px] bg-[#E9F3FF] grid grid-cols-2 md:flex items-center gap-1">
                 <button
+                  type="button"
                   onClick={() => setViewMode('week')}
                   className={`px-3 py-1 rounded-[8px] text-[13px] font-bold transition-all cursor-pointer ${
                     viewMode === 'week'
@@ -1037,6 +1182,7 @@ export const SchedulePage: React.FC = () => {
                   Tuần
                 </button>
                 <button
+                  type="button"
                   onClick={() => setViewMode('month')}
                   className={`px-3 py-1 rounded-[8px] text-[13px] font-bold transition-all cursor-pointer ${
                     viewMode === 'month'
@@ -1049,10 +1195,9 @@ export const SchedulePage: React.FC = () => {
               </div>
             </div>
 
-            {/* 2. KHUNG NỘI DUNG LỊCH (736px): CHẾ ĐỘ THÁNG HOẶC CHẾ ĐỘ TUẦN */}
+            {/* 2. KHUNG NỘI DUNG LỊCH: THÁNG HOẶC TUẦN */}
             {viewMode === 'month' ? (
               <div className="flex-1 flex flex-col overflow-hidden relative">
-                {/* Hàng tiêu đề 7 ngày trong tuần: T2, T3, T4, T5, T6, T7, CN (#DCEBFA, #1F4E79, 13px semibold) */}
                 <div className="h-[34px] bg-[#DCEBFA] border-b border-[#F3D9E3] grid grid-cols-7 flex-shrink-0">
                   {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((dayName, idx) => (
                     <div
@@ -1064,14 +1209,13 @@ export const SchedulePage: React.FC = () => {
                   ))}
                 </div>
 
-                {/* Lưới 6 hàng tuần × 7 cột ngày lấp đầy toàn bộ chiều cao thẻ */}
                 <div className="flex-1 grid grid-cols-7 grid-rows-6 bg-white overflow-hidden">
                   {dynamicMonthCells.map((cell, idx) => {
                     const isLastCol = (idx + 1) % 7 === 0;
                     const isLastRow = idx >= 35;
                     const maxChips = 3;
-                    const visibleChips = cell.chips.slice(0, maxChips);
-                    const remainingCount = cell.chips.length - maxChips;
+                    const visibleSessions = cell.sessions.slice(0, maxChips);
+                    const remainingCount = cell.sessions.length - maxChips;
 
                     return (
                       <div
@@ -1080,12 +1224,10 @@ export const SchedulePage: React.FC = () => {
                           !isLastCol ? 'border-r' : ''
                         } ${!isLastRow ? 'border-b' : ''} ${
                           cell.isToday ? 'bg-[#F7FBFF]' : ''
-                        }`}
+                        } ${!cell.isCurrentMonth ? 'bg-slate-50/40' : ''}`}
                       >
-                        {/* Số ngày góc trên bên trái ô (14px) */}
                         <div className="flex items-center justify-between mb-1 h-[22px] flex-shrink-0">
                           {cell.isToday ? (
-                            /* Hôm nay ngày 10: Số 10 trong vòng tròn đỏ mâm xôi #D6336C, chữ trắng */
                             <div className="w-[22px] h-[22px] rounded-full bg-[#D6336C] text-white flex items-center justify-center text-[12px] font-bold shadow-2xs">
                               {cell.dayNumber}
                             </div>
@@ -1102,63 +1244,70 @@ export const SchedulePage: React.FC = () => {
                           )}
                         </div>
 
-                        {/* Di động: hiển thị tối đa 3 chấm màu + "+N" */}
-                        {cell.isCurrentMonth && cell.chips.length > 0 && (
+                        {/* Di động: chấm màu */}
+                        {cell.sessions.length > 0 && (
                           <div className="flex md:hidden flex-wrap items-center gap-1 pt-0.5">
-                            {visibleChips.map((chip, chipIdx) => (
+                            {visibleSessions.map((sess) => (
                               <button
-                                key={chipIdx}
+                                key={sess.instanceId}
                                 type="button"
-                                style={{ backgroundColor: chip.textColor }}
-                                onClick={() =>
-                                  showToast(
-                                    `Buổi dạy ${chip.label} ngày ${cell.dayNumber}/11`
-                                  )
-                                }
-                                className="w-2 h-2 rounded-full flex-shrink-0 cursor-pointer"
-                                title={chip.label}
-                                aria-label={chip.label}
+                                style={{ backgroundColor: sess.schedule.textColor }}
+                                onClick={() => setSelectedSession(sess)}
+                                className={`w-2.5 h-2.5 rounded-full flex-shrink-0 cursor-pointer ${
+                                  sess.isCancelled ? 'opacity-35' : ''
+                                }`}
+                                title={`${sess.schedule.startTime} ${sess.schedule.className}`}
                               />
                             ))}
                             {remainingCount > 0 && (
-                              <span className="text-[10px] font-bold text-[#2F6FA8] leading-none">
+                              <button
+                                type="button"
+                                onClick={() => setDayModalCell(cell)}
+                                className="text-[10px] font-bold text-[#2F6FA8] leading-none"
+                              >
                                 +{remainingCount}
-                              </span>
+                              </button>
                             )}
                           </div>
                         )}
 
-                        {/* Máy tính bảng & Máy tính bàn: Danh sách thẻ buổi dạy nhỏ trong ngày (tối đa 3 thẻ/ô, bo góc 8px, cao 26px) */}
-                        {cell.isCurrentMonth && cell.chips.length > 0 && (
-                          <div className="hidden md:flex flex-col gap-[2px] overflow-hidden flex-1">
-                            {visibleChips.map((chip, chipIdx) => (
-                              <div
-                                key={chipIdx}
+                        {/* Máy tính bảng & Máy tính bàn: Danh sách thẻ buổi dạy */}
+                        {cell.sessions.length > 0 && (
+                          <div
+                            className={`hidden md:flex flex-col gap-[2px] overflow-hidden flex-1 ${
+                              !cell.isCurrentMonth ? 'opacity-50' : ''
+                            }`}
+                          >
+                            {visibleSessions.map((sess) => (
+                              <button
+                                key={sess.instanceId}
+                                type="button"
                                 style={{
-                                  backgroundColor: chip.bgColor,
-                                  color: chip.textColor,
-                                  borderLeftColor: chip.textColor,
+                                  backgroundColor: sess.schedule.bgColor,
+                                  color: sess.schedule.textColor,
+                                  borderLeftColor: sess.schedule.textColor,
                                 }}
-                                onClick={() =>
-                                  showToast(
-                                    `Buổi dạy ${chip.label} ngày ${cell.dayNumber}/11`
-                                  )
-                                }
-                                className="h-[26px] px-2 rounded-[8px] border-l-[3px] flex items-center text-[11px] font-bold truncate cursor-pointer hover:brightness-95 transition-all shadow-2xs flex-shrink-0"
-                                title={chip.label}
+                                onClick={() => setSelectedSession(sess)}
+                                className={`h-[26px] px-2 rounded-[8px] border-l-[3px] flex items-center justify-between gap-1 text-[11px] font-bold truncate cursor-pointer hover:brightness-95 transition-all shadow-2xs flex-shrink-0 text-left ${
+                                  sess.isCancelled ? 'opacity-65 line-through' : ''
+                                }`}
+                                title={`${sess.schedule.startTime}–${sess.schedule.endTime} ${sess.schedule.className}`}
                               >
-                                <span className="truncate">{chip.label}</span>
-                              </div>
+                                <span className="truncate">
+                                  {sess.schedule.startTime} {sess.schedule.className}
+                                </span>
+                                {sess.isCancelled && (
+                                  <span className="text-[9px] bg-white/80 text-[#B02525] px-1 rounded no-underline flex-shrink-0">
+                                    Nghỉ
+                                  </span>
+                                )}
+                              </button>
                             ))}
 
-                            {/* Nếu có nhiều hơn 3 buổi thì hiển thị liên kết "+N nữa" màu #2F6FA8 */}
                             {remainingCount > 0 && (
                               <button
-                                onClick={() =>
-                                  showToast(
-                                    `Ngày ${cell.dayNumber}/11 còn ${remainingCount} buổi dạy nữa`
-                                  )
-                                }
+                                type="button"
+                                onClick={() => setDayModalCell(cell)}
                                 className="text-[11px] font-bold text-[#2F6FA8] hover:underline pl-0.5 text-left cursor-pointer leading-tight flex-shrink-0"
                               >
                                 +{remainingCount} nữa
@@ -1172,210 +1321,349 @@ export const SchedulePage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              /* KHUNG LƯỚI THỜI KHÓA BIỂU THEO TUẦN (736px trên desktop, cuộn ngang trên mobile/tablet) */
-              <div className="flex-1 flex flex-col overflow-x-auto overflow-y-hidden relative">
-                <div className="min-w-[640px] flex-1 flex flex-col min-h-[680px] lg:min-h-0">
-              {/* Hàng tiêu đề 7 ngày trong tuần (44px) */}
-              <div className="h-[44px] border-b border-[#F3D9E3] grid grid-cols-[54px_repeat(7,1fr)] bg-[#FCF8FA] flex-shrink-0">
-                {/* Góc trống giao nhau với cột giờ */}
-                <div className="sticky left-0 z-20 bg-[#FCF8FA] border-r border-[#F3D9E3]" />
-                {dynamicWeekDays.map((day, idx) => (
-                  <div
-                    key={idx}
-                    className={`flex items-center justify-center gap-1.5 border-r border-[#F3D9E3] last:border-r-0 ${
-                      day.isToday ? 'bg-[#F7FBFF]' : ''
-                    }`}
-                  >
-                    <span
-                      className={`text-[13px] font-bold ${
-                        day.isToday ? 'text-[#1F4E79]' : 'text-[#6B5560]'
-                      }`}
-                    >
-                      {day.shortName}
-                    </span>
-                    {day.isToday ? (
-                      /* Ngày hôm nay (T3 10): Số 10 nằm trong vòng tròn đỏ mâm xôi #D6336C */
-                      <div className="w-6 h-6 rounded-full bg-[#D6336C] text-white flex items-center justify-center text-[12px] font-bold shadow-2xs">
-                        {day.dateNumber}
+              /* KHUNG LƯỚI THỜI KHÓA BIỂU THEO TUẦN */
+              <div className="flex-1 flex flex-col overflow-x-auto overflow-y-auto relative">
+                <div className="min-w-[640px] flex-1 flex flex-col min-h-[720px]">
+                  {/* Hàng tiêu đề 7 ngày trong tuần */}
+                  <div className="h-[44px] border-b border-[#F3D9E3] grid grid-cols-[54px_repeat(7,1fr)] bg-[#FCF8FA] flex-shrink-0 sticky top-0 z-30">
+                    <div className="sticky left-0 z-20 bg-[#FCF8FA] border-r border-[#F3D9E3]" />
+                    {dynamicWeekDays.map((day, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex items-center justify-center gap-1.5 border-r border-[#F3D9E3] last:border-r-0 ${
+                          day.isToday ? 'bg-[#F7FBFF]' : ''
+                        }`}
+                      >
+                        <span
+                          className={`text-[13px] font-bold ${
+                            day.isToday ? 'text-[#1F4E79]' : 'text-[#6B5560]'
+                          }`}
+                        >
+                          {day.shortName}
+                        </span>
+                        {day.isToday ? (
+                          <div className="w-6 h-6 rounded-full bg-[#D6336C] text-white flex items-center justify-center text-[12px] font-bold shadow-2xs">
+                            {day.dateNumber}
+                          </div>
+                        ) : (
+                          <span className="text-[13px] font-semibold text-[#6B5560]">
+                            {day.dateNumber}
+                          </span>
+                        )}
                       </div>
+                    ))}
+                  </div>
+
+                  {/* Khu vực lưới các khung giờ (07:00 - 21:00) */}
+                  <div
+                    style={{ height: `${TIME_SLOTS.length * HOUR_HEIGHT}px` }}
+                    className="relative grid grid-cols-[54px_repeat(7,1fr)] flex-shrink-0"
+                  >
+                    <div className="sticky left-0 z-20 border-r border-[#F3D9E3] bg-[#FCF8FA] relative">
+                      {TIME_SLOTS.map((time, idx) => (
+                        <div
+                          key={idx}
+                          style={{ top: `${idx * HOUR_HEIGHT}px` }}
+                          className="absolute left-0 right-0 -translate-y-1/2 text-right pr-2 text-[11px] font-medium text-[#6B5560]"
+                        >
+                          {time}
+                        </div>
+                      ))}
+                    </div>
+
+                    {dynamicWeekDays.map((day, colIdx) => (
+                      <div
+                        key={colIdx}
+                        className={`relative border-r border-[#F3D9E3] last:border-r-0 ${
+                          day.isToday ? 'bg-[#F7FBFF]' : 'bg-white'
+                        }`}
+                      >
+                        {TIME_SLOTS.map((_, rowIdx) => (
+                          <div
+                            key={rowIdx}
+                            style={{ top: `${rowIdx * HOUR_HEIGHT}px` }}
+                            className="absolute left-0 right-0 border-b border-[#F3D9E3]/70 pointer-events-none"
+                          />
+                        ))}
+
+                        {day.sessions.map((session) => {
+                          const clampedStart = Math.max(START_HOUR, session.startHour);
+                          const topPx = (clampedStart - START_HOUR) * HOUR_HEIGHT;
+                          const heightPx = Math.max(36, session.durationHours * HOUR_HEIGHT);
+
+                          return (
+                            <button
+                              key={session.instanceId}
+                              type="button"
+                              style={{
+                                top: `${topPx}px`,
+                                height: `${heightPx}px`,
+                                backgroundColor: session.schedule.bgColor,
+                                color: session.schedule.textColor,
+                                borderLeftColor: session.schedule.textColor,
+                              }}
+                              onClick={() => setSelectedSession(session)}
+                              className={`absolute left-1 right-1 rounded-[10px] border-l-4 p-2 shadow-2xs cursor-pointer transition-all hover:scale-[1.02] flex flex-col justify-start text-left select-none z-10 overflow-hidden ${
+                                session.isCancelled ? 'opacity-65' : ''
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-1">
+                                <span
+                                  className={`font-bold text-[12px] leading-tight truncate ${
+                                    session.isCancelled ? 'line-through' : ''
+                                  }`}
+                                  style={{ color: session.schedule.textColor }}
+                                >
+                                  {session.schedule.className}
+                                </span>
+                                {session.isCancelled && (
+                                  <span className="text-[9px] bg-white/85 text-[#B02525] font-bold px-1 rounded flex-shrink-0">
+                                    Nghỉ
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[11px] leading-tight opacity-90 block mt-0.5 truncate text-[#3B2A35]">
+                                {session.schedule.startTime}–{session.schedule.endTime}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ==================== HỘP THOẠI POPOVER CHI TIẾT BUỔI HỌC (CHO CẢ LỊCH TUẦN & THÁNG) ==================== */}
+        {selectedSession && (
+          <div
+            className="fixed inset-0 z-50 bg-[#3B2A35]/35 flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in duration-150"
+            onClick={() => !isTogglingCancel && setSelectedSession(null)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-full md:w-[420px] bg-white rounded-t-[20px] md:rounded-[18px] border border-[#F3D9E3] shadow-[0_20px_50px_rgba(59,42,53,0.22)] p-5 md:p-6 flex flex-col gap-4 select-none animate-in slide-in-from-bottom md:zoom-in-95 duration-150"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      style={{
+                        backgroundColor: selectedSession.schedule.bgColor,
+                        color: selectedSession.schedule.textColor,
+                      }}
+                      className="px-2.5 py-0.5 rounded-[8px] text-[12px] font-bold"
+                    >
+                      {formatDMYFromYMD(selectedSession.dateStr)}
+                    </span>
+                    {selectedSession.isCancelled ? (
+                      <span className="px-2.5 py-0.5 rounded-[8px] bg-[#FFE3E3] text-[#B02525] text-[12px] font-bold">
+                        Đã báo nghỉ buổi này
+                      </span>
                     ) : (
-                      <span className="text-[13px] font-semibold text-[#6B5560]">
-                        {day.dateNumber}
+                      <span className="px-2.5 py-0.5 rounded-[8px] bg-emerald-50 text-emerald-700 text-[12px] font-bold">
+                        Buổi học bình thường
                       </span>
                     )}
                   </div>
-                ))}
-              </div>
-
-              {/* Khu vực lưới các khung giờ (07:00 - 21:00) và các buổi dạy */}
-              <div className="flex-1 relative overflow-hidden grid grid-cols-[54px_repeat(7,1fr)]">
-                {/* Cột trục giờ bên trái (cố định khi cuộn ngang) */}
-                <div className="sticky left-0 z-20 border-r border-[#F3D9E3] bg-[#FCF8FA] relative">
-                  {TIME_SLOTS.map((time, idx) => (
-                    <div
-                      key={idx}
-                      style={{ top: `${idx * HOUR_HEIGHT}px` }}
-                      className="absolute left-0 right-0 -translate-y-1/2 text-right pr-2 text-[11px] font-medium text-[#6B5560]"
-                    >
-                      {time}
-                    </div>
-                  ))}
+                  <h3 className="font-playfair text-[22px] font-bold text-[#3B2A35] mt-2 leading-tight">
+                    {selectedSession.schedule.className}
+                  </h3>
                 </div>
 
-                {/* 7 cột ngày chứa các đường kẻ ngang và các khối buổi học */}
-                {dynamicWeekDays.map((day, colIdx) => (
-                  <div
-                    key={colIdx}
-                    className={`relative border-r border-[#F3D9E3] last:border-r-0 ${
-                      day.isToday ? 'bg-[#F7FBFF]' : 'bg-white'
-                    }`}
-                  >
-                    {/* Các đường kẻ ngang phân chia khung giờ */}
-                    {TIME_SLOTS.map((_, rowIdx) => (
-                      <div
-                        key={rowIdx}
-                        style={{ top: `${rowIdx * HOUR_HEIGHT}px` }}
-                        className="absolute left-0 right-0 border-b border-[#F3D9E3]/70 pointer-events-none"
-                      />
-                    ))}
+                <button
+                  type="button"
+                  onClick={() => setSelectedSession(null)}
+                  className="w-8 h-8 rounded-[8px] text-[#6B5560] hover:text-[#3B2A35] hover:bg-[#FFE0EB]/50 flex items-center justify-center cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
-                    {/* Render các khối buổi học rơi vào ngày này */}
-                    {WEEK_SESSIONS.filter((s) => s.dayIndex === colIdx).map((session) => {
-                      const topPx = (session.startHour - START_HOUR) * HOUR_HEIGHT;
-                      const heightPx = session.durationHours * HOUR_HEIGHT;
-
-                      return (
-                        <div
-                          key={session.id}
-                          style={{
-                            top: `${topPx}px`,
-                            height: `${heightPx}px`,
-                            backgroundColor: session.bgColor,
-                            color: session.textColor,
-                            borderLeftColor: session.textColor,
-                          }}
-                          onClick={() => {
-                            if (session.hasPopover) {
-                              setIsPopoverOpen(!isPopoverOpen);
-                            } else {
-                              showToast(`Buổi dạy ${session.className} (${session.timeRange})`);
-                            }
-                          }}
-                          className={`absolute left-1 right-1 rounded-[10px] border-l-4 p-2 shadow-2xs cursor-pointer transition-all hover:scale-[1.02] flex flex-col justify-start select-none ${
-                            session.hasPopover ? 'z-30 overflow-visible' : 'z-10 overflow-hidden'
-                          }`}
-                        >
-                          <span
-                            className="font-bold text-[13px] leading-tight block truncate"
-                            style={{ color: session.textColor }}
-                          >
-                            {session.className}
-                          </span>
-                          <span className="text-[11px] leading-tight opacity-90 block mt-0.5 truncate text-[#3B2A35]">
-                            {session.timeRange}
-                          </span>
-
-                          {/* ==================== CỬA SỔ POPOVER MẪU CHO LỚP 10 (T3 10) ==================== */}
-                          {session.hasPopover && isPopoverOpen && (
-                            <div
-                              onClick={(e) => e.stopPropagation()}
-                              className="absolute left-[calc(100%+14px)] top-[-10px] w-[260px] rounded-[14px] bg-white border border-[#F3D9E3] shadow-[0_12px_32px_rgba(59,42,53,0.16)] p-3.5 z-40 text-left select-none animate-in fade-in zoom-in-95 duration-150"
-                            >
-                              {/* Mũi tên tam giác chỉ sang khối Lớp 10 bên trái */}
-                              <div className="absolute top-5 -left-2 w-0 h-0 border-y-8 border-y-transparent border-r-8 border-r-white filter drop-shadow-[-2px_0_1px_rgba(59,42,53,0.08)]" />
-
-                              {/* Đầu Popover: Tên lớp và nút đóng */}
-                              <div className="flex items-center justify-between mb-1.5">
-                                <h3 className="font-playfair text-[16px] font-bold text-[#3B2A35]">
-                                  Lớp 10
-                                </h3>
-                                <button
-                                  onClick={() => setIsPopoverOpen(false)}
-                                  className="text-[#6B5560] hover:text-[#3B2A35] p-0.5 rounded cursor-pointer"
-                                  title="Đóng"
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-
-                              {/* Dòng thời gian buổi dạy */}
-                              <div className="text-[13px] text-[#3B2A35] font-bold leading-tight mb-1">
-                                18:00 – 19:30
-                              </div>
-
-                              {/* Dòng quy luật lặp lại hàng tuần */}
-                              <div className="text-[12px] text-[#6B5560] font-medium leading-tight mb-3">
-                                Lặp Thứ 3, 5, 7 hằng tuần
-                              </div>
-
-                              {/* 2 nút thao tác dưới đáy Popover */}
-                              <div className="flex items-center justify-between pt-2 border-t border-[#F3D9E3]/80">
-                                {/* Nút Sửa lịch */}
-                                <button
-                                  onClick={() => {
-                                    setIsPopoverOpen(false);
-                                    setDrawerClass('Lớp 10');
-                                    setDrawerWeekdays(['T3', 'T5', 'T7']);
-                                    setDrawerStartTime('18:00');
-                                    setDrawerEndTime('19:30');
-                                    setDrawerColor('#CFE3FF');
-                                    setIsDrawerOpen(true);
-                                  }}
-                                  className="h-7 px-3 rounded-[8px] border border-[#2F6FA8] text-[#2F6FA8] text-[12px] font-bold hover:bg-[#E9F3FF] transition-colors cursor-pointer"
-                                >
-                                  Sửa lịch
-                                </button>
-
-                                {/* Nút Xóa lịch */}
-                                <button
-                                  onClick={() => {
-                                    setIsPopoverOpen(false);
-                                    setDeleteTarget({
-                                      className: 'Lớp 10',
-                                      summary: 'Lớp 10 · Thứ 3, 5, 7 · 18:00–19:30',
-                                    });
-                                    setIsDeleteDialogOpen(true);
-                                  }}
-                                  className="text-[#B02525] hover:underline text-[12px] font-bold flex items-center gap-1 cursor-pointer"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5 text-[#B02525]" strokeWidth={1.75} />
-                                  <span>Xóa lịch</span>
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+              <div className="space-y-2 p-3.5 rounded-[12px] bg-[#FFF6F9] border border-[#F3D9E3] text-[13px]">
+                <div className="flex items-center gap-2 font-bold text-[#3B2A35]">
+                  <Clock className="w-4 h-4 text-[#2F6FA8]" />
+                  <span>
+                    Khung giờ: {selectedSession.schedule.startTime} –{' '}
+                    {selectedSession.schedule.endTime}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-[#6B5560] font-semibold">
+                  <CalendarIcon className="w-4 h-4 text-[#D6336C]" />
+                  <span>
+                    Lặp cố định: {formatFullWeekdays(selectedSession.schedule.weekdays)} hằng tuần
+                  </span>
+                </div>
+                {selectedSession.schedule.roomNumber && (
+                  <div className="flex items-center gap-2 text-[#6B5560] font-semibold">
+                    <MapPin className="w-4 h-4 text-[#1F4E79]" />
+                    <span>Phòng học: {selectedSession.schedule.roomNumber}</span>
                   </div>
+                )}
+                {selectedSession.schedule.note && (
+                  <div className="text-xs text-[#6B5560] pt-1 border-t border-[#F3D9E3]/70">
+                    Ghi chú: <strong className="text-[#3B2A35]">{selectedSession.schedule.note}</strong>
+                  </div>
+                )}
+              </div>
+
+              {!isStudentView ? (
+                <div className="space-y-2.5 pt-1">
+                  {/* Hàng 1: Điểm danh lớp & Báo nghỉ buổi lẻ */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const clsId = selectedSession.schedule.classId;
+                        const dt = selectedSession.dateStr;
+                        setSelectedSession(null);
+                        navigate(`${ROUTES.CLASS_DETAIL.replace(':id', clsId)}?date=${dt}`);
+                      }}
+                      className="h-[42px] px-3.5 rounded-[10px] bg-[#2F6FA8] hover:bg-[#1F4E79] text-white font-bold text-[13px] flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
+                    >
+                      <UserCheck className="w-4 h-4" />
+                      <span>Điểm danh lớp</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isTogglingCancel}
+                      onClick={() => handleToggleSessionCancel(selectedSession)}
+                      className={`h-[42px] px-3.5 rounded-[10px] border font-bold text-[13px] flex items-center justify-center gap-1.5 cursor-pointer transition-colors disabled:opacity-60 ${
+                        selectedSession.isCancelled
+                          ? 'border-emerald-600 text-emerald-700 hover:bg-emerald-50'
+                          : 'border-[#A61E4D] text-[#A61E4D] hover:bg-[#FFE0EB]/50'
+                      }`}
+                    >
+                      {isTogglingCancel ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <CalendarOff className="w-4 h-4" />
+                      )}
+                      <span>
+                        {selectedSession.isCancelled
+                          ? 'Mở lại buổi này'
+                          : 'Báo nghỉ buổi này'}
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Hàng 2: Sửa lịch cố định & Xóa lịch cố định */}
+                  {selectedSession.schedule.isActive && (
+                    <div className="flex items-center justify-between pt-2.5 border-t border-[#F3D9E3]">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditDrawer(selectedSession.schedule)}
+                        className="h-9 px-3.5 rounded-[8px] border border-[#2F6FA8] text-[#2F6FA8] text-[12px] font-bold hover:bg-[#E9F3FF] inline-flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span>Sửa lịch cố định</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const sched = selectedSession.schedule;
+                          setSelectedSession(null);
+                          setDeleteTarget(sched);
+                        }}
+                        className="text-[#B02525] hover:underline text-[12px] font-bold inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-[#B02525]" />
+                        <span>Xóa lịch cố định</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSession(null)}
+                    className="h-10 px-5 rounded-[10px] bg-[#2F6FA8] text-white font-bold text-sm cursor-pointer"
+                  >
+                    Đóng
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ==================== HỘP THOẠI XEM TẤT CẢ BUỔI HỌC TRONG NGÀY (+N NỮA) ==================== */}
+        {dayModalCell && (
+          <div
+            className="fixed inset-0 z-50 bg-[#3B2A35]/35 flex items-center justify-center p-4"
+            onClick={() => setDayModalCell(null)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-[400px] bg-white rounded-[16px] border border-[#F3D9E3] shadow-xl p-5 space-y-3"
+            >
+              <div className="flex items-center justify-between border-b border-[#F3D9E3] pb-2.5">
+                <h3 className="font-playfair text-lg font-bold text-[#3B2A35]">
+                  Lịch ngày {formatDMYFromYMD(dayModalCell.dateStr)}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setDayModalCell(null)}
+                  className="w-7 h-7 rounded-lg hover:bg-slate-100 flex items-center justify-center cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {dayModalCell.sessions.map((sess) => (
+                  <button
+                    key={sess.instanceId}
+                    type="button"
+                    style={{
+                      backgroundColor: sess.schedule.bgColor,
+                      color: sess.schedule.textColor,
+                    }}
+                    onClick={() => {
+                      setDayModalCell(null);
+                      setSelectedSession(sess);
+                    }}
+                    className="w-full p-3 rounded-[10px] flex items-center justify-between text-left font-bold text-sm cursor-pointer hover:brightness-95"
+                  >
+                    <span className={sess.isCancelled ? 'line-through opacity-70' : ''}>
+                      {sess.schedule.startTime}–{sess.schedule.endTime} ·{' '}
+                      {sess.schedule.className}
+                    </span>
+                    {sess.isCancelled && (
+                      <span className="text-[11px] bg-white/85 text-[#B02525] px-2 py-0.5 rounded">
+                        Nghỉ
+                      </span>
+                    )}
+                  </button>
                 ))}
               </div>
-                </div>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
 
-        {/* ==================== NGĂN KÉO: THÊM LỊCH DẠY ==================== */}
-        {isDrawerOpen && (
+        {/* ==================== NGĂN KÉO: THÊM / SỬA LỊCH DẠY ==================== */}
+        {isDrawerOpen && !isStudentView && (
           <div
             className="fixed inset-0 z-50 bg-[#3B2A35]/35 flex items-end md:items-stretch justify-center md:justify-end animate-in fade-in duration-200"
-            onClick={() => setIsDrawerOpen(false)}
+            onClick={() => !isSavingSchedule && setIsDrawerOpen(false)}
           >
-            {/* Bảng trượt đáy trên di động, ngăn kéo phải trên máy tính bảng/máy tính bàn */}
             <div
-              className="w-full md:w-[min(480px,90vw)] lg:w-[480px] max-h-[90dvh] md:max-h-none md:h-full bg-white rounded-t-[20px] md:rounded-t-none md:rounded-l-[16px] shadow-[-12px_0_40px_rgba(59,42,53,0.18)] flex flex-col justify-between overflow-hidden relative select-none animate-in slide-in-from-bottom md:slide-in-from-right duration-250"
+              className="w-full md:w-[min(480px,90vw)] lg:w-[480px] max-h-[92dvh] md:max-h-none md:h-full bg-white rounded-t-[20px] md:rounded-t-none md:rounded-l-[16px] shadow-[-12px_0_40px_rgba(59,42,53,0.18)] flex flex-col justify-between overflow-hidden relative select-none animate-in slide-in-from-bottom md:slide-in-from-right duration-250"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Thanh kéo nhỏ trên di động */}
               <div className="md:hidden pt-2.5 pb-1 flex justify-center flex-shrink-0">
                 <span className="w-10 h-1 rounded-full bg-[#E5D3DC]" />
               </div>
-              {/* Phần đầu ngăn kéo: Tiêu đề và nút đóng */}
+
               <div className="px-5 md:px-6 py-4 md:py-5 border-b border-[#F3D9E3] flex items-start justify-between flex-shrink-0">
                 <div>
                   <h2 className="font-playfair text-[22px] font-bold text-[#3B2A35] leading-tight">
-                    Thêm lịch dạy
+                    {editingSchedule ? 'Sửa lịch dạy cố định' : 'Thêm lịch dạy'}
                   </h2>
                   <p className="font-nunito text-[14px] text-[#6B5560] mt-1">
                     Tạo một lần, lặp mỗi tuần đến khi Admin xóa
@@ -1383,6 +1671,7 @@ export const SchedulePage: React.FC = () => {
                 </div>
                 <button
                   type="button"
+                  disabled={isSavingSchedule}
                   onClick={() => setIsDrawerOpen(false)}
                   className="w-8 h-8 rounded-[8px] text-[#6B5560] hover:text-[#3B2A35] hover:bg-[#FFE0EB] flex items-center justify-center transition-colors cursor-pointer"
                   aria-label="Đóng"
@@ -1391,46 +1680,71 @@ export const SchedulePage: React.FC = () => {
                 </button>
               </div>
 
-              {/* Phần thân biểu mẫu: khoảng cách 24px giữa các trường */}
               <form
                 onSubmit={handleSaveDrawerSchedule}
-                className="flex-1 overflow-y-auto px-6 py-6 space-y-6"
+                className="flex-1 overflow-y-auto px-6 py-5 space-y-5"
               >
-                {/* Trường 1: Lớp (hộp chọn, giá trị "Lớp 10", trạng thái viền nét 2px #2F6FA8 khi chọn) */}
-                <div>
-                  <label className="block text-[14px] font-bold text-[#3B2A35] mb-2">
-                    Lớp
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={drawerClass}
-                      onChange={(e) => setDrawerClass(e.target.value)}
-                      className="w-full h-[48px] px-4 rounded-[12px] border border-[#9C6B84] text-[14px] font-semibold text-[#3B2A35] bg-white ring-2 ring-[#2F6FA8] outline-none appearance-none cursor-pointer pr-10"
-                    >
-                      <option value="Lớp 1">Lớp 1</option>
-                      <option value="Lớp 2">Lớp 2</option>
-                      <option value="Lớp 3">Lớp 3</option>
-                      <option value="Lớp 4">Lớp 4</option>
-                      <option value="Lớp 5">Lớp 5</option>
-                      <option value="Lớp 6">Lớp 6</option>
-                      <option value="Lớp 7">Lớp 7</option>
-                      <option value="Lớp 8">Lớp 8</option>
-                      <option value="Lớp 9">Lớp 9</option>
-                      <option value="Lớp 10">Lớp 10</option>
-                      <option value="Lớp 11">Lớp 11</option>
-                      <option value="Lớp 12">Lớp 12</option>
-                    </select>
-                    <ChevronDown
-                      className="w-4 h-4 text-[#6B5560] absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"
-                      strokeWidth={2}
-                    />
+                {drawerError && (
+                  <div className="p-3.5 rounded-[12px] bg-rose-50 border border-rose-200 text-rose-700 text-[13px] font-semibold flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-rose-600" />
+                    <span>{drawerError}</span>
                   </div>
-                </div>
+                )}
 
-                {/* Trường 2: Các thứ trong tuần (hàng 7 thẻ nút 44px, chọn T3, T5, T7) */}
+                {classes.length === 0 ? (
+                  <div className="p-4 rounded-[12px] bg-amber-50 border border-amber-200 text-amber-900 space-y-2.5">
+                    <p className="text-[13px] font-bold">
+                      Chưa có lớp học nào trong hệ thống!
+                    </p>
+                    <p className="text-[12px]">
+                      Vui lòng tạo lớp học ở mục Lớp học trước, sau đó quay lại đây để xếp lịch dạy cố định.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => navigate(ROUTES.CLASSES)}
+                      className="h-9 px-3.5 rounded-[8px] bg-[#2F6FA8] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>Đi tới mục Lớp học</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block text-[14px] font-bold text-[#3B2A35] mb-2">
+                      Lớp học *
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={drawerClassId}
+                        onChange={(e) => {
+                          const nextId = e.target.value;
+                          setDrawerClassId(nextId);
+                          const found = classes.find((c) => c.id === nextId);
+                          if (found?.colorTheme?.bg && !editingSchedule) {
+                            setDrawerColor(found.colorTheme.bg);
+                          }
+                        }}
+                        className="w-full h-[48px] px-4 rounded-[12px] border border-[#9C6B84] text-[14px] font-semibold text-[#3B2A35] bg-white focus:ring-2 focus:ring-[#2F6FA8] outline-none appearance-none cursor-pointer pr-10"
+                      >
+                        {classes.map((cls) => (
+                          <option key={cls.id} value={cls.id}>
+                            {cls.name} (Khối {cls.grade}
+                            {cls.roomNumber ? ` · ${cls.roomNumber}` : ''})
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown
+                        className="w-4 h-4 text-[#6B5560] absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"
+                        strokeWidth={2}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Các thứ trong tuần */}
                 <div>
                   <label className="block text-[14px] font-bold text-[#3B2A35] mb-2">
-                    Các thứ trong tuần
+                    Các thứ trong tuần *
                   </label>
                   <div className="flex flex-wrap items-center justify-between gap-1.5">
                     {DRAWER_WEEKDAY_OPTIONS.map((day) => {
@@ -1453,75 +1767,58 @@ export const SchedulePage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Trường 3: Giờ bắt đầu (18:00) và Giờ kết thúc (19:30) cạnh nhau kèm biểu tượng đồng hồ */}
+                {/* Giờ bắt đầu và Giờ kết thúc */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[14px] font-bold text-[#3B2A35] mb-2">
-                      Giờ bắt đầu
+                      Giờ bắt đầu *
                     </label>
-                    <div className="relative">
-                      <Clock
-                        className="w-4 h-4 text-[#6B5560] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                        strokeWidth={1.75}
-                      />
-                      <input
-                        type="text"
-                        value={drawerStartTime}
-                        onChange={(e) => setDrawerStartTime(e.target.value)}
-                        className="w-full h-[48px] pl-10 pr-3 rounded-[12px] border border-[#9C6B84] text-[14px] font-semibold text-[#3B2A35] bg-white outline-none focus:ring-2 focus:ring-[#2F6FA8]"
-                        placeholder="18:00"
-                      />
-                    </div>
+                    <input
+                      type="time"
+                      value={drawerStartTime}
+                      onChange={(e) => setDrawerStartTime(e.target.value)}
+                      required
+                      className="w-full h-[48px] px-3.5 rounded-[12px] border border-[#9C6B84] text-[14px] font-semibold text-[#3B2A35] bg-white outline-none focus:ring-2 focus:ring-[#2F6FA8]"
+                    />
                   </div>
                   <div>
                     <label className="block text-[14px] font-bold text-[#3B2A35] mb-2">
-                      Giờ kết thúc
+                      Giờ kết thúc *
                     </label>
-                    <div className="relative">
-                      <Clock
-                        className="w-4 h-4 text-[#6B5560] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                        strokeWidth={1.75}
-                      />
-                      <input
-                        type="text"
-                        value={drawerEndTime}
-                        onChange={(e) => setDrawerEndTime(e.target.value)}
-                        className="w-full h-[48px] pl-10 pr-3 rounded-[12px] border border-[#9C6B84] text-[14px] font-semibold text-[#3B2A35] bg-white outline-none focus:ring-2 focus:ring-[#2F6FA8]"
-                        placeholder="19:30"
-                      />
-                    </div>
+                    <input
+                      type="time"
+                      value={drawerEndTime}
+                      onChange={(e) => setDrawerEndTime(e.target.value)}
+                      required
+                      className="w-full h-[48px] px-3.5 rounded-[12px] border border-[#9C6B84] text-[14px] font-semibold text-[#3B2A35] bg-white outline-none focus:ring-2 focus:ring-[#2F6FA8]"
+                    />
                   </div>
                 </div>
 
-                {/* Trường 4: Ngày bắt đầu áp dụng (10/11/2026) */}
+                {/* Ngày bắt đầu áp dụng */}
                 <div>
                   <label className="block text-[14px] font-bold text-[#3B2A35] mb-2">
-                    Ngày bắt đầu áp dụng
+                    Ngày bắt đầu áp dụng *
                   </label>
-                  <div className="relative">
-                    <CalendarIcon
-                      className="w-4 h-4 text-[#6B5560] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                      strokeWidth={1.75}
-                    />
-                    <input
-                      type="text"
-                      value={drawerStartDate}
-                      onChange={(e) => setDrawerStartDate(e.target.value)}
-                      className="w-full h-[48px] pl-10 pr-4 rounded-[12px] border border-[#9C6B84] text-[14px] font-semibold text-[#3B2A35] bg-white outline-none focus:ring-2 focus:ring-[#2F6FA8]"
-                      placeholder="10/11/2026"
-                    />
-                  </div>
+                  <input
+                    type="date"
+                    value={drawerStartDate}
+                    onChange={(e) => setDrawerStartDate(e.target.value)}
+                    required
+                    className="w-full h-[48px] px-3.5 rounded-[12px] border border-[#9C6B84] text-[14px] font-semibold text-[#3B2A35] bg-white outline-none focus:ring-2 focus:ring-[#2F6FA8]"
+                  />
                 </div>
 
-                {/* Trường 5: Màu hiển thị (6 ô tròn 32px, #CFE3FF chọn với viền 2px #2F6FA8 và dấu tích, nút Ngẫu nhiên) */}
+                {/* Màu hiển thị */}
                 <div>
                   <label className="block text-[14px] font-bold text-[#3B2A35] mb-2">
                     Màu hiển thị
                   </label>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <div className="flex items-center gap-2.5">
                       {DRAWER_SWATCH_COLORS.map((swatch) => {
-                        const isSelected = drawerColor === swatch;
+                        const isSelected =
+                          drawerColor.toLowerCase() === swatch.toLowerCase();
                         return (
                           <button
                             key={swatch}
@@ -1554,19 +1851,36 @@ export const SchedulePage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Hộp tóm tắt quy luật lặp lại (nền #E9F3FF, radius 12px, biểu tượng thông tin, chữ #1F4E79) */}
+                {/* Ghi chú tùy chọn */}
+                <div>
+                  <label className="block text-[14px] font-bold text-[#3B2A35] mb-2">
+                    Ghi chú (tùy chọn)
+                  </label>
+                  <input
+                    type="text"
+                    value={drawerNote}
+                    onChange={(e) => setDrawerNote(e.target.value)}
+                    placeholder="VD: Chuyên đề Nghị luận văn học..."
+                    className="w-full h-[44px] px-3.5 rounded-[12px] border border-[#9C6B84] text-[13px] text-[#3B2A35] bg-white outline-none focus:ring-2 focus:ring-[#2F6FA8]"
+                  />
+                </div>
+
+                {/* Hộp tóm tắt quy luật lặp lại */}
                 <div className="p-4 rounded-[12px] bg-[#E9F3FF] border border-[#CFE8FF] flex items-start gap-3">
-                  <Info className="w-5 h-5 text-[#1F4E79] flex-shrink-0 mt-0.5" strokeWidth={1.75} />
+                  <Info
+                    className="w-5 h-5 text-[#1F4E79] flex-shrink-0 mt-0.5"
+                    strokeWidth={1.75}
+                  />
                   <p className="font-nunito text-[13px] font-bold text-[#1F4E79] leading-relaxed">
                     {summaryText}
                   </p>
                 </div>
               </form>
 
-              {/* Chân ngăn kéo cố định: Nút Hủy và Nút Lưu lịch dạy */}
               <div className="h-[80px] px-6 border-t border-[#F3D9E3] flex items-center justify-between flex-shrink-0 bg-white">
                 <button
                   type="button"
+                  disabled={isSavingSchedule}
                   onClick={() => setIsDrawerOpen(false)}
                   className="text-[#6B5560] hover:text-[#3B2A35] text-[14px] font-bold transition-colors cursor-pointer"
                 >
@@ -1574,68 +1888,70 @@ export const SchedulePage: React.FC = () => {
                 </button>
                 <button
                   type="button"
+                  disabled={isSavingSchedule || classes.length === 0}
                   onClick={handleSaveDrawerSchedule}
-                  className="h-[48px] px-6 rounded-[12px] bg-[#D6336C] hover:bg-[#C2255C] text-white font-bold text-[14px] flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95"
+                  className="h-[48px] px-6 rounded-[12px] bg-[#D6336C] hover:bg-[#C2255C] disabled:opacity-50 text-white font-bold text-[14px] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
                 >
-                  Lưu lịch dạy
+                  {isSavingSchedule && <Loader2 className="w-4 h-4 animate-spin" />}
+                  <span>{editingSchedule ? 'Cập nhật lịch dạy' : 'Lưu lịch dạy'}</span>
                 </button>
               </div>
             </div>
           </div>
         )}
-        {/* ==================== HỘP THOẠI XÁC NHẬN: XÓA LỊCH DẠY LỚP 10 ==================== */}
-        {isDeleteDialogOpen && (
+
+        {/* ==================== HỘP THOẠI XÁC NHẬN: XÓA LỊCH DẠY ==================== */}
+        {deleteTarget && (
           <div
             className="fixed inset-0 z-50 bg-[#3B2A35]/35 flex items-end md:items-center justify-center p-0 md:p-4 animate-in fade-in duration-200"
-            onClick={() => setIsDeleteDialogOpen(false)}
+            onClick={() => !isDeleting && setDeleteTarget(null)}
           >
-            {/* Bảng trượt đáy trên di động, căn giữa trên máy tính bảng/máy tính bàn */}
             <div
               className="w-full md:w-[480px] max-h-[90dvh] overflow-y-auto bg-white rounded-t-[20px] md:rounded-[20px] p-5 md:p-6 shadow-[0_20px_50px_rgba(59,42,53,0.22)] border border-[#F3D9E3] flex flex-col gap-4 md:gap-5 select-none relative animate-in slide-in-from-bottom md:zoom-in-95 duration-200"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Thanh kéo nhỏ trên di động */}
               <div className="md:hidden -mt-2 pb-1 flex justify-center flex-shrink-0">
                 <span className="w-10 h-1 rounded-full bg-[#E5D3DC]" />
               </div>
-              {/* Phía trên: Huy hiệu biểu tượng tròn 48px (nền #FFE3E3, biểu tượng thùng rác #B02525) */}
+
               <div className="w-12 h-12 rounded-full bg-[#FFE3E3] flex items-center justify-center flex-shrink-0">
                 <Trash2 className="w-6 h-6 text-[#B02525]" strokeWidth={2} />
               </div>
 
-              {/* Tiêu đề font Playfair Display 22px */}
               <h2 className="font-playfair text-[22px] font-bold text-[#3B2A35] leading-tight">
                 Xóa lịch dạy {deleteTarget.className}?
               </h2>
 
-              {/* Hàng tóm tắt nhỏ (nền #CFE3FF, chữ #1F4E79, bo góc 12px, đệm 12px, thanh viền trái 4px #1F4E79) */}
               <div className="p-3 rounded-[12px] bg-[#CFE3FF] border-l-4 border-l-[#1F4E79] flex items-center font-nunito font-bold text-[14px] text-[#1F4E79]">
-                {deleteTarget.summary}
+                {deleteTarget.className} · {formatShortWeekdays(deleteTarget.weekdays)} ·{' '}
+                {deleteTarget.startTime}–{deleteTarget.endTime}
               </div>
 
-              {/* Nội dung thông báo font Nunito 14px #3B2A35 */}
               <p className="font-nunito text-[14px] text-[#3B2A35] leading-relaxed">
-                Lịch này sẽ biến mất khỏi lịch học từ hôm nay trở đi. Các buổi đã dạy và dữ liệu điểm danh cũ vẫn được giữ. Chỉ Admin mới xóa được lịch dạy.
+                Lịch này sẽ biến mất khỏi lịch học từ hôm nay trở đi. Các buổi đã dạy ở các tuần/tháng trước và dữ liệu điểm danh cũ vẫn được giữ nguyên.
               </p>
 
-              {/* Các nút bấm: xếp dọc chiều rộng 100% trên di động, căn phải trên máy tính bảng/máy tính bàn */}
               <div className="flex flex-col-reverse md:flex-row items-stretch md:items-center justify-end gap-2.5 md:gap-3 pt-2">
-                {/* Nút Hủy (dạng nút chữ, màu #6B5560) */}
                 <button
                   type="button"
-                  onClick={() => setIsDeleteDialogOpen(false)}
+                  disabled={isDeleting}
+                  onClick={() => setDeleteTarget(null)}
                   className="w-full md:w-auto h-[48px] px-5 rounded-[12px] text-[#6B5560] hover:text-[#3B2A35] hover:bg-slate-50 font-bold text-[14px] transition-colors cursor-pointer"
                 >
                   Hủy
                 </button>
 
-                {/* Nút Xóa lịch (nền phủ #B02525, chữ trắng, biểu tượng thùng rác) */}
                 <button
                   type="button"
+                  disabled={isDeleting}
                   onClick={handleConfirmDeleteSchedule}
-                  className="w-full md:w-auto h-[48px] px-6 rounded-[12px] bg-[#B02525] hover:bg-[#961F1F] text-white font-bold text-[14px] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
+                  className="w-full md:w-auto h-[48px] px-6 rounded-[12px] bg-[#B02525] hover:bg-[#961F1F] disabled:opacity-60 text-white font-bold text-[14px] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-95"
                 >
-                  <Trash2 className="w-4 h-4 text-white" strokeWidth={2} />
+                  {isDeleting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4 text-white" strokeWidth={2} />
+                  )}
                   <span>Xóa lịch</span>
                 </button>
               </div>

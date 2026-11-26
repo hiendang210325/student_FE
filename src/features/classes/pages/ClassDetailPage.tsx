@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   UserPlus,
@@ -23,7 +23,11 @@ import { ROUTES } from '@/routes/paths';
 import { AddStudentModal } from '../components/AddStudentModal';
 import { ClassFormModal } from '../components/ClassFormModal';
 import { classApi } from '../api/classApi';
-import { ClassDetailData, ClassPayload } from '../types/class.types';
+import {
+  ClassDetailData,
+  ClassPayload,
+  ApprovedLeaveAttendanceInfo,
+} from '../types/class.types';
 import { Student } from '@/features/students/types/student.types';
 import {
   Tooltip,
@@ -35,6 +39,7 @@ import { ApiError } from '@/services/api/apiError';
 
 export const ClassDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const [classDetail, setClassDetail] = useState<ClassDetailData | null>(null);
@@ -49,10 +54,17 @@ export const ClassDetailPage: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
 
-  // Trạng thái điểm danh theo ngày (lưu DB)
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const [attendanceDate, setAttendanceDate] = useState<string>(todayStr);
+  // Trạng thái điểm danh theo ngày (lưu DB, hỗ trợ nhận ?date=YYYY-MM-DD từ trang Lịch học)
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const queryDate = searchParams.get('date');
+  const initialDate =
+    queryDate && /^\d{4}-\d{2}-\d{2}$/.test(queryDate) ? queryDate : todayStr;
+  const [attendanceDate, setAttendanceDate] = useState<string>(initialDate);
   const [attendedStudentIds, setAttendedStudentIds] = useState<string[]>([]);
+  const [approvedLeavesMap, setApprovedLeavesMap] = useState<
+    Record<string, ApprovedLeaveAttendanceInfo>
+  >({});
   const [isSavingAttendance, setIsSavingAttendance] = useState<boolean>(false);
   const [removingStudentId, setRemovingStudentId] = useState<string | null>(null);
 
@@ -84,6 +96,11 @@ export const ClassDetailPage: React.FC = () => {
     try {
       const res = await classApi.getAttendance(id, attendanceDate);
       setAttendedStudentIds(res.data?.presentStudentIds || []);
+      const map: Record<string, ApprovedLeaveAttendanceInfo> = {};
+      for (const lv of res.data?.approvedLeaves || []) {
+        map[lv.studentId] = lv;
+      }
+      setApprovedLeavesMap(map);
     } catch (err) {
       console.error('Lỗi khi tải dữ liệu điểm danh:', err);
     }
@@ -165,21 +182,28 @@ export const ClassDetailPage: React.FC = () => {
     }
   };
 
-  // Điểm danh tất cả học sinh trong lớp cho ngày đang chọn
+  // Điểm danh tất cả học sinh trong lớp cho ngày đang chọn (tự động chừa các em đã có đơn Nghỉ có phép được duyệt)
   const handleMarkAllAttendance = async () => {
     if (!id || students.length === 0) return;
-    const allIds = students.map((s) => s.id);
-    const allMarked = allIds.every((sid) => attendedStudentIds.includes(sid));
-    const nextIds = allMarked ? [] : allIds;
+    const eligibleIds = students
+      .filter((s) => !approvedLeavesMap[s.id])
+      .map((s) => s.id);
+    const excusedCount = students.length - eligibleIds.length;
+    const allEligibleMarked =
+      eligibleIds.length > 0 &&
+      eligibleIds.every((sid) => attendedStudentIds.includes(sid));
+    const nextIds = allEligibleMarked ? [] : eligibleIds;
 
     setAttendedStudentIds(nextIds);
     setIsSavingAttendance(true);
     try {
       await classApi.saveAttendance(id, attendanceDate, nextIds);
       showToast(
-        allMarked
+        allEligibleMarked
           ? `Đã bỏ chọn điểm danh tất cả ngày ${attendanceDate}.`
-          : `Đã điểm danh đủ ${allIds.length} học sinh ngày ${attendanceDate}!`
+          : excusedCount > 0
+          ? `Đã điểm danh ${eligibleIds.length} học sinh (chừa ${excusedCount} học sinh nghỉ có phép)!`
+          : `Đã điểm danh đủ ${eligibleIds.length} học sinh ngày ${attendanceDate}!`
       );
     } catch (err) {
       setAttendedStudentIds(attendedStudentIds);
@@ -242,8 +266,15 @@ export const ClassDetailPage: React.FC = () => {
     );
   }
 
+  const eligibleAttendanceIds = students
+    .filter((s) => !approvedLeavesMap[s.id])
+    .map((s) => s.id);
+  const excusedTodayCount = Object.keys(approvedLeavesMap).filter((sid) =>
+    students.some((s) => s.id === sid)
+  ).length;
   const allMarked =
-    students.length > 0 && students.every((s) => attendedStudentIds.includes(s.id));
+    eligibleAttendanceIds.length > 0 &&
+    eligibleAttendanceIds.every((sid) => attendedStudentIds.includes(sid));
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -433,6 +464,7 @@ export const ClassDetailPage: React.FC = () => {
                 filteredStudents.map((student, index) => {
                   const isPinkAvatar = index % 2 === 0;
                   const isAttended = attendedStudentIds.includes(student.id);
+                  const approvedLeave = approvedLeavesMap[student.id];
 
                   return (
                     <div
@@ -458,14 +490,28 @@ export const ClassDetailPage: React.FC = () => {
                           {getInitials(student.fullName)}
                         </div>
                         <div className="flex flex-col truncate min-w-0">
-                          <button
-                            type="button"
-                            onClick={() => navigate(`/students/${student.studentCode}`)}
-                            className="text-left font-bold text-[#3B2A35] hover:text-[#2F6FA8] hover:underline leading-tight truncate cursor-pointer"
-                            title={student.fullName}
-                          >
-                            {student.fullName}
-                          </button>
+                          <div className="flex items-center gap-2 min-w-0">
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/students/${student.studentCode}`)}
+                              className="text-left font-bold text-[#3B2A35] hover:text-[#2F6FA8] hover:underline leading-tight truncate cursor-pointer"
+                              title={student.fullName}
+                            >
+                              {student.fullName}
+                            </button>
+                            {approvedLeave && !isAttended && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="px-2 py-0.5 rounded-[6px] bg-[#FFE0EB] text-[#A61E4D] text-[11px] font-bold flex-shrink-0 cursor-help">
+                                    Nghỉ có phép
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-[260px]">
+                                  <span>Lý do: {approvedLeave.reason}</span>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
                           <span
                             className="text-[12px] text-[#6B5560] leading-none mt-1 truncate"
                             title={student.email}
@@ -565,6 +611,7 @@ export const ClassDetailPage: React.FC = () => {
                 filteredStudents.map((student, index) => {
                   const isPinkAvatar = index % 2 === 0;
                   const isAttended = attendedStudentIds.includes(student.id);
+                  const approvedLeave = approvedLeavesMap[student.id];
 
                   return (
                     <div key={student.id} className="p-4 flex flex-col gap-3 bg-white">
@@ -580,8 +627,15 @@ export const ClassDetailPage: React.FC = () => {
                             {getInitials(student.fullName)}
                           </div>
                           <div className="min-w-0">
-                            <div className="font-bold text-[15px] text-[#3B2A35] leading-tight truncate">
-                              {student.fullName}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-[15px] text-[#3B2A35] leading-tight truncate">
+                                {student.fullName}
+                              </span>
+                              {approvedLeave && !isAttended && (
+                                <span className="px-2 py-0.5 rounded-[6px] bg-[#FFE0EB] text-[#A61E4D] text-[11px] font-bold">
+                                  Nghỉ có phép
+                                </span>
+                              )}
                             </div>
                             <div className="text-[12px] text-[#6B5560] truncate mt-0.5">
                               {student.email || 'Chưa cập nhật email'}
@@ -635,6 +689,7 @@ export const ClassDetailPage: React.FC = () => {
               </span>
               <span className="font-nunito text-[13px] text-[#1F4E79] font-semibold">
                 Có mặt ngày {attendanceDate}: {attendedStudentIds.length}/{students.length}
+                {excusedTodayCount > 0 ? ` · Nghỉ có phép: ${excusedTodayCount}` : ''}
               </span>
             </div>
           </div>

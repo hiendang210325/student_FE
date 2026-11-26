@@ -21,7 +21,6 @@ import {
   Eye,
   EyeOff,
   RotateCw,
-  Sparkles,
 } from 'lucide-react';
 
 interface ForgotPasswordModalProps {
@@ -47,7 +46,6 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
   const [countdown, setCountdown] = useState(60);
   const [isCounting, setIsCounting] = useState(false);
   const [resetToken, setResetToken] = useState<string>('');
-  const [devOtpHint, setDevOtpHint] = useState<string | null>(null);
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Trạng thái mật khẩu mới
@@ -70,7 +68,6 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
       setOtpError(null);
       setSubmitError(null);
       setResetToken('');
-      setDevOtpHint(null);
     }
   }, [isOpen, initialEmail]);
 
@@ -184,10 +181,7 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      const response = await authApi.forgotPassword(email.trim());
-      if (response.data?.devReset?.otp) {
-        setDevOtpHint(response.data.devReset.otp);
-      }
+      await authApi.forgotPassword(email.trim());
       setStep('OTP');
       setCountdown(60);
       setIsCounting(true);
@@ -247,22 +241,11 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
     otpInputRefs.current[0]?.focus();
 
     try {
-      const response = await authApi.forgotPassword(email.trim());
-      if (response.data?.devReset?.otp) {
-        setDevOtpHint(response.data.devReset.otp);
-      }
+      await authApi.forgotPassword(email.trim());
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Không thể gửi lại mã OTP';
       setOtpError(msg);
     }
-  };
-
-  // Tự động điền mã OTP thử nghiệm (tiện ích cho môi trường Dev)
-  const handleAutoFillDevOtp = () => {
-    if (!devOtpHint || devOtpHint.length !== 6) return;
-    const digits = devOtpHint.split('');
-    setOtp(digits);
-    setOtpError(null);
   };
 
   const handleOtpSubmit = async (e: React.FormEvent) => {
@@ -461,23 +444,6 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({
                 <strong className="text-brand-textDark font-semibold">{email}</strong>. Vui lòng kiểm tra và nhập mã bên dưới.
               </DialogDescription>
             </DialogHeader>
-
-            {/* Thông báo gợi ý OTP khi ở môi trường thử nghiệm (chưa có SMTP) */}
-            {devOtpHint && (
-              <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-center justify-between">
-                <div className="flex items-center gap-1.5 font-medium">
-                  <Sparkles className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                  <span>Mã OTP thử nghiệm (Console): <strong>{devOtpHint}</strong></span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAutoFillDevOtp}
-                  className="font-bold text-amber-900 underline hover:text-amber-700 cursor-pointer"
-                >
-                  Điền nhanh
-                </button>
-              </div>
-            )}
 
             {/* 6 ô nhập chữ số OTP */}
             <div className="space-y-2">

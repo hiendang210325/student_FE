@@ -35,6 +35,11 @@ apiClient.interceptors.request.use(
       config.headers['x-csrf-token'] = csrfToken;
     }
 
+    // 3. Nếu body là FormData, để trình duyệt tự đặt multipart/form-data kèm boundary
+    if (typeof FormData !== 'undefined' && config.data instanceof FormData && config.headers) {
+      delete config.headers['Content-Type'];
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
