@@ -10,6 +10,7 @@ export interface TuitionSlipExportData {
   transferContent: string;
   teacherComment: string;
   fileName: string;
+  status?: 'UNPAID' | 'PAID';
 }
 
 // Tải ảnh bất đồng bộ để vẽ lên Canvas
@@ -145,7 +146,11 @@ export const exportTuitionSlipPng = async (
   ctx.textAlign = 'center';
   ctx.fillStyle = '#A61E4D';
   ctx.font = 'bold 20px "Nunito", sans-serif';
-  ctx.fillText('Học phí 1 tháng', 540, cursorY + 38);
+  ctx.fillText(
+    data.status === 'PAID' ? 'Học phí 1 tháng (Đã thanh toán)' : 'Học phí 1 tháng',
+    540,
+    cursorY + 38
+  );
 
   ctx.font = 'bold 64px "Playfair Display", Georgia, serif';
   ctx.fillText(data.formattedAmount, 540, cursorY + 104);
@@ -201,7 +206,10 @@ export const exportTuitionSlipPng = async (
 
   ctx.fillStyle = '#3B2A35';
   ctx.font = '500 22px "Nunito", sans-serif';
-  const commentLines = wrapTextLines(ctx, data.teacherComment, contentW - 64).slice(0, 3);
+  const effectiveComment =
+    data.teacherComment?.trim() ||
+    'Chúc em luôn giữ tinh thần chăm chỉ, rèn luyện tốt kỹ năng cảm thụ và viết văn trong tháng học mới.';
+  const commentLines = wrapTextLines(ctx, effectiveComment, contentW - 64).slice(0, 3);
   commentLines.forEach((line, idx) => {
     ctx.fillText(line, contentX + 32, cursorY + 80 + idx * 34);
   });

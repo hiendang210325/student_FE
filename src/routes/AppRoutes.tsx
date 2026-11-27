@@ -21,6 +21,7 @@ import { TuitionPage } from '@/features/tuition/pages/TuitionPage';
 import { TuitionClassDetailPage } from '@/features/tuition/pages/TuitionClassDetailPage';
 import { NotificationsPage } from '@/features/notifications/pages/NotificationsPage';
 import { AccountListPage } from '@/features/accounts/pages/AccountListPage';
+import { AdminProfilePage } from '@/features/profile/pages/AdminProfilePage';
 
 const PageLoader = () => (
   <div className="flex h-[50vh] items-center justify-center">
@@ -64,6 +65,8 @@ export const AppRoutes: React.FC = () => {
           <Route path={ROUTES.TUITION} element={<TuitionPage />} />
           <Route path={ROUTES.TUITION_CLASS_DETAIL} element={<TuitionClassDetailPage />} />
           <Route path={ROUTES.NOTIFICATIONS} element={<NotificationsPage />} />
+          <Route path={ROUTES.PROFILE} element={<AdminProfilePage />} />
+          <Route path="/reports" element={<Navigate to={ROUTES.PROFILE} replace />} />
           <Route
             path={ROUTES.GRADES}
             element={

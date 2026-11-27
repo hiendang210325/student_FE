@@ -8,6 +8,9 @@ export interface User extends BaseEntity {
   role: AppRole;
   avatarUrl?: string;
   phoneNumber?: string;
+  title?: string;
+  bio?: string;
+  address?: string;
   isActive: boolean;
   studentCode?: string | null;
   status?: string;

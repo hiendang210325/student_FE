@@ -91,6 +91,37 @@ export const authApi = {
   changePassword: async (payload: ChangePasswordPayload): Promise<ApiResponse<null>> => {
     return apiClient.post('/auth/change-password', payload);
   },
+
+  /**
+   * 12. Cập nhật thông tin hồ sơ & ảnh đại diện
+   */
+  updateProfile: async (payload: {
+    fullName: string;
+    username: string;
+    email: string;
+    phoneNumber: string;
+    title: string;
+    bio: string;
+    address: string;
+    avatarFile?: File | null;
+    removeAvatar?: boolean;
+  }): Promise<ApiResponse<User>> => {
+    const formData = new FormData();
+    formData.append('fullName', payload.fullName);
+    formData.append('username', payload.username);
+    formData.append('email', payload.email);
+    formData.append('phoneNumber', payload.phoneNumber);
+    formData.append('title', payload.title);
+    formData.append('bio', payload.bio);
+    formData.append('address', payload.address);
+    if (payload.removeAvatar) {
+      formData.append('removeAvatar', 'true');
+    }
+    if (payload.avatarFile) {
+      formData.append('avatar', payload.avatarFile);
+    }
+    return apiClient.put('/auth/profile', formData);
+  },
 };
 
 export default authApi;

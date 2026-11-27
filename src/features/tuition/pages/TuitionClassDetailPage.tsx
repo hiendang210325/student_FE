@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
   ChevronLeft,
@@ -8,6 +8,13 @@ import {
   Wallet,
   Check,
   Calendar,
+  Search,
+  X,
+  Sparkles,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Users,
 } from 'lucide-react';
 import { ROUTES } from '@/routes/paths';
 import {
@@ -16,640 +23,969 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { TuitionPaymentModal } from '../components/TuitionPaymentModal';
+import { tuitionApi } from '../api/tuitionApi';
 import {
-  TuitionPaymentModal,
-  TuitionModalStudent,
-} from '../components/TuitionPaymentModal';
+  TuitionClassDetailResponse,
+  TuitionClassStudentRow,
+  TuitionPaymentMethod,
+  TuitionPaymentStatus,
+} from '../types/tuition.types';
 
-// Kiểu dữ liệu học phí của từng học sinh trong Lớp 10
-type ClassTuitionStudent = TuitionModalStudent;
+const formatCurrencyVND = (amount?: number | null): string => {
+  const safe = Math.max(0, Math.round(amount || 0));
+  return `${String(safe).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} đ`;
+};
 
-// Danh sách đúng 10 học sinh của Lớp 10 kèm mức học phí tháng 11 theo đặc tả
-const CLASS_10_TUITION_STUDENTS: ClassTuitionStudent[] = [
-  {
-    id: 1,
-    studentCode: 'HS0007',
-    fullName: 'Phạm Hoàng Nam',
-    parentPhone: '0900 111 207',
-    tuitionAmount: '1.200.000 đ',
-  },
-  {
-    id: 2,
-    studentCode: 'HS0009',
-    fullName: 'Hoàng Minh Khôi',
-    parentPhone: '0900 111 209',
-    tuitionAmount: '1.200.000 đ',
-  },
-  {
-    id: 3,
-    studentCode: 'HS0021',
-    fullName: 'Nguyễn Thu Hà',
-    parentPhone: '0900 111 221',
-    tuitionAmount: '1.200.000 đ',
-  },
-  {
-    id: 4,
-    studentCode: 'HS0022',
-    fullName: 'Trần Đức Anh',
-    parentPhone: '0900 111 222',
-    tuitionAmount: '1.200.000 đ',
-  },
-  {
-    id: 5,
-    studentCode: 'HS0023',
-    fullName: 'Lê Phương Thảo',
-    parentPhone: '0900 111 223',
-    tuitionAmount: '1.000.000 đ',
-  },
-  {
-    id: 6,
-    studentCode: 'HS0024',
-    fullName: 'Võ Thành Đạt',
-    parentPhone: '0900 111 224',
-    tuitionAmount: '1.200.000 đ',
-  },
-  {
-    id: 7,
-    studentCode: 'HS0025',
-    fullName: 'Đặng Khánh Vy',
-    parentPhone: '0900 111 225',
-    tuitionAmount: '1.200.000 đ',
-  },
-  {
-    id: 8,
-    studentCode: 'HS0026',
-    fullName: 'Bùi Quốc Bảo',
-    parentPhone: '0900 111 226',
-    tuitionAmount: null,
-  },
-  {
-    id: 9,
-    studentCode: 'HS0027',
-    fullName: 'Phan Ngọc Mai',
-    parentPhone: '0900 111 227',
-    tuitionAmount: null,
-  },
-  {
-    id: 10,
-    studentCode: 'HS0028',
-    fullName: 'Dương Hải Đăng',
-    parentPhone: '0900 111 228',
-    tuitionAmount: '1.200.000 đ',
-  },
-];
+const formatTuitionInputNumber = (raw: string): string => {
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return '';
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+};
 
-// Hàm lấy chữ cái đầu của họ và tên để hiển thị trong avatar 36px
+const parseFormattedMoney = (formatted: string): number => {
+  const digits = formatted.replace(/\D/g, '');
+  return digits ? Number(digits) : 0;
+};
+
 const getInitials = (name: string): string => {
-  const parts = name.trim().split(/\s+/);
+  const parts = String(name || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
   if (parts.length >= 2) {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
-  return name.slice(0, 2).toUpperCase();
+  return String(name || 'HS')
+    .slice(0, 2)
+    .toUpperCase();
 };
 
 export const TuitionClassDetailPage: React.FC = () => {
+  const { id: classId } = useParams<{ id: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [students, setStudents] = useState<ClassTuitionStudent[]>(CLASS_10_TUITION_STUDENTS);
-  // Học sinh đang được chọn để mở hộp thoại nhập học phí và mã QR (mặc định null để không tự mở khi tải trang)
-  const [selectedStudent, setSelectedStudent] = useState<ClassTuitionStudent | null>(null);
-  // Thông báo Toast phản hồi sau khi lưu học phí
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Ngày, tháng và năm đang xem (mặc định 13/11/2026)
-  const [selectedDay, setSelectedDay] = useState<number>(13);
-  const [selectedMonth, setSelectedMonth] = useState<number>(11);
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState<boolean>(false);
-  const [pickerMonth, setPickerMonth] = useState<number>(11);
-  const [pickerYear, setPickerYear] = useState<number>(2026);
-  const [pickerMode, setPickerMode] = useState<'day' | 'month'>('day');
-  const datePickerRef = useRef<HTMLDivElement>(null);
+  const now = new Date();
+  const initMonth = Math.min(
+    12,
+    Math.max(1, Number(searchParams.get('month')) || now.getMonth() + 1)
+  );
+  const initYear = Math.min(
+    2100,
+    Math.max(2020, Number(searchParams.get('year')) || now.getFullYear())
+  );
 
-  // Đóng bảng chọn ngày/tháng/năm khi bấm ra ngoài
+  const [selectedMonth, setSelectedMonth] = useState<number>(initMonth);
+  const [selectedYear, setSelectedYear] = useState<number>(initYear);
+  const [detail, setDetail] = useState<TuitionClassDetailResponse | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<
+    'ALL' | 'UNPAID' | 'PAID' | 'UNSET'
+  >('ALL');
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [togglingRecordId, setTogglingRecordId] = useState<string | null>(null);
+
+  // Hộp thoại Áp mức học phí chung cho cả lớp
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState<boolean>(false);
+  const [bulkMode, setBulkMode] = useState<'FIXED' | 'PER_SESSION'>('FIXED');
+  const [bulkFixedInput, setBulkFixedInput] = useState<string>('1.200.000');
+  const [bulkUnitPriceInput, setBulkUnitPriceInput] = useState<string>('150.000');
+  const [bulkOverwrite, setBulkOverwrite] = useState<boolean>(false);
+  const [bulkComment, setBulkComment] = useState<string>('');
+  const [isSubmittingBulk, setIsSubmittingBulk] = useState<boolean>(false);
+
+  // Popover chọn nhanh Tháng / Năm
+  const [isMonthPickerOpen, setIsMonthPickerOpen] = useState<boolean>(false);
+  const [pickerYear, setPickerYear] = useState<number>(initYear);
+  const monthPickerRef = useRef<HTMLDivElement>(null);
+
+  const [toast, setToast] = useState<{
+    message: string;
+    type: 'success' | 'error';
+  } | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+
+  const showToast = useCallback(
+    (message: string, type: 'success' | 'error' = 'success') => {
+      setToast({ message, type });
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
+      toastTimerRef.current = window.setTimeout(() => {
+        setToast(null);
+      }, 3300);
+    },
+    []
+  );
+
   useEffect(() => {
-    if (!isDatePickerOpen) return;
-    const handleClickOutside = (event: MouseEvent) => {
+    if (!isMonthPickerOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
       if (
-        datePickerRef.current &&
-        !datePickerRef.current.contains(event.target as Node)
+        monthPickerRef.current &&
+        !monthPickerRef.current.contains(e.target as Node)
       ) {
-        setIsDatePickerOpen(false);
+        setIsMonthPickerOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isDatePickerOpen]);
+  }, [isMonthPickerOpen]);
 
-  const monthLabel = `${String(selectedMonth).padStart(2, '0')}/${selectedYear}`;
-  const fullDateLabel = `${String(selectedDay).padStart(2, '0')}/${monthLabel}`;
+  const fetchClassTuition = useCallback(async () => {
+    if (!classId) return;
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      const res = await tuitionApi.getClassDetail(classId, {
+        month: selectedMonth,
+        year: selectedYear,
+      });
+      setDetail(res.data);
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Không tìm thấy thông tin lớp học.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [classId, selectedMonth, selectedYear]);
 
-  // Số ngày trong một tháng bất kỳ
-  const getDaysInMonth = (month: number, year: number): number => {
-    return new Date(year, month, 0).getDate();
-  };
-
-  // Vị trí thứ trong tuần (Thứ 2 = 0 ... Chủ nhật = 6) của ngày 1
-  const getMondayStartOffset = (month: number, year: number): number => {
-    const jsDay = new Date(year, month - 1, 1).getDay(); // CN = 0, T2 = 1...
-    return jsDay === 0 ? 6 : jsDay - 1;
-  };
+  useEffect(() => {
+    fetchClassTuition();
+    setSearchParams(
+      { month: String(selectedMonth), year: String(selectedYear) },
+      { replace: true }
+    );
+  }, [fetchClassTuition, selectedMonth, selectedYear, setSearchParams]);
 
   const handlePrevMonth = () => {
-    const nextMonth = selectedMonth === 1 ? 12 : selectedMonth - 1;
-    const nextYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear;
-    const maxDays = getDaysInMonth(nextMonth, nextYear);
-    setSelectedMonth(nextMonth);
-    setSelectedYear(nextYear);
-    if (selectedDay > maxDays) setSelectedDay(maxDays);
+    if (selectedMonth === 1) {
+      setSelectedMonth(12);
+      setSelectedYear((y) => y - 1);
+    } else {
+      setSelectedMonth((m) => m - 1);
+    }
   };
 
   const handleNextMonth = () => {
-    const nextMonth = selectedMonth === 12 ? 1 : selectedMonth + 1;
-    const nextYear = selectedMonth === 12 ? selectedYear + 1 : selectedYear;
-    const maxDays = getDaysInMonth(nextMonth, nextYear);
-    setSelectedMonth(nextMonth);
-    setSelectedYear(nextYear);
-    if (selectedDay > maxDays) setSelectedDay(maxDays);
+    if (selectedMonth === 12) {
+      setSelectedMonth(1);
+      setSelectedYear((y) => y + 1);
+    } else {
+      setSelectedMonth((m) => m + 1);
+    }
   };
 
-  const handleToggleDatePicker = () => {
-    setPickerMonth(selectedMonth);
-    setPickerYear(selectedYear);
-    setPickerMode('day');
-    setIsDatePickerOpen((prev) => !prev);
+  const students = detail?.students || [];
+  const selectedStudent: TuitionClassStudentRow | null = useMemo(
+    () => students.find((s) => s.studentId === selectedStudentId) || null,
+    [students, selectedStudentId]
+  );
+
+  const filteredStudents = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return students.filter((st) => {
+      if (statusFilter !== 'ALL' && st.tuitionStatus !== statusFilter) {
+        return false;
+      }
+      if (!q) return true;
+      return (
+        st.fullName.toLowerCase().includes(q) ||
+        st.studentCode.toLowerCase().includes(q) ||
+        (st.parentPhone || '').includes(q) ||
+        (st.email || '').toLowerCase().includes(q)
+      );
+    });
+  }, [students, statusFilter, searchQuery]);
+
+  // Lưu phiếu học phí cho 1 học sinh từ Modal
+  const handleSaveStudentTuition = async (payload: {
+    studentId: string;
+    amount: number;
+    teacherComment: string;
+    status: TuitionPaymentStatus;
+    paymentMethod: TuitionPaymentMethod | null;
+    attendedCountSnapshot: number | null;
+    unitPriceSnapshot: number | null;
+  }) => {
+    if (!classId) return;
+    try {
+      await tuitionApi.upsertStudentTuition(classId, payload.studentId, {
+        month: selectedMonth,
+        year: selectedYear,
+        amount: payload.amount,
+        teacherComment: payload.teacherComment,
+        status: payload.status,
+        paymentMethod: payload.paymentMethod,
+        attendedCountSnapshot: payload.attendedCountSnapshot,
+        unitPriceSnapshot: payload.unitPriceSnapshot,
+      });
+      await fetchClassTuition();
+      showToast(
+        `Đã lưu phiếu học phí (${formatCurrencyVND(payload.amount)}) thành công!`
+      );
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể lưu phiếu học phí.', 'error');
+      throw err;
+    }
   };
 
-  const handleSelectDayFromPicker = (day: number) => {
-    setSelectedDay(day);
-    setSelectedMonth(pickerMonth);
-    setSelectedYear(pickerYear);
-    setIsDatePickerOpen(false);
+  // Gửi Email phiếu học phí
+  const handleSendTuitionEmail = async (recordId: string) => {
+    try {
+      const res = await tuitionApi.sendTuitionEmail(recordId);
+      await fetchClassTuition();
+      showToast(res.message || 'Đã gửi Email phiếu học phí thành công!');
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể gửi Email phiếu học phí.', 'error');
+      throw err;
+    }
   };
 
-  const handleSelectMonthInPicker = (month: number) => {
-    setPickerMonth(month);
-    setPickerMode('day');
+  // Bấm nhanh chuyển trạng thái Đã đóng / Chờ đóng ngay trên dòng bảng
+  const handleQuickTogglePaid = async (row: TuitionClassStudentRow) => {
+    if (!row.record) return;
+    const nextStatus: TuitionPaymentStatus =
+      row.record.status === 'PAID' ? 'UNPAID' : 'PAID';
+    setTogglingRecordId(row.record.id);
+    try {
+      await tuitionApi.updatePaymentStatus(row.record.id, {
+        status: nextStatus,
+        paymentMethod: 'TRANSFER',
+      });
+      await fetchClassTuition();
+      showToast(
+        nextStatus === 'PAID'
+          ? `Đã xác nhận ${row.fullName} hoàn tất đóng học phí!`
+          : `Đã chuyển ${row.fullName} về trạng thái Chờ đóng.`
+      );
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể cập nhật trạng thái.', 'error');
+    } finally {
+      setTogglingRecordId(null);
+    }
   };
 
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+  // Áp mức học phí chung cho cả lớp
+  const handleBulkApplySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!classId) return;
+
+    const fixedVal = parseFormattedMoney(bulkFixedInput);
+    const unitVal = parseFormattedMoney(bulkUnitPriceInput);
+
+    if (bulkMode === 'FIXED' && fixedVal <= 0) {
+      showToast('Vui lòng nhập mức học phí trọn gói lớn hơn 0 đ.', 'error');
+      return;
+    }
+    if (bulkMode === 'PER_SESSION' && unitVal <= 0) {
+      showToast('Vui lòng nhập đơn giá 1 buổi lớn hơn 0 đ.', 'error');
+      return;
+    }
+
+    setIsSubmittingBulk(true);
+    try {
+      const res = await tuitionApi.bulkApplyTuition(classId, {
+        month: selectedMonth,
+        year: selectedYear,
+        mode: bulkMode,
+        fixedAmount: bulkMode === 'FIXED' ? fixedVal : undefined,
+        unitPrice: bulkMode === 'PER_SESSION' ? unitVal : undefined,
+        overwriteExisting: bulkOverwrite,
+        defaultComment: bulkComment.trim(),
+      });
+      setIsBulkModalOpen(false);
+      await fetchClassTuition();
+      showToast(
+        res.message ||
+          `Đã áp mức học phí cho ${res.data?.appliedCount || 0} học sinh!`
+      );
+    } catch (err: any) {
+      showToast(err?.message || 'Không thể áp mức học phí hàng loạt.', 'error');
+    } finally {
+      setIsSubmittingBulk(false);
+    }
   };
 
-  // Lưu số tiền học phí và nhận xét giáo viên cho học sinh, đóng hộp thoại và hiện thông báo
-  const handleSaveTuition = (
-    studentId: number,
-    formattedAmount: string,
-    comment: string,
-    savedAt: string
-  ) => {
-    const targetStudent = students.find((item) => item.id === studentId);
-    setStudents((prev) =>
-      prev.map((item) =>
-        item.id === studentId
-          ? {
-              ...item,
-              tuitionAmount: formattedAmount,
-              teacherComment: comment,
-              lastSavedAt: savedAt,
-            }
-          : item
-      )
+  const monthLabel = `${String(selectedMonth).padStart(2, '0')}/${selectedYear}`;
+
+  if (isLoading) {
+    return (
+      <div className="w-full min-h-[420px] flex flex-col items-center justify-center gap-3 text-[#6B5560] bg-[#FFF6F9] font-nunito">
+        <Loader2 className="w-8 h-8 animate-spin text-[#2F6FA8]" />
+        <span className="text-sm font-semibold">
+          Đang tải danh sách học phí tháng {monthLabel}...
+        </span>
+      </div>
     );
-    setSelectedStudent(null);
-    showToast(
-      `Đã lưu học phí (${formattedAmount}) cho ${targetStudent?.fullName ?? 'học sinh'} thành công!`
+  }
+
+  if (errorMsg || !detail) {
+    return (
+      <div className="w-full max-w-[1136px] mx-auto p-6 lg:p-8 font-nunito">
+        <div className="rounded-[16px] border border-[#F3D9E3] bg-white p-10 text-center space-y-4">
+          <AlertCircle className="w-10 h-10 text-[#A61E4D] mx-auto" />
+          <h2 className="font-playfair text-2xl font-bold text-[#3B2A35]">
+            Không tìm thấy lớp học
+          </h2>
+          <p className="text-sm text-[#6B5560]">{errorMsg}</p>
+          <button
+            type="button"
+            onClick={() => navigate(ROUTES.TUITION)}
+            className="h-10 px-5 rounded-[10px] bg-[#2F6FA8] text-white font-bold text-sm inline-flex items-center gap-2 cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Quay lại danh sách lớp học phí</span>
+          </button>
+        </div>
+      </div>
     );
-  };
+  }
+
+  const { classInfo, summary, totalClassSessionsInMonth } = detail;
 
   return (
     <TooltipProvider delayDuration={120}>
-      <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[100dvh] lg:min-h-[976px] font-nunito text-[#3B2A35]">
-        {/* Vùng nội dung chính 1200px trên máy tính bàn, co giãn theo khung nhìn trên di động/máy tính bảng */}
-        <div className="w-full lg:w-[1200px] lg:h-[976px] p-0 lg:p-8 flex flex-col gap-4 lg:gap-0 lg:justify-between box-border select-none relative">
-          {/* Thông báo nổi phản hồi khi lưu học phí */}
-          {toastMessage && (
-            <div className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 bg-[#1F4E79] text-white px-4 py-3 rounded-[12px] shadow-lg text-[13px] font-bold flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
-              <Check className="w-4 h-4 text-white flex-shrink-0" strokeWidth={2.2} />
-              <span>{toastMessage}</span>
+      <div className="w-full flex justify-center bg-[#FFF6F9] min-h-[100dvh] font-nunito text-[#3B2A35]">
+        <div className="w-full lg:w-[1200px] p-0 lg:p-8 flex flex-col gap-5 box-border select-none relative">
+          {toast && (
+            <div
+              className={`fixed bottom-20 md:bottom-6 right-4 md:right-6 z-50 px-4 py-2.5 rounded-[12px] shadow-lg text-xs font-semibold flex items-center gap-2 ${
+                toast.type === 'error'
+                  ? 'bg-[#B02525] text-white'
+                  : 'bg-[#1F4E79] text-white'
+              }`}
+            >
+              {toast.type === 'error' ? (
+                <AlertCircle className="w-4 h-4 text-[#FFE3E3] flex-shrink-0" />
+              ) : (
+                <Check className="w-4 h-4 text-white flex-shrink-0" strokeWidth={2.2} />
+              )}
+              <span>{toast.message}</span>
             </div>
           )}
-          {/* ==================== HÀNG 1: TIÊU ĐỀ ĐẦU TRANG ==================== */}
-          <header className="min-h-[72px] lg:h-[88px] w-full lg:w-[1136px] flex flex-col md:flex-row md:items-center justify-between gap-3 flex-shrink-0">
+
+          {/* ==================== HÀNG 1: TIÊU ĐỀ & BỘ CHỌN THÁNG ==================== */}
+          <header className="w-full lg:w-[1136px] flex flex-col lg:flex-row lg:items-center justify-between gap-3 flex-shrink-0">
             <div className="flex flex-col justify-center min-w-0">
-              {/* Thanh điều hướng phân cấp phía trên tiêu đề: nút mũi tên quay lại và "Học phí › Lớp 10" */}
               <div className="flex items-center gap-1.5 mb-1 text-[14px] text-[#6B5560]">
                 <button
                   type="button"
                   onClick={() => navigate(ROUTES.TUITION)}
-                  className="p-1 -ml-1 rounded-[6px] hover:bg-white/60 text-[#6B5560] hover:text-[#2F6FA8] transition-colors flex items-center justify-center cursor-pointer"
-                  title="Quay lại danh sách lớp học phí"
+                  className="p-1 -ml-1 rounded-[6px] hover:bg-white/60 text-[#6B5560] hover:text-[#2F6FA8] cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" strokeWidth={1.75} />
                 </button>
                 <Link
                   to={ROUTES.TUITION}
-                  className="text-[#2F6FA8] hover:underline cursor-pointer font-semibold"
+                  className="text-[#2F6FA8] hover:underline font-semibold"
                 >
                   Học phí
                 </Link>
-                <span className="text-[#6B5560]">›</span>
-                <span className="text-[#6B5560] font-semibold">Lớp 10</span>
+                <span>›</span>
+                <span className="font-semibold truncate">{classInfo.name}</span>
               </div>
 
-              {/* Tiêu đề "Học phí · Lớp 10" cạnh thẻ sĩ số */}
-              <div className="flex flex-wrap items-center gap-2 lg:gap-3">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <h1 className="font-playfair text-[24px] lg:text-[28px] font-bold text-[#3B2A35] leading-tight">
-                  Học phí · Lớp 10
+                  Học phí · {classInfo.name}
                 </h1>
-                <span className="px-3 py-1 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] font-nunito text-[13px] font-bold tracking-wide">
-                  {students.length} học sinh
+                <span className="px-3 py-1 rounded-[10px] bg-[#DCEBFA] text-[#1F4E79] text-[13px] font-bold">
+                  {summary.totalStudents} học sinh
                 </span>
-              </div>
-
-              {/* Ghi chú viết tay của giáo viên dưới tiêu đề kèm gạch chân lượn sóng và 2 hình dán pastel */}
-              <div className="flex items-center mt-1.5">
-                <div className="inline-block transform -rotate-1 origin-left">
-                  <span className="font-playfair italic text-[14px] lg:text-[15px] font-semibold text-[#A61E4D] squiggle-underline-note">
-                    Bấm biểu tượng ví để nhập học phí và gửi QR cho phụ huynh!
-                  </span>
-                </div>
-
-                {/* Đúng 2 hình dán vector phẳng pastel (ẩn trên di động) */}
-                <div className="hidden md:flex items-center gap-2 ml-[24px]">
-                  {/* Hình dán 1: Ngôi sao pastel #F8A5C2 (24px) */}
-                  <svg
-                    className="w-6 h-6 text-[#F8A5C2] flex-shrink-0"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path d="M12 2l2.75 6.63L22 9.24l-5.45 4.73L18.18 21 12 17.27 5.82 21l1.63-7.03L2 9.24l7.25-.61L12 2z" />
-                  </svg>
-
-                  {/* Hình dán 2: Ngòi bút nhỏ pastel #2F6FA8 (24px) */}
-                  <svg
-                    className="w-6 h-6 text-[#2F6FA8] flex-shrink-0"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.75"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"
-                    />
-                  </svg>
-                </div>
+                <span className="px-2.5 py-1 rounded-[10px] bg-[#FFF0F6] text-[#A61E4D] text-[12px] font-bold">
+                  {totalClassSessionsInMonth} buổi điểm danh tháng {selectedMonth}
+                </span>
               </div>
             </div>
 
-            {/* Bên phải: Bộ điều khiển ngày/tháng/năm */}
-            <div ref={datePickerRef} className="relative flex-shrink-0 w-full md:w-auto">
-              <div className="h-[48px] px-3.5 bg-white border border-[#9C6B84] rounded-[12px] flex items-center justify-between md:justify-start gap-2 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={handlePrevMonth}
-                  className="w-7 h-7 rounded-[8px] flex items-center justify-center text-[#1F4E79] hover:bg-[#DCEBFA]/60 transition-colors cursor-pointer"
-                  aria-label="Tháng trước"
-                >
-                  <ChevronLeft className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
-                </button>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                disabled={students.length === 0}
+                onClick={() => setIsBulkModalOpen(true)}
+                className="h-[44px] px-4 rounded-[12px] bg-[#D6336C] hover:bg-[#BE285C] text-white text-[13px] font-bold inline-flex items-center gap-2 shadow-xs disabled:opacity-50 cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Áp mức học phí cả lớp</span>
+              </button>
 
-                <span className="font-nunito text-[14px] font-bold text-[#3B2A35] pl-1">
-                  {fullDateLabel}
-                </span>
+              {/* Bộ chọn Tháng / Năm */}
+              <div ref={monthPickerRef} className="relative">
+                <div className="h-[44px] px-3 bg-white border border-[#9C6B84] rounded-[12px] flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handlePrevMonth}
+                    className="w-7 h-7 rounded-[8px] flex items-center justify-center text-[#1F4E79] hover:bg-[#DCEBFA]/60 cursor-pointer"
+                  >
+                    <ChevronLeft className="w-4 h-4" strokeWidth={1.75} />
+                  </button>
 
-                {/* Biểu tượng lịch bên cạnh ngày/tháng/năm để mở bảng chọn ngày, tháng, năm bất kỳ */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      onClick={handleToggleDatePicker}
-                      className={`w-7 h-7 rounded-[8px] flex items-center justify-center transition-colors cursor-pointer ${
-                        isDatePickerOpen
-                          ? 'bg-[#DCEBFA] text-[#1F4E79]'
-                          : 'text-[#1F4E79] hover:bg-[#DCEBFA]/60'
-                      }`}
-                      aria-label="Chọn ngày, tháng và năm"
-                    >
-                      <Calendar className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <span>Chọn ngày, tháng &amp; năm</span>
-                  </TooltipContent>
-                </Tooltip>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPickerYear(selectedYear);
+                      setIsMonthPickerOpen((v) => !v);
+                    }}
+                    className="px-2 py-1 rounded-[8px] hover:bg-[#FFF6F9] text-[14px] font-bold text-[#3B2A35] inline-flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Calendar className="w-3.5 h-3.5 text-[#1F4E79]" />
+                    <span>Tháng {monthLabel}</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={handleNextMonth}
-                  className="w-7 h-7 rounded-[8px] flex items-center justify-center text-[#1F4E79] hover:bg-[#DCEBFA]/60 transition-colors cursor-pointer"
-                  aria-label="Tháng sau"
-                >
-                  <ChevronRight className="w-4 h-4 text-[#1F4E79]" strokeWidth={1.75} />
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    onClick={handleNextMonth}
+                    className="w-7 h-7 rounded-[8px] flex items-center justify-center text-[#1F4E79] hover:bg-[#DCEBFA]/60 cursor-pointer"
+                  >
+                    <ChevronRight className="w-4 h-4" strokeWidth={1.75} />
+                  </button>
+                </div>
 
-              {/* Popover lịch chọn Ngày / Tháng / Năm */}
-              {isDatePickerOpen && (
-                <div className="absolute right-0 top-[56px] z-40 w-[300px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-[0_12px_32px_rgba(59,42,53,0.14)] p-4">
-                  {/* Thanh điều hướng Tháng / Năm */}
-                  <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#F3D9E3]">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (pickerMode === 'month') {
-                          setPickerYear((y) => y - 1);
-                        } else if (pickerMonth === 1) {
-                          setPickerMonth(12);
-                          setPickerYear((y) => y - 1);
-                        } else {
-                          setPickerMonth((m) => m - 1);
-                        }
-                      }}
-                      className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[#1F4E79] hover:bg-[#DCEBFA] transition-colors cursor-pointer"
-                      aria-label={pickerMode === 'month' ? 'Năm trước' : 'Tháng trước'}
-                    >
-                      <ChevronLeft className="w-4 h-4" strokeWidth={1.75} />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setPickerMode((prev) => (prev === 'day' ? 'month' : 'day'))
-                      }
-                      className="px-2.5 py-1 rounded-[8px] font-playfair text-[16px] font-bold text-[#3B2A35] hover:bg-[#FFF6F9] transition-colors cursor-pointer"
-                      title="Bấm để chuyển nhanh giữa chọn Ngày và chọn Tháng/Năm"
-                    >
-                      {pickerMode === 'month'
-                        ? `Năm ${pickerYear}`
-                        : `Tháng ${String(pickerMonth).padStart(2, '0')}/${pickerYear}`}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (pickerMode === 'month') {
-                          setPickerYear((y) => y + 1);
-                        } else if (pickerMonth === 12) {
-                          setPickerMonth(1);
-                          setPickerYear((y) => y + 1);
-                        } else {
-                          setPickerMonth((m) => m + 1);
-                        }
-                      }}
-                      className="w-8 h-8 rounded-[8px] flex items-center justify-center text-[#1F4E79] hover:bg-[#DCEBFA] transition-colors cursor-pointer"
-                      aria-label={pickerMode === 'month' ? 'Năm sau' : 'Tháng sau'}
-                    >
-                      <ChevronRight className="w-4 h-4" strokeWidth={1.75} />
-                    </button>
-                  </div>
-
-                  {pickerMode === 'month' ? (
-                    /* Lưới 12 tháng để nhảy nhanh tới tháng & năm bất kỳ */
+                {isMonthPickerOpen && (
+                  <div className="absolute right-0 top-[52px] z-40 w-[260px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-xl p-4">
+                    <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-[#F3D9E3]">
+                      <button
+                        type="button"
+                        onClick={() => setPickerYear((y) => y - 1)}
+                        className="w-7 h-7 rounded-[8px] hover:bg-[#DCEBFA] flex items-center justify-center text-[#1F4E79] cursor-pointer"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <span className="font-playfair font-bold text-[16px] text-[#3B2A35]">
+                        Năm {pickerYear}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPickerYear((y) => y + 1)}
+                        className="w-7 h-7 rounded-[8px] hover:bg-[#DCEBFA] flex items-center justify-center text-[#1F4E79] cursor-pointer"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
                     <div className="grid grid-cols-3 gap-2">
-                      {Array.from({ length: 12 }, (_, idx) => idx + 1).map((month) => {
-                        const isCurrent =
-                          month === pickerMonth && pickerYear === selectedYear;
+                      {Array.from({ length: 12 }, (_, idx) => idx + 1).map((m) => {
+                        const active =
+                          m === selectedMonth && pickerYear === selectedYear;
                         return (
                           <button
-                            key={month}
+                            key={m}
                             type="button"
-                            onClick={() => handleSelectMonthInPicker(month)}
-                            className={`h-[36px] rounded-[10px] text-[13px] font-bold transition-colors cursor-pointer ${
-                              isCurrent
+                            onClick={() => {
+                              setSelectedMonth(m);
+                              setSelectedYear(pickerYear);
+                              setIsMonthPickerOpen(false);
+                            }}
+                            className={`h-[34px] rounded-[9px] text-[12px] font-bold cursor-pointer ${
+                              active
                                 ? 'bg-[#2F6FA8] text-white'
-                                : 'bg-[#FFF6F9] text-[#3B2A35] hover:bg-[#DCEBFA] hover:text-[#1F4E79]'
+                                : 'bg-[#FFF6F9] text-[#3B2A35] hover:bg-[#DCEBFA]'
                             }`}
                           >
-                            Tháng {month}
+                            Tháng {m}
                           </button>
                         );
                       })}
                     </div>
-                  ) : (
-                    /* Lưới lịch chọn ngày trong tháng */
-                    <>
-                      <div className="grid grid-cols-7 gap-1 mb-1.5 text-center">
-                        {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((wd) => (
-                          <span
-                            key={wd}
-                            className="text-[12px] font-bold text-[#6B5560] py-1"
-                          >
-                            {wd}
-                          </span>
-                        ))}
-                      </div>
-                      <div className="grid grid-cols-7 gap-1">
-                        {Array.from(
-                          { length: getMondayStartOffset(pickerMonth, pickerYear) },
-                          (_, i) => (
-                            <div key={`empty-${i}`} className="h-[34px]" />
-                          )
-                        )}
-                        {Array.from(
-                          { length: getDaysInMonth(pickerMonth, pickerYear) },
-                          (_, i) => i + 1
-                        ).map((day) => {
-                          const isSelected =
-                            day === selectedDay &&
-                            pickerMonth === selectedMonth &&
-                            pickerYear === selectedYear;
-                          return (
-                            <button
-                              key={day}
-                              type="button"
-                              onClick={() => handleSelectDayFromPicker(day)}
-                              className={`h-[34px] rounded-[8px] text-[13px] font-bold transition-colors cursor-pointer ${
-                                isSelected
-                                  ? 'bg-[#2F6FA8] text-white'
-                                  : 'text-[#3B2A35] hover:bg-[#DCEBFA] hover:text-[#1F4E79]'
-                              }`}
-                            >
-                              {day}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
           </header>
 
-          {/* ==================== HÀNG 2: THẺ TRẮNG DUY NHẤT ==================== */}
-          <div className="w-full lg:w-[1136px] lg:h-[800px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-[0_1px_2px_rgba(59,42,53,0.06)] flex flex-col justify-between overflow-hidden flex-shrink-0">
-            {/* Thanh tiêu đề thẻ */}
-            <div className="min-h-[60px] lg:h-[72px] px-4 lg:px-6 py-3 lg:py-0 flex items-center justify-between gap-2 border-b border-[#F3D9E3] flex-shrink-0">
-              <h2 className="font-playfair text-[18px] font-bold text-[#3B2A35]">
-                Danh sách học sinh lớp 10
-              </h2>
-              <span className="font-nunito text-[13px] lg:text-[14px] font-semibold text-[#6B5560] whitespace-nowrap">
-                Học phí tháng {monthLabel}
+          {/* ==================== HÀNG 2: THANH TỔNG HỢP DOANH THU ==================== */}
+          <div className="w-full lg:w-[1136px] grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="bg-white border border-[#F3D9E3] rounded-[14px] px-4 py-3 flex items-center justify-between">
+              <div>
+                <div className="text-[12px] font-semibold text-[#6B5560]">
+                  Tổng dự thu tháng {monthLabel}
+                </div>
+                <div className="font-playfair text-[22px] font-bold text-[#3B2A35] mt-0.5">
+                  {formatCurrencyVND(summary.expectedAmount)}
+                </div>
+              </div>
+              <span className="px-2.5 py-1 rounded-[8px] bg-[#FFF6F9] text-[#6B5560] text-[12px] font-bold">
+                {summary.paidCount + summary.unpaidCount}/{summary.totalStudents} phiếu
               </span>
             </div>
 
-            {/* Tiêu đề bảng (ẩn trên di động, ẩn SĐT phụ huynh trên máy tính bảng) */}
-            <div className="hidden md:grid md:grid-cols-[120px_1.5fr_160px_100px] lg:flex h-[48px] bg-[#DCEBFA] text-[#1F4E79] text-[13px] font-semibold items-center border-b border-[#F3D9E3] flex-shrink-0">
-              <div className="lg:w-[160px] pl-4 lg:pl-6 flex-shrink-0">Mã học sinh</div>
-              <div className="lg:w-[340px] flex-shrink-0">Họ và tên</div>
-              <div className="hidden lg:block lg:w-[260px] flex-shrink-0">Số điện thoại phụ huynh</div>
-              <div className="lg:w-[220px] flex-shrink-0">Học phí tháng {selectedMonth}</div>
-              <div className="lg:w-[156px] pr-4 lg:pr-6 text-center flex-shrink-0">Thao tác</div>
+            <div className="bg-white border border-[#F3D9E3] rounded-[14px] px-4 py-3 flex items-center justify-between">
+              <div>
+                <div className="text-[12px] font-semibold text-[#1F4E79]">
+                  Đã thu thành công
+                </div>
+                <div className="font-playfair text-[22px] font-bold text-[#1F4E79] mt-0.5">
+                  {formatCurrencyVND(summary.collectedAmount)}
+                </div>
+              </div>
+              <span className="px-2.5 py-1 rounded-[8px] bg-[#DCEBFA] text-[#1F4E79] text-[12px] font-bold">
+                {summary.paidCount} đã đóng
+              </span>
             </div>
 
-            {/* Bảng hiển thị cho Máy tính bảng / Máy tính bàn */}
-            <div className="hidden md:flex flex-1 flex-col">
-              {students.map((student, index) => {
-                // Avatar 36px đan xen hồng (#FFE0EB / #A61E4D) và xanh (#DCEBFA / #1F4E79)
-                const isPinkAvatar = index % 2 === 0;
+            <div className="bg-white border border-[#F3D9E3] rounded-[14px] px-4 py-3 flex items-center justify-between">
+              <div>
+                <div className="text-[12px] font-semibold text-[#A61E4D]">
+                  Còn chờ thanh toán
+                </div>
+                <div className="font-playfair text-[22px] font-bold text-[#A61E4D] mt-0.5">
+                  {formatCurrencyVND(summary.remainingAmount)}
+                </div>
+              </div>
+              <span className="px-2.5 py-1 rounded-[8px] bg-[#FFE0EB] text-[#A61E4D] text-[12px] font-bold">
+                {summary.unpaidCount} chờ đóng
+              </span>
+            </div>
+          </div>
 
-                return (
-                  <div
-                    key={student.id}
-                    className="md:grid md:grid-cols-[120px_1.5fr_160px_100px] lg:flex h-[64px] bg-white hover:bg-[#FFF6F9] border-b border-[#F3D9E3] items-center transition-colors select-none text-[14px]"
+          {/* ==================== HÀNG 3: BẢNG DANH SÁCH HỌC SINH ==================== */}
+          <div className="w-full lg:w-[1136px] bg-white border border-[#F3D9E3] rounded-[16px] shadow-[0_1px_2px_rgba(59,42,53,0.06)] flex flex-col overflow-hidden">
+            {/* Thanh tìm kiếm & lọc trạng thái */}
+            <div className="p-4 lg:px-6 flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-[#F3D9E3]">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="w-4 h-4 text-[#9C6B84] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Tìm tên, mã HS, SĐT phụ huynh..."
+                  className="w-full h-[40px] pl-10 pr-8 rounded-[10px] border border-[#F3D9E3] bg-[#FFF6F9]/50 focus:bg-white text-[13px] font-semibold text-[#3B2A35] outline-none focus:border-[#2F6FA8]"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#6B5560] cursor-pointer"
                   >
-                    {/* Cột 1: Mã học sinh */}
-                    <div className="lg:w-[160px] pl-4 lg:pl-6 font-semibold text-[#3B2A35] flex-shrink-0">
-                      {student.studentCode}
-                    </div>
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
 
-                    {/* Cột 2: Họ và tên kèm ảnh đại diện chữ cái đầu 36px */}
-                    <div className="lg:w-[340px] flex items-center gap-3 pr-4 flex-shrink-0 min-w-0">
-                      <div
-                        className={`w-[36px] h-[36px] rounded-full flex items-center justify-center font-bold text-[13px] flex-shrink-0 ${
-                          isPinkAvatar
-                            ? 'bg-[#FFE0EB] text-[#A61E4D]'
-                            : 'bg-[#DCEBFA] text-[#1F4E79]'
-                        }`}
-                      >
-                        {getInitials(student.fullName)}
-                      </div>
-                      <span className="font-bold text-[#3B2A35] text-[14px] truncate" title={student.fullName}>
-                        {student.fullName}
-                      </span>
-                    </div>
-
-                    {/* Cột 3: Số điện thoại phụ huynh (ẩn trên máy tính bảng) */}
-                    <div className="hidden lg:block lg:w-[260px] font-medium text-[#3B2A35] flex-shrink-0">
-                      {student.parentPhone}
-                    </div>
-
-                    {/* Cột 4: Học phí tháng */}
-                    <div className="lg:w-[220px] flex-shrink-0">
-                      {student.tuitionAmount ? (
-                        <span className="font-bold text-[15px] text-[#3B2A35]">
-                          {student.tuitionAmount}
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-[10px] bg-[#FFE0EB] text-[#A61E4D] text-[12px] font-bold">
-                          <Clock className="w-3.5 h-3.5 text-[#A61E4D] flex-shrink-0" strokeWidth={1.75} />
-                          <span>Chưa nhập</span>
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Cột 5: Thao tác */}
-                    <div className="lg:w-[156px] pr-4 lg:pr-6 flex items-center justify-center flex-shrink-0">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedStudent(student)}
-                            className="w-[40px] h-[40px] rounded-[10px] text-[#1F4E79] hover:bg-[#DCEBFA] flex items-center justify-center transition-colors cursor-pointer"
-                            aria-label={`Học phí và mã QR của ${student.fullName}`}
-                          >
-                            <Wallet className="w-[18px] h-[18px] text-[#1F4E79]" strokeWidth={1.75} />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">
-                          <span>Học phí và mã QR</span>
-                        </TooltipContent>
-                      </Tooltip>
-                    </div>
-                  </div>
-                );
-              })}
+              <div className="flex items-center gap-1.5 overflow-x-auto">
+                {(
+                  [
+                    { key: 'ALL', label: `Tất cả (${summary.totalStudents})` },
+                    { key: 'UNPAID', label: `Chờ đóng (${summary.unpaidCount})` },
+                    { key: 'PAID', label: `Đã đóng (${summary.paidCount})` },
+                    { key: 'UNSET', label: `Chưa tạo phiếu (${summary.unsetCount})` },
+                  ] as const
+                ).map((tab) => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setStatusFilter(tab.key)}
+                    className={`h-[36px] px-3 rounded-[10px] text-[12px] font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                      statusFilter === tab.key
+                        ? 'bg-[#2F6FA8] text-white'
+                        : 'bg-[#E9F3FF] text-[#1F4E79] hover:bg-[#DCEBFA]'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* DANH SÁCH THẺ TRÊN DI ĐỘNG */}
-            <div className="md:hidden divide-y divide-[#F3D9E3]">
-              {students.map((student, index) => {
-                const isPinkAvatar = index % 2 === 0;
-                return (
-                  <div
-                    key={student.id}
-                    className="p-4 bg-white flex items-center justify-between gap-3"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
+            {filteredStudents.length === 0 ? (
+              <div className="py-16 px-6 text-center flex flex-col items-center gap-2.5 text-[#6B5560]">
+                <Users className="w-9 h-9 text-[#9C6B84]/60" />
+                <div className="font-bold text-[15px] text-[#3B2A35]">
+                  {students.length === 0
+                    ? `Lớp ${classInfo.name} hiện chưa có học sinh nào`
+                    : 'Không có học sinh nào khớp với bộ lọc hiện tại'}
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Tiêu đề bảng Desktop */}
+                <div className="hidden md:grid md:grid-cols-[100px_1.5fr_120px_160px_120px] lg:grid-cols-[110px_1.5fr_160px_140px_190px_130px] h-[46px] bg-[#DCEBFA] text-[#1F4E79] text-[12px] font-bold items-center px-4 lg:px-6 border-b border-[#F3D9E3]">
+                  <div>Mã HS</div>
+                  <div>Họ và tên</div>
+                  <div className="hidden lg:block">SĐT Phụ huynh</div>
+                  <div>Chuyên cần</div>
+                  <div>Học phí tháng {selectedMonth}</div>
+                  <div className="text-center">Thao tác</div>
+                </div>
+
+                {/* Dòng bảng Desktop / Tablet */}
+                <div className="hidden md:flex flex-col divide-y divide-[#F3D9E3]">
+                  {filteredStudents.map((st, idx) => {
+                    const isPinkAvatar = idx % 2 === 0;
+                    const isPaid = st.tuitionStatus === 'PAID';
+                    return (
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-[13px] flex-shrink-0 ${
-                          isPinkAvatar
-                            ? 'bg-[#FFE0EB] text-[#A61E4D]'
-                            : 'bg-[#DCEBFA] text-[#1F4E79]'
-                        }`}
+                        key={st.studentId}
+                        className="md:grid md:grid-cols-[100px_1.5fr_120px_160px_120px] lg:grid-cols-[110px_1.5fr_160px_140px_190px_130px] min-h-[64px] px-4 lg:px-6 py-2 bg-white hover:bg-[#FFF6F9] items-center text-[13px]"
                       >
-                        {getInitials(student.fullName)}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-bold text-[15px] text-[#3B2A35] truncate">
-                          {student.fullName}
+                        <div className="font-mono font-bold text-[#1F4E79]">
+                          {st.studentCode}
                         </div>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="font-mono text-[12px] font-semibold text-[#6B5560]">
-                            {student.studentCode}
+
+                        <div className="flex items-center gap-2.5 pr-3 min-w-0">
+                          <div
+                            className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-[12px] flex-shrink-0 ${
+                              isPinkAvatar
+                                ? 'bg-[#FFE0EB] text-[#A61E4D]'
+                                : 'bg-[#DCEBFA] text-[#1F4E79]'
+                            }`}
+                          >
+                            {getInitials(st.fullName)}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-bold text-[#3B2A35] truncate">
+                              {st.fullName}
+                            </div>
+                            {st.email && (
+                              <div className="text-[11px] text-[#6B5560] truncate">
+                                {st.email}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="hidden lg:block font-medium text-[#3B2A35]">
+                          {st.parentPhone || '—'}
+                        </div>
+
+                        <div className="text-[12px] font-semibold text-[#3B2A35]">
+                          <span>
+                            {st.attendedCount}/{totalClassSessionsInMonth} buổi
                           </span>
-                          <span className="text-[#F3D9E3]">•</span>
-                          {student.tuitionAmount ? (
-                            <span className="font-bold text-[14px] text-[#3B2A35]">
-                              {student.tuitionAmount}
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[8px] bg-[#FFE0EB] text-[#A61E4D] text-[12px] font-bold">
-                              <Clock className="w-3 h-3 text-[#A61E4D]" strokeWidth={1.75} />
-                              <span>Chưa nhập</span>
+                          {st.excusedLeaveCount > 0 && (
+                            <span className="block text-[11px] text-[#A61E4D]">
+                              {st.excusedLeaveCount} nghỉ phép
                             </span>
                           )}
                         </div>
+
+                        <div className="flex flex-col items-start gap-1">
+                          {st.record ? (
+                            <>
+                              <span className="font-bold text-[14px] text-[#3B2A35]">
+                                {formatCurrencyVND(st.record.amount)}
+                              </span>
+                              {isPaid ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#DCEBFA] text-[#1F4E79] text-[11px] font-bold">
+                                  <Check className="w-3 h-3" strokeWidth={2.3} />
+                                  <span>Đã đóng</span>
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FFE0EB] text-[#A61E4D] text-[11px] font-bold">
+                                  <Clock className="w-3 h-3" strokeWidth={1.75} />
+                                  <span>Chờ đóng</span>
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[9px] bg-[#EFE9ED] text-[#6B5560] text-[11px] font-bold">
+                              <Clock className="w-3 h-3" strokeWidth={1.75} />
+                              <span>Chưa tạo phiếu</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-center gap-1.5">
+                          {st.record && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  disabled={togglingRecordId === st.record.id}
+                                  onClick={() => handleQuickTogglePaid(st)}
+                                  className={`w-9 h-9 rounded-[10px] flex items-center justify-center transition-colors cursor-pointer ${
+                                    isPaid
+                                      ? 'bg-[#DCEBFA] text-[#1F4E79] hover:bg-[#CFE3FF]'
+                                      : 'text-[#6B5560] hover:bg-[#DCEBFA] hover:text-[#1F4E79]'
+                                  }`}
+                                  aria-label={`Đổi trạng thái thu học phí của ${st.fullName}`}
+                                >
+                                  {togglingRecordId === st.record.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <CheckCircle2 className="w-[18px] h-[18px]" />
+                                  )}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                <span>
+                                  {isPaid
+                                    ? 'Đã đóng (Bấm để chuyển về Chờ đóng)'
+                                    : 'Xác nhận Đã đóng học phí'}
+                                </span>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedStudentId(st.studentId)}
+                                className="w-9 h-9 rounded-[10px] bg-[#E9F3FF] text-[#1F4E79] hover:bg-[#DCEBFA] flex items-center justify-center transition-colors cursor-pointer"
+                                aria-label={`Mở phiếu học phí và mã QR của ${st.fullName}`}
+                              >
+                                <Wallet className="w-[18px] h-[18px]" strokeWidth={1.75} />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <span>Nhập học phí, xuất phiếu PNG &amp; gửi Email</span>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
                       </div>
-                    </div>
+                    );
+                  })}
+                </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setSelectedStudent(student)}
-                      className="w-11 h-11 rounded-[10px] bg-[#E9F3FF] text-[#1F4E79] hover:bg-[#DCEBFA] flex items-center justify-center transition-colors cursor-pointer flex-shrink-0"
-                      aria-label={`Học phí và mã QR của ${student.fullName}`}
-                    >
-                      <Wallet className="w-5 h-5 text-[#1F4E79]" strokeWidth={1.75} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+                {/* Danh sách thẻ trên Di động */}
+                <div className="md:hidden divide-y divide-[#F3D9E3]">
+                  {filteredStudents.map((st, idx) => {
+                    const isPinkAvatar = idx % 2 === 0;
+                    const isPaid = st.tuitionStatus === 'PAID';
+                    return (
+                      <div
+                        key={st.studentId}
+                        className="p-4 flex items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div
+                            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-[12px] flex-shrink-0 ${
+                              isPinkAvatar
+                                ? 'bg-[#FFE0EB] text-[#A61E4D]'
+                                : 'bg-[#DCEBFA] text-[#1F4E79]'
+                            }`}
+                          >
+                            {getInitials(st.fullName)}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-bold text-[14px] text-[#3B2A35] truncate">
+                              {st.fullName}
+                            </div>
+                            <div className="text-[12px] font-semibold text-[#6B5560] mt-0.5">
+                              {st.studentCode} · {st.attendedCount}/
+                              {totalClassSessionsInMonth} buổi
+                            </div>
+                            <div className="mt-1">
+                              {st.record ? (
+                                <span className="font-bold text-[13px] text-[#A61E4D]">
+                                  {formatCurrencyVND(st.record.amount)} ·{' '}
+                                  {isPaid ? 'Đã đóng' : 'Chờ đóng'}
+                                </span>
+                              ) : (
+                                <span className="text-[12px] font-bold text-[#6B5560]">
+                                  Chưa tạo phiếu
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
 
-            {/* Chân thẻ cố định (40px): "Lớp 10 có 10 học sinh" */}
-            <div className="min-h-[40px] px-4 lg:px-6 border-t border-[#F3D9E3] bg-white flex items-center justify-between flex-shrink-0">
-              <span className="font-nunito text-[13px] font-medium text-[#6B5560]">
-                Lớp 10 có {students.length} học sinh
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {st.record && (
+                            <button
+                              type="button"
+                              onClick={() => handleQuickTogglePaid(st)}
+                              className={`w-10 h-10 rounded-[10px] flex items-center justify-center cursor-pointer ${
+                                isPaid
+                                  ? 'bg-[#DCEBFA] text-[#1F4E79]'
+                                  : 'bg-[#FFF6F9] text-[#6B5560]'
+                              }`}
+                            >
+                              <CheckCircle2 className="w-5 h-5" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedStudentId(st.studentId)}
+                            className="w-10 h-10 rounded-[10px] bg-[#E9F3FF] text-[#1F4E79] flex items-center justify-center cursor-pointer"
+                          >
+                            <Wallet className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            <div className="min-h-[42px] px-4 lg:px-6 border-t border-[#F3D9E3] bg-[#FCF8FA] flex flex-wrap items-center justify-between gap-2 text-[12px] font-semibold text-[#6B5560]">
+              <span>
+                {classInfo.name} có <strong>{summary.totalStudents}</strong> học sinh
+              </span>
+              <span>
+                Đã thu {summary.paidCount}/{summary.totalStudents} học sinh ·{' '}
+                <strong className="text-[#1F4E79]">
+                  {formatCurrencyVND(summary.collectedAmount)}
+                </strong>
               </span>
             </div>
           </div>
         </div>
 
-        {/* Hộp thoại nhập học phí, nhận xét giáo viên và mã QR thanh toán */}
+        {/* HỘP THOẠI ÁP MỨC HỌC PHÍ CHUNG CHO CẢ LỚP */}
+        {isBulkModalOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-end md:items-center justify-center bg-[#3B2A35]/35 p-0 md:p-4"
+            onClick={() => !isSubmittingBulk && setIsBulkModalOpen(false)}
+          >
+            <form
+              onSubmit={handleBulkApplySubmit}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full md:w-[520px] bg-white rounded-t-[20px] md:rounded-[20px] p-6 border border-[#F3D9E3] shadow-xl space-y-4 font-nunito"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="font-playfair text-[22px] font-bold text-[#3B2A35]">
+                    Áp mức học phí cả lớp
+                  </h2>
+                  <p className="text-[13px] text-[#6B5560] mt-0.5">
+                    {classInfo.name} · Tháng {monthLabel} ({summary.totalStudents} học sinh)
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsBulkModalOpen(false)}
+                  className="w-8 h-8 rounded-[10px] hover:bg-[#FFF6F9] flex items-center justify-center text-[#6B5560] cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setBulkMode('FIXED')}
+                  className={`p-3 rounded-[12px] border text-left transition-all cursor-pointer ${
+                    bulkMode === 'FIXED'
+                      ? 'bg-[#E9F3FF] border-[#2F6FA8] text-[#1F4E79]'
+                      : 'bg-white border-[#F3D9E3] text-[#3B2A35]'
+                  }`}
+                >
+                  <div className="text-[13px] font-bold">Trọn gói cố định</div>
+                  <div className="text-[11px] text-[#6B5560] mt-0.5">
+                    Cùng 1 mức tiền cho cả lớp
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setBulkMode('PER_SESSION')}
+                  className={`p-3 rounded-[12px] border text-left transition-all cursor-pointer ${
+                    bulkMode === 'PER_SESSION'
+                      ? 'bg-[#E9F3FF] border-[#2F6FA8] text-[#1F4E79]'
+                      : 'bg-white border-[#F3D9E3] text-[#3B2A35]'
+                  }`}
+                >
+                  <div className="text-[13px] font-bold">Theo buổi điểm danh</div>
+                  <div className="text-[11px] text-[#6B5560] mt-0.5">
+                    Số buổi có mặt × Đơn giá
+                  </div>
+                </button>
+              </div>
+
+              {bulkMode === 'FIXED' ? (
+                <div>
+                  <label className="block text-[13px] font-bold text-[#3B2A35] mb-1.5">
+                    Mức học phí 1 tháng (VNĐ)
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={bulkFixedInput}
+                    onChange={(e) =>
+                      setBulkFixedInput(formatTuitionInputNumber(e.target.value))
+                    }
+                    placeholder="VD: 1.200.000"
+                    className="w-full h-[46px] px-4 rounded-[12px] border border-[#9C6B84] font-bold text-[16px] text-[#3B2A35] outline-none focus:border-2 focus:border-[#2F6FA8]"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-[13px] font-bold text-[#3B2A35] mb-1.5">
+                    Đơn giá 1 buổi học (VNĐ)
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={bulkUnitPriceInput}
+                    onChange={(e) =>
+                      setBulkUnitPriceInput(formatTuitionInputNumber(e.target.value))
+                    }
+                    placeholder="VD: 150.000"
+                    className="w-full h-[46px] px-4 rounded-[12px] border border-[#9C6B84] font-bold text-[16px] text-[#3B2A35] outline-none focus:border-2 focus:border-[#2F6FA8]"
+                  />
+                  <p className="text-[12px] text-[#1F4E79] font-semibold mt-1">
+                    Hệ thống tự lấy số buổi có mặt thực tế trong tháng {monthLabel} của từng em để nhân với đơn giá.
+                  </p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[13px] font-bold text-[#3B2A35] mb-1.5">
+                  Lời nhắn / nhận xét chung (tùy chọn)
+                </label>
+                <textarea
+                  rows={2}
+                  maxLength={500}
+                  value={bulkComment}
+                  onChange={(e) => setBulkComment(e.target.value)}
+                  placeholder="Có thể để trống và nhập nhận xét riêng cho từng em sau..."
+                  className="w-full px-3.5 py-2 rounded-[12px] border border-[#9C6B84] text-[13px] text-[#3B2A35] outline-none focus:border-[#2F6FA8] resize-none"
+                />
+              </div>
+
+              <label className="flex items-center gap-2.5 text-[13px] font-semibold text-[#3B2A35] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={bulkOverwrite}
+                  onChange={(e) => setBulkOverwrite(e.target.checked)}
+                  className="w-4 h-4 accent-[#2F6FA8]"
+                />
+                <span>
+                  Cập nhật đè cả các phiếu đang Chờ đóng (không ảnh hưởng phiếu Đã đóng)
+                </span>
+              </label>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkModalOpen(false)}
+                  className="h-[42px] px-4 rounded-[11px] bg-[#EFE9ED] text-[#3B2A35] text-[13px] font-bold cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingBulk}
+                  className="h-[42px] px-5 rounded-[11px] bg-[#D6336C] text-white text-[13px] font-bold inline-flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  {isSubmittingBulk && (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  )}
+                  <span>Áp dụng ngay</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* HỘP THOẠI CHI TIẾT HỌC PHÍ, QR, GỬI EMAIL & TẢI PNG */}
         <TuitionPaymentModal
           student={selectedStudent}
-          classNameLabel="Lớp 10"
-          monthLabel={monthLabel}
-          onClose={() => setSelectedStudent(null)}
-          onSave={handleSaveTuition}
+          classNameLabel={classInfo.name}
+          month={selectedMonth}
+          year={selectedYear}
+          totalClassSessionsInMonth={totalClassSessionsInMonth}
+          onClose={() => setSelectedStudentId(null)}
+          onSave={handleSaveStudentTuition}
+          onSendEmail={handleSendTuitionEmail}
         />
       </div>
     </TooltipProvider>
   );
 };
-

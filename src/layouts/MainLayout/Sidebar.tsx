@@ -1,7 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { ROUTES } from '@/routes/paths';
 import { useAuthStore } from '@/store/useAuthStore';
+import { leaveRequestApi } from '@/features/leave-requests/api/leaveRequestApi';
+import { tuitionApi } from '@/features/tuition/api/tuitionApi';
+import { notificationApi } from '@/features/notifications/api/notificationApi';
+import {
+  homeworkApi,
+  getFileViewUrl,
+} from '@/features/homework/api/homeworkApi';
 import logoImage from '@/assets/logo/logo.png';
 import {
   LayoutDashboard,
@@ -18,6 +25,7 @@ import {
   CalendarOff,
   MoreHorizontal,
   KeyRound,
+  UserCog,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -41,6 +49,7 @@ const getMobilePageTitle = (pathname: string): string => {
   if (pathname.startsWith(ROUTES.LEAVE_REQUESTS)) return 'Đơn xin nghỉ';
   if (pathname.startsWith(ROUTES.TUITION)) return 'Học phí';
   if (pathname.startsWith(ROUTES.NOTIFICATIONS)) return 'Thông báo';
+  if (pathname.startsWith(ROUTES.PROFILE)) return 'Thông tin';
   return 'Lớp Văn chị Vân';
 };
 
@@ -57,8 +66,64 @@ export const Sidebar: React.FC = () => {
   }, [location.pathname]);
 
   const isNotificationsPage = location.pathname.startsWith(ROUTES.NOTIFICATIONS);
-  const isStudentView = activeRole === 'student';
+  const isStudentView =
+    user?.role === 'user' ||
+    activeRole === 'student' ||
+    location.search.includes('role=student');
   const mobileTitle = getMobilePageTitle(location.pathname);
+
+  // Số lượng thực tế cho huy hiệu trên Sidebar (chỉ hiển thị khi > 0)
+  const [adminPendingLeaveCount, setAdminPendingLeaveCount] = useState<number>(0);
+  const [studentPendingHomeworkCount, setStudentPendingHomeworkCount] = useState<number>(0);
+  const [studentPendingLeaveCount, setStudentPendingLeaveCount] = useState<number>(0);
+  const [studentUnpaidTuitionCount, setStudentUnpaidTuitionCount] = useState<number>(0);
+  const [studentUnreadNotifCount, setStudentUnreadNotifCount] = useState<number>(0);
+
+  const refreshSidebarBadges = useCallback(async () => {
+    if (!user) return;
+    try {
+      if (isStudentView) {
+        const [hwRes, lvRes, tuiRes, notifRes] = await Promise.all([
+          homeworkApi.getMyHomeworks().catch(() => null),
+          leaveRequestApi.getMyLeaveRequests().catch(() => null),
+          tuitionApi.getMyTuitionSlips().catch(() => null),
+          notificationApi.getMyNotifications().catch(() => null),
+        ]);
+        if (hwRes?.data?.items) {
+          const unsubmitted = hwRes.data.items.filter(
+            (i) => i.status === 'not_submitted'
+          ).length;
+          setStudentPendingHomeworkCount(unsubmitted);
+        } else {
+          setStudentPendingHomeworkCount(0);
+        }
+        setStudentPendingLeaveCount(lvRes?.data?.counts?.pending || 0);
+        setStudentUnpaidTuitionCount(tuiRes?.data?.unpaidCount || 0);
+        setStudentUnreadNotifCount(notifRes?.data?.unreadCount || 0);
+      } else {
+        const res = await leaveRequestApi
+          .getAdminLeaveRequests({ status: 'PENDING', page: 1, limit: 1 })
+          .catch(() => null);
+        setAdminPendingLeaveCount(res?.data?.globalPendingCount || 0);
+      }
+    } catch {
+      // Bỏ qua lỗi phụ trên thanh bên
+    }
+  }, [user, isStudentView]);
+
+  useEffect(() => {
+    refreshSidebarBadges();
+  }, [refreshSidebarBadges, location.pathname]);
+
+  useEffect(() => {
+    const handleRefreshEvent = () => {
+      refreshSidebarBadges();
+    };
+    window.addEventListener('sidebar-badges-refresh', handleRefreshEvent);
+    return () => {
+      window.removeEventListener('sidebar-badges-refresh', handleRefreshEvent);
+    };
+  }, [refreshSidebarBadges]);
 
   const handleLogout = () => {
     logout();
@@ -168,16 +233,18 @@ export const Sidebar: React.FC = () => {
                         />
                         <span>Bài tập</span>
                       </div>
-                      <span
-                        className={cn(
-                          'w-5 h-5 rounded-full text-[12px] font-bold flex items-center justify-center leading-none',
-                          isNotificationsPage
-                            ? 'bg-[#DCEBFA] text-[#1F4E79]'
-                            : 'bg-[#D6336C] text-white'
-                        )}
-                      >
-                        2
-                      </span>
+                      {studentPendingHomeworkCount > 0 && (
+                        <span
+                          className={cn(
+                            'min-w-[20px] h-5 px-1 rounded-full text-[12px] font-bold flex items-center justify-center leading-none',
+                            isNotificationsPage
+                              ? 'bg-[#DCEBFA] text-[#1F4E79]'
+                              : 'bg-[#D6336C] text-white'
+                          )}
+                        >
+                          {studentPendingHomeworkCount}
+                        </span>
+                      )}
                     </>
                   )}
                 </NavLink>
@@ -201,7 +268,7 @@ export const Sidebar: React.FC = () => {
                   onClick={() => setIsMobileOpen(false)}
                   className={({ isActive }) =>
                     cn(
-                      'h-[44px] px-3.5 rounded-[10px] flex items-center gap-3 text-[14px] transition-all',
+                      'h-[44px] px-3.5 rounded-[10px] flex items-center justify-between text-[14px] transition-all',
                       isActive
                         ? 'bg-white shadow-sm text-[#A61E4D] font-bold'
                         : 'text-brand-text hover:bg-white/40 font-semibold'
@@ -210,14 +277,55 @@ export const Sidebar: React.FC = () => {
                 >
                   {({ isActive }) => (
                     <>
-                      <CalendarOff
-                        className={cn(
-                          'w-5 h-5 flex-shrink-0',
-                          isActive ? 'text-[#A61E4D]' : 'text-brand-subtext'
-                        )}
-                        strokeWidth={1.75}
-                      />
-                      <span>Đơn xin nghỉ</span>
+                      <div className="flex items-center gap-3">
+                        <CalendarOff
+                          className={cn(
+                            'w-5 h-5 flex-shrink-0',
+                            isActive ? 'text-[#A61E4D]' : 'text-brand-subtext'
+                          )}
+                          strokeWidth={1.75}
+                        />
+                        <span>Đơn xin nghỉ</span>
+                      </div>
+                      {studentPendingLeaveCount > 0 && (
+                        <span className="min-w-[20px] h-5 px-1 rounded-full bg-[#D6336C] text-white text-[12px] font-bold flex items-center justify-center leading-none">
+                          {studentPendingLeaveCount}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </NavLink>
+
+                {/* Học phí của em */}
+                <NavLink
+                  to={ROUTES.TUITION}
+                  onClick={() => setIsMobileOpen(false)}
+                  className={({ isActive }) =>
+                    cn(
+                      'h-[44px] px-3.5 rounded-[10px] flex items-center justify-between text-[14px] transition-all',
+                      isActive
+                        ? 'bg-white shadow-sm text-[#A61E4D] font-bold'
+                        : 'text-brand-text hover:bg-white/40 font-semibold'
+                    )
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <CreditCard
+                          className={cn(
+                            'w-5 h-5 flex-shrink-0',
+                            isActive ? 'text-[#A61E4D]' : 'text-brand-subtext'
+                          )}
+                          strokeWidth={1.75}
+                        />
+                        <span>Học phí</span>
+                      </div>
+                      {studentUnpaidTuitionCount > 0 && (
+                        <span className="min-w-[20px] h-5 px-1 rounded-full bg-[#D6336C] text-white text-[12px] font-bold flex items-center justify-center leading-none">
+                          {studentUnpaidTuitionCount}
+                        </span>
+                      )}
                     </>
                   )}
                 </NavLink>
@@ -250,9 +358,9 @@ export const Sidebar: React.FC = () => {
                       />
                       <span>Thông báo</span>
                     </div>
-                    {isNotificationsPage && (
-                      <span className="w-5 h-5 rounded-full bg-[#D6336C] text-white text-[12px] font-bold flex items-center justify-center leading-none">
-                        3
+                    {studentUnreadNotifCount > 0 && (
+                      <span className="min-w-[20px] h-5 px-1 rounded-full bg-[#D6336C] text-white text-[12px] font-bold flex items-center justify-center leading-none">
+                        {studentUnreadNotifCount}
                       </span>
                     )}
                   </>
@@ -434,7 +542,7 @@ export const Sidebar: React.FC = () => {
                   )}
                 </NavLink>
 
-                {/* Đơn xin nghỉ kèm huy hiệu số 3 màu #D6336C */}
+                {/* Đơn xin nghỉ kèm huy hiệu số đơn Chờ duyệt thực tế */}
                 <NavLink
                   to={ROUTES.LEAVE_REQUESTS}
                   onClick={() => setIsMobileOpen(false)}
@@ -459,19 +567,21 @@ export const Sidebar: React.FC = () => {
                         />
                         <span>Đơn xin nghỉ</span>
                       </div>
-                      <span className="w-5 h-5 rounded-full bg-[#D6336C] text-white text-[12px] font-bold flex items-center justify-center leading-none">
-                        3
-                      </span>
+                      {adminPendingLeaveCount > 0 && (
+                        <span className="min-w-[20px] h-5 px-1 rounded-full bg-[#D6336C] text-white text-[12px] font-bold flex items-center justify-center leading-none">
+                          {adminPendingLeaveCount}
+                        </span>
+                      )}
                     </>
                   )}
                 </NavLink>
               </div>
             </div>
 
-            {/* Nhóm: TÀI CHÍNH & BÁO CÁO */}
+            {/* Nhóm: TÀI CHÍNH & HỆ THỐNG */}
             <div className="pt-0.5">
               <div className="px-3.5 pb-1 text-[12px] font-bold tracking-wider text-brand-subtext uppercase">
-                TÀI CHÍNH &amp; BÁO CÁO
+                TÀI CHÍNH &amp; THÔNG TIN
               </div>
               <div className="space-y-0.5">
                 <NavLink
@@ -527,7 +637,7 @@ export const Sidebar: React.FC = () => {
                 </NavLink>
 
                 <NavLink
-                  to="/reports"
+                  to={ROUTES.PROFILE}
                   onClick={() => setIsMobileOpen(false)}
                   className={({ isActive }) =>
                     cn(
@@ -540,14 +650,14 @@ export const Sidebar: React.FC = () => {
                 >
                   {({ isActive }) => (
                     <>
-                      <FileText
+                      <UserCog
                         className={cn(
                           'w-5 h-5 flex-shrink-0',
                           isActive ? 'text-[#A61E4D]' : 'text-brand-subtext'
                         )}
                         strokeWidth={1.75}
                       />
-                      <span>Báo cáo</span>
+                      <span>Thông tin</span>
                     </>
                   )}
                 </NavLink>
@@ -588,16 +698,31 @@ export const Sidebar: React.FC = () => {
           </div>
         ) : (
           <div className="bg-white/90 border border-brand-border/80 shadow-sm rounded-[12px] p-2.5 flex items-center justify-between transition-all hover:border-brand-pinkAccent/60">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-[10px] bg-[#FFE4EE] border border-brand-pinkAccent/60 flex items-center justify-center font-bold text-brand-pinkText text-[13px] shadow-sm flex-shrink-0 select-none">
-                {user?.fullName?.charAt(0).toUpperCase() || 'V'}
+            <div
+              onClick={() => {
+                setIsMobileOpen(false);
+                navigate(ROUTES.PROFILE);
+              }}
+              className="flex items-center gap-2.5 min-w-0 cursor-pointer"
+              title="Xem và chỉnh sửa thông tin cá nhân"
+            >
+              <div className="w-9 h-9 rounded-[10px] bg-[#FFE4EE] border border-brand-pinkAccent/60 flex items-center justify-center font-bold text-brand-pinkText text-[13px] shadow-sm flex-shrink-0 select-none overflow-hidden">
+                {user?.avatarUrl ? (
+                  <img
+                    src={getFileViewUrl(user.avatarUrl)}
+                    alt={user?.fullName || 'Admin'}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  user?.fullName?.charAt(0).toUpperCase() || 'V'
+                )}
               </div>
               <div className="flex flex-col min-w-0">
                 <span className="text-[13px] font-bold text-brand-text leading-tight truncate">
                   {user?.fullName || 'Chị Vân'} · Admin
                 </span>
-                <span className="text-[12px] font-medium text-brand-subtext leading-none mt-0.5">
-                  Giáo viên chính
+                <span className="text-[12px] font-medium text-brand-subtext leading-none mt-0.5 truncate">
+                  {user?.title || 'Giáo viên phụ trách'}
                 </span>
               </div>
             </div>
@@ -619,9 +744,30 @@ export const Sidebar: React.FC = () => {
     ? [
         { to: ROUTES.DASHBOARD, end: true, label: 'Tổng quan', icon: LayoutDashboard },
         { to: ROUTES.SCHEDULE, label: 'Lịch học', icon: Calendar },
-        { to: ROUTES.HOMEWORK, label: 'Bài tập', icon: FileText, badge: 2 },
-        { to: ROUTES.LEAVE_REQUESTS, label: 'Đơn xin nghỉ', icon: CalendarOff },
-        { to: ROUTES.NOTIFICATIONS, label: 'Thông báo', icon: Bell, badge: isNotificationsPage ? 3 : undefined },
+        {
+          to: ROUTES.HOMEWORK,
+          label: 'Bài tập',
+          icon: FileText,
+          badge: studentPendingHomeworkCount > 0 ? studentPendingHomeworkCount : undefined,
+        },
+        {
+          to: ROUTES.LEAVE_REQUESTS,
+          label: 'Đơn xin nghỉ',
+          icon: CalendarOff,
+          badge: studentPendingLeaveCount > 0 ? studentPendingLeaveCount : undefined,
+        },
+        {
+          to: ROUTES.TUITION,
+          label: 'Học phí',
+          icon: CreditCard,
+          badge: studentUnpaidTuitionCount > 0 ? studentUnpaidTuitionCount : undefined,
+        },
+        {
+          to: ROUTES.NOTIFICATIONS,
+          label: 'Thông báo',
+          icon: Bell,
+          badge: studentUnreadNotifCount > 0 ? studentUnreadNotifCount : undefined,
+        },
       ]
     : [
         { to: ROUTES.DASHBOARD, end: true, label: 'Tổng quan', icon: LayoutDashboard },
@@ -630,9 +776,15 @@ export const Sidebar: React.FC = () => {
         { to: ROUTES.CLASSES, label: 'Lớp học', icon: BookOpen },
         { to: ROUTES.SCHEDULE, label: 'Lịch học', icon: Calendar },
         { to: ROUTES.HOMEWORK, label: 'Bài tập', icon: FileText },
-        { to: ROUTES.LEAVE_REQUESTS, label: 'Đơn xin nghỉ', icon: CalendarOff, badge: 3 },
+        {
+          to: ROUTES.LEAVE_REQUESTS,
+          label: 'Đơn xin nghỉ',
+          icon: CalendarOff,
+          badge: adminPendingLeaveCount > 0 ? adminPendingLeaveCount : undefined,
+        },
         { to: ROUTES.TUITION, label: 'Học phí', icon: CreditCard },
         { to: ROUTES.NOTIFICATIONS, label: 'Thông báo', icon: Bell },
+        { to: ROUTES.PROFILE, label: 'Thông tin', icon: UserCog },
       ];
 
   return (

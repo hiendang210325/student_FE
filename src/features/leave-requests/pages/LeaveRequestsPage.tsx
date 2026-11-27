@@ -314,6 +314,8 @@ export const LeaveRequestsPage: React.FC = () => {
       showToast(res.message || 'Đã gửi đơn xin nghỉ tới giáo viên!');
       setStudentReason('');
       await fetchMyRequests();
+      window.dispatchEvent(new Event('sidebar-badges-refresh'));
+      window.dispatchEvent(new Event('sidebar-badges-refresh'));
     } catch (err: any) {
       showToast(err?.message || 'Không thể gửi đơn xin nghỉ.', 'error');
     } finally {
@@ -333,6 +335,7 @@ export const LeaveRequestsPage: React.FC = () => {
         setViewingStudentItem(null);
       }
       await fetchMyRequests();
+      window.dispatchEvent(new Event('sidebar-badges-refresh'));
     } catch (err: any) {
       showToast(err?.message || 'Không thể rút lại đơn xin nghỉ.', 'error');
     } finally {
@@ -363,6 +366,7 @@ export const LeaveRequestsPage: React.FC = () => {
       );
       setSelectedRequest(null);
       await fetchAdminRequests(adminPage, activeFilter, selectedClassFilter);
+      window.dispatchEvent(new Event('sidebar-badges-refresh'));
     } catch (err: any) {
       showToast(err?.message || 'Không thể cập nhật trạng thái đơn.', 'error');
     } finally {
@@ -379,6 +383,7 @@ export const LeaveRequestsPage: React.FC = () => {
       setSelectedRequest(null);
       setConfirmingDeleteInModal(false);
       await fetchAdminRequests(adminPage, activeFilter, selectedClassFilter);
+      window.dispatchEvent(new Event('sidebar-badges-refresh'));
     } catch (err: any) {
       showToast(err?.message || 'Không thể xóa đơn xin nghỉ.', 'error');
     } finally {

@@ -686,6 +686,7 @@ export const HomeworkPage: React.FC = () => {
       );
       resetStudentDraft();
       await fetchStudentHomeworks();
+      window.dispatchEvent(new Event('sidebar-badges-refresh'));
     } catch (err: any) {
       showToast(err?.message || 'Không thể nộp bài làm.', 'error');
     } finally {
